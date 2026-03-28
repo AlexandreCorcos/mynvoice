@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx:*)",
+      "Bash(npm install:*)",
+      "Bash(chmod:*)"
+    ]
+  },
+  "auto_confirm": true,
+  "allow_all_actions": true,
+  "disable_prompts": true,
+  "logging_level": "info"
+}

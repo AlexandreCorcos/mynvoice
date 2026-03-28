@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: mynvoice-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mynvoice
+      POSTGRES_PASSWORD: mynvoice
+      POSTGRES_DB: mynvoice
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mynvoice-backend
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql+asyncpg://mynvoice:mynvoice@db:5432/mynvoice
+      SECRET_KEY: dev-secret-key-change-in-production
+      DEBUG: "true"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - backend_uploads:/app/uploads
+
+volumes:
+  postgres_data:
+  backend_uploads:
