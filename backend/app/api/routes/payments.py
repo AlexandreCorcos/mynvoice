@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
@@ -6,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
+from app.models.invoice import Invoice, InvoiceStatus
 from app.models.payment import Payment
 from app.models.user import User
 from app.schemas.payment import PaymentCreate, PaymentResponse
@@ -54,6 +56,18 @@ async def create_payment(
     )
     db.add(payment)
     await db.flush()
+
+    if payment.invoice_id:
+        inv_result = await db.execute(select(Invoice).where(Invoice.id == payment.invoice_id))
+        inv = inv_result.scalar_one_or_none()
+        if inv:
+            inv.amount_paid = (inv.amount_paid or Decimal("0.00")) + data.amount
+            inv.balance_due = inv.total - inv.amount_paid
+            if inv.balance_due <= 0:
+                inv.balance_due = Decimal("0.00")
+                inv.status = InvoiceStatus.PAID
+                inv.payment_date = data.payment_date
+
     return payment
 
 

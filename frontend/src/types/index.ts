@@ -120,6 +120,8 @@ export interface Invoice {
   tax_amount: number;
   discount_amount: number;
   total: number;
+  amount_paid: number;
+  balance_due: number;
   currency: string;
   payment_method: PaymentMethod | null;
   payment_date: string | null;
@@ -141,6 +143,8 @@ export interface InvoiceListItem {
   issue_date: string;
   due_date: string;
   total: number;
+  amount_paid: number;
+  balance_due: number;
   currency: string;
   created_at: string;
 }

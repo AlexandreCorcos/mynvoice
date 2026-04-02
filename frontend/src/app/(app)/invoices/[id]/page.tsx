@@ -10,10 +10,15 @@ import {
   Copy,
   Trash2,
   AlertTriangle,
+  Pencil,
+  Download,
+  Mail,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import StatusBadge from "@/components/ui/status-badge";
+import Toast from "@/components/ui/toast";
+import type { ToastType } from "@/components/ui/toast";
 import type { Client, Invoice, InvoiceStatus, PaymentMethod } from "@/types";
 
 export default function InvoiceDetailPage() {
@@ -23,6 +28,10 @@ export default function InvoiceDetailPage() {
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [sendEmail, setSendEmail] = useState("");
+  const [sending, setSending] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
 
   const fetchInvoice = useCallback(async () => {
     try {
@@ -70,6 +79,42 @@ export default function InvoiceDetailPage() {
     router.push("/invoices");
   };
 
+  const handleDownloadPdf = async () => {
+    if (!invoice) return;
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+    const token = localStorage.getItem("access_token");
+    const res = await fetch(`${API_BASE}/invoices/${invoice.id}/pdf`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) {
+      setToast({ message: "Failed to generate PDF", type: "error" });
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${invoice.invoice_number}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleSendEmail = async () => {
+    if (!invoice || !sendEmail) return;
+    setSending(true);
+    try {
+      await api.post(`/invoices/${invoice.id}/send`, { email: sendEmail });
+      setToast({ message: `Invoice sent to ${sendEmail}`, type: "success" });
+      setShowSendModal(false);
+      setSendEmail("");
+      fetchInvoice();
+    } catch {
+      setToast({ message: "Failed to send email. Check SMTP settings.", type: "error" });
+    } finally {
+      setSending(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="mx-auto max-w-4xl space-y-6">
@@ -101,9 +146,18 @@ export default function InvoiceDetailPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           {invoice.status === "draft" && (
+            <Link
+              href={`/invoices/${invoice.id}/edit`}
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] bg-petrol-dark px-4 py-2 text-sm font-semibold text-white hover:bg-petrol-mid transition-colors"
+            >
+              <Pencil className="h-4 w-4" />
+              Edit
+            </Link>
+          )}
+          {invoice.status === "draft" && (
             <button
               onClick={() => handleStatusChange("sent")}
-              className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] bg-petrol-dark px-4 py-2 text-sm font-semibold text-white hover:bg-petrol-mid transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-petrol-dark px-4 py-2 text-sm font-semibold text-petrol-dark hover:bg-petrol-dark hover:text-white transition-colors"
             >
               <Send className="h-4 w-4" />
               Mark as Sent
@@ -127,6 +181,23 @@ export default function InvoiceDetailPage() {
               Mark Overdue
             </button>
           )}
+          <button
+            onClick={handleDownloadPdf}
+            className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-text-primary hover:bg-gray-50 transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            PDF
+          </button>
+          <button
+            onClick={() => {
+              setSendEmail(client?.email || "");
+              setShowSendModal(true);
+            }}
+            className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-text-primary hover:bg-gray-50 transition-colors"
+          >
+            <Mail className="h-4 w-4" />
+            Send
+          </button>
           <button
             onClick={handleDuplicate}
             className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-text-primary hover:bg-gray-50 transition-colors"
@@ -253,6 +324,22 @@ export default function InvoiceDetailPage() {
               {formatCurrency(invoice.total, invoice.currency)}
             </span>
           </div>
+          {Number(invoice.amount_paid) > 0 && Number(invoice.balance_due) > 0 && (
+            <>
+              <div className="flex justify-between text-sm">
+                <span className="text-emerald-600">Amount Paid</span>
+                <span className="text-emerald-600">
+                  -{formatCurrency(invoice.amount_paid, invoice.currency)}
+                </span>
+              </div>
+              <div className="flex justify-between border-t border-gray-200 pt-2">
+                <span className="font-semibold text-coral">Balance Due</span>
+                <span className="text-lg font-bold text-coral">
+                  {formatCurrency(invoice.balance_due, invoice.currency)}
+                </span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Notes */}
@@ -277,6 +364,53 @@ export default function InvoiceDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Toast */}
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+      )}
+
+      {/* Send Email Modal */}
+      {showSendModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-dropdown)]">
+            <h3 className="text-lg font-semibold text-text-primary mb-4">
+              Send Invoice
+            </h3>
+            <p className="text-sm text-text-secondary mb-4">
+              Send {invoice.invoice_number} as PDF to:
+            </p>
+            <input
+              type="email"
+              value={sendEmail}
+              onChange={(e) => setSendEmail(e.target.value)}
+              placeholder="recipient@email.com"
+              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2.5 text-sm focus:border-petrol-mid focus:outline-none mb-4"
+            />
+            {invoice.sent_to_email && (
+              <p className="text-xs text-text-secondary mb-4">
+                Previously sent to {invoice.sent_to_email}
+                {invoice.sent_at && ` on ${formatDate(invoice.sent_at)}`}
+              </p>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowSendModal(false)}
+                className="flex-1 rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-text-secondary hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendEmail}
+                disabled={!sendEmail || sending}
+                className="flex-1 rounded-[var(--radius-button)] bg-petrol-dark px-4 py-2 text-sm font-semibold text-white hover:bg-petrol-mid disabled:opacity-50 transition-colors"
+              >
+                {sending ? "Sending..." : "Send"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mark as Paid Modal */}
       {showStatusModal && (

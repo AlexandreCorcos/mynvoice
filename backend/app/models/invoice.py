@@ -75,6 +75,8 @@ class Invoice(Base):
         Numeric(12, 2), default=Decimal("0.00")
     )
     total: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0.00"))
+    amount_paid: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0.00"))
+    balance_due: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0.00"))
 
     # Currency
     currency: Mapped[str] = mapped_column(String(3), default="GBP")

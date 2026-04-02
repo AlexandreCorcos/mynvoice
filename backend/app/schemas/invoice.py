@@ -74,6 +74,8 @@ class InvoiceResponse(BaseModel):
     tax_amount: Decimal
     discount_amount: Decimal
     total: Decimal
+    amount_paid: Decimal
+    balance_due: Decimal
     currency: str
     payment_method: PaymentMethod | None
     payment_date: date | None
@@ -97,6 +99,8 @@ class InvoiceListResponse(BaseModel):
     issue_date: date
     due_date: date
     total: Decimal
+    amount_paid: Decimal
+    balance_due: Decimal
     currency: str
     created_at: datetime
 

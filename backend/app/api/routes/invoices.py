@@ -3,6 +3,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -152,6 +153,7 @@ async def create_invoice(
         terms=data.terms,
         footer=data.footer,
     )
+    invoice.balance_due = total
     db.add(invoice)
     await db.flush()
 
@@ -268,6 +270,11 @@ async def update_invoice_status(
     if data.payment_date:
         invoice.payment_date = data.payment_date
 
+    # Update payment tracking when marking as paid
+    if data.status == InvoiceStatus.PAID:
+        invoice.amount_paid = invoice.total
+        invoice.balance_due = Decimal("0.00")
+
     # Auto-create payment record when marking as paid
     if data.status == InvoiceStatus.PAID:
         from sqlalchemy import func as sqla_func
@@ -319,6 +326,8 @@ async def duplicate_invoice(
         tax_amount=original.tax_amount,
         discount_amount=original.discount_amount,
         total=original.total,
+        balance_due=original.total,
+        amount_paid=Decimal("0.00"),
         currency=original.currency,
         notes=original.notes,
         terms=original.terms,
@@ -367,3 +376,129 @@ async def delete_invoice(
         raise HTTPException(status_code=400, detail="Cannot delete a paid invoice")
 
     await db.delete(invoice)
+
+
+@router.get("/{invoice_id}/pdf")
+async def download_invoice_pdf(
+    invoice_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate and download a PDF for the specified invoice."""
+    result = await db.execute(
+        select(Invoice)
+        .where(Invoice.id == invoice_id, Invoice.user_id == user.id)
+        .options(selectinload(Invoice.items))
+    )
+    invoice = result.scalar_one_or_none()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    # Fetch client
+    client = None
+    if invoice.client_id:
+        cl_result = await db.execute(
+            select(ClientModel).where(ClientModel.id == invoice.client_id)
+        )
+        client = cl_result.scalar_one_or_none()
+
+    # Fetch company
+    co_result = await db.execute(
+        select(Company).where(Company.user_id == user.id)
+    )
+    company = co_result.scalar_one_or_none()
+
+    from app.services.pdf import generate_invoice_pdf
+
+    pdf_bytes = await generate_invoice_pdf(invoice, client, company)
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{invoice.invoice_number}.pdf"'
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# Send invoice by email
+# ---------------------------------------------------------------------------
+
+from pydantic import BaseModel as PydanticBaseModel
+from app.services.email import send_invoice_email, fmt_currency
+
+
+class SendInvoiceRequest(PydanticBaseModel):
+    email: str
+
+
+@router.post("/{invoice_id}/send")
+async def send_invoice(
+    invoice_id: uuid.UUID,
+    data: SendInvoiceRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    # Fetch invoice with items
+    result = await db.execute(
+        select(Invoice)
+        .where(Invoice.id == invoice_id, Invoice.user_id == user.id)
+        .options(selectinload(Invoice.items))
+    )
+    invoice = result.scalar_one_or_none()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    # Fetch client
+    client = None
+    if invoice.client_id:
+        result = await db.execute(
+            select(ClientModel).where(ClientModel.id == invoice.client_id)
+        )
+        client = result.scalar_one_or_none()
+
+    # Fetch company
+    result = await db.execute(
+        select(Company).where(Company.user_id == user.id)
+    )
+    company = result.scalar_one_or_none()
+
+    # Generate PDF
+    from app.services.pdf import generate_invoice_pdf
+
+    pdf_bytes = await generate_invoice_pdf(invoice, client, company)
+
+    # Send email
+    client_name = client.company_name if client else "Customer"
+    company_name = company.name if company else "MYNVOICE"
+    total_formatted = fmt_currency(float(invoice.total), invoice.currency)
+    due_date_formatted = invoice.due_date.strftime("%d %B %Y")
+
+    success = await send_invoice_email(
+        to_email=data.email,
+        invoice_number=invoice.invoice_number,
+        client_name=client_name,
+        total=total_formatted,
+        currency=invoice.currency,
+        due_date=due_date_formatted,
+        pdf_bytes=pdf_bytes,
+        company_name=company_name,
+    )
+
+    if not success:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to send email. Check SMTP settings.",
+        )
+
+    # Update invoice tracking
+    invoice.sent_at = datetime.now(timezone.utc)
+    invoice.sent_to_email = data.email
+
+    if invoice.status == InvoiceStatus.DRAFT:
+        invoice.status = InvoiceStatus.SENT
+
+    await db.flush()
+
+    return {"success": True, "sent_to": data.email}

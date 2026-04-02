@@ -58,20 +58,26 @@
 - [x] Settings: use_year_in_number toggle
 - [x] Settings: refreshUser after profile save
 
-## Remaining (To Implement)
+## Phase 6: Core Completion -- DONE
 
-### High Priority (core features)
-- [ ] PDF invoice generation (WeasyPrint already in deps)
-- [ ] Email sending with PDF attachment (aiosmtplib + Jinja2 templates already in deps)
-- [ ] Invoice edit page (/invoices/[id]/edit for drafts)
-- [ ] Partial payments support (Balance Due tracking)
+- [x] Toast notification system (floating, visible at any scroll position)
+- [x] Logo upload for company profile (upload, preview, remove)
+- [x] Payments Received page (auto-created on paid, manual recording)
+- [x] PDF invoice generation (WeasyPrint, professional layout with logo/colours)
+- [x] Email sending with PDF attachment (aiosmtplib, HTML email template)
+- [x] Invoice edit page (/invoices/[id]/edit for drafts)
+- [x] Partial payments support (amount_paid, balance_due, auto-mark paid when balance=0)
+- [x] Download PDF button on invoice detail
+- [x] Send invoice by email button with modal
+- [x] Invoice detail: Edit button for drafts
+
+## Remaining (To Implement)
 
 ### Medium Priority (UX improvements)
 - [ ] Reports page (revenue by period/client)
 - [ ] Billable expenses (mark expense as billable to client, convert to invoice item)
 - [ ] Expense import (CSV upload)
 - [ ] Dark mode activation (structure is prepared, needs wiring up)
-- [ ] Logo/file upload for company profile
 - [ ] Onboarding flow ("Getting Started" checklist for new users)
 
 ### Low Priority (future features)
