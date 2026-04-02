@@ -71,14 +71,15 @@
 - [x] Send invoice by email button with modal
 - [x] Invoice detail: Edit button for drafts
 
-## Remaining (To Implement)
+## Phase 7: UX Improvements -- DONE
 
-### Medium Priority (UX improvements)
-- [ ] Reports page (revenue by period/client)
-- [ ] Billable expenses (mark expense as billable to client, convert to invoice item)
-- [ ] Expense import (CSV upload)
-- [ ] Dark mode activation (structure is prepared, needs wiring up)
-- [ ] Onboarding flow ("Getting Started" checklist for new users)
+- [x] Dark mode activation (toggle wired up, CSS overrides for all pages, flash prevention)
+- [x] Reports page (revenue by period/client, expenses by category, net profit, charts)
+- [x] Billable expenses (is_billable flag, client_id on expenses, convert to invoice items endpoint)
+- [x] Expense CSV import (upload CSV, parse, preview errors, bulk create)
+- [x] Onboarding flow ("Getting Started" checklist on dashboard, 3 steps, dismissible)
+
+## Remaining (To Implement)
 
 ### Low Priority (future features)
 - [ ] Google OAuth callback implementation

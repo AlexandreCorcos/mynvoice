@@ -31,6 +31,8 @@ class ExpenseCreate(BaseModel):
     expense_date: date
     vendor: str | None = None
     notes: str | None = None
+    is_billable: bool = False
+    client_id: uuid.UUID | None = None
 
 
 class ExpenseUpdate(BaseModel):
@@ -42,6 +44,8 @@ class ExpenseUpdate(BaseModel):
     expense_date: date | None = None
     vendor: str | None = None
     notes: str | None = None
+    is_billable: bool | None = None
+    client_id: uuid.UUID | None = None
 
 
 class ExpenseResponse(BaseModel):
@@ -55,6 +59,8 @@ class ExpenseResponse(BaseModel):
     vendor: str | None
     receipt_url: str | None
     notes: str | None
+    is_billable: bool
+    client_id: uuid.UUID | None
     created_at: datetime
 
     model_config = {"from_attributes": True}

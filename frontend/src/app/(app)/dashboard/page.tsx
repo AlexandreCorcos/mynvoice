@@ -23,6 +23,7 @@ import {
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import StatCard from "@/components/ui/stat-card";
+import { OnboardingChecklist } from "@/components/onboarding";
 import { StaggerContainer, StaggerItem, FadeIn } from "@/components/motion";
 import type { DashboardData } from "@/types";
 
@@ -112,6 +113,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Onboarding */}
+      <OnboardingChecklist />
+
       {/* Quick actions */}
       <div className="flex flex-wrap items-center gap-3">
         <Link

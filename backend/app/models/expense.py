@@ -3,7 +3,7 @@ import uuid
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, Numeric, String, Text
+from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -44,6 +44,12 @@ class Expense(Base):
     vendor: Mapped[str | None] = mapped_column(String(255), nullable=True)
     receipt_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Billable
+    is_billable: Mapped[bool] = mapped_column(Boolean, default=False)
+    client_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("clients.id", ondelete="SET NULL"), nullable=True
+    )
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(

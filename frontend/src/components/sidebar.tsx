@@ -17,6 +17,7 @@ import {
   X,
   Package,
   CreditCard,
+  BarChart3,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/items", label: "Items & Services", icon: Package },
   { href: "/payments", label: "Payments Received", icon: CreditCard },
   { href: "/expenses", label: "Expenses", icon: Wallet },
+  { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
