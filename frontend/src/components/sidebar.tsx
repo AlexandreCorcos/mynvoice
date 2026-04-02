@@ -16,6 +16,7 @@ import {
   Menu,
   X,
   Package,
+  CreditCard,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -24,6 +25,7 @@ const navItems = [
   { href: "/invoices", label: "Invoices", icon: FileText },
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/items", label: "Items & Services", icon: Package },
+  { href: "/payments", label: "Payments Received", icon: CreditCard },
   { href: "/expenses", label: "Expenses", icon: Wallet },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

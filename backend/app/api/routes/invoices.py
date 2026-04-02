@@ -13,6 +13,7 @@ from app.models.client import Client as ClientModel
 from app.models.company import Company
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.invoice_item import InvoiceItem
+from app.models.payment import Payment
 from app.models.user import User
 from app.schemas.invoice import (
     InvoiceCreate,
@@ -266,6 +267,25 @@ async def update_invoice_status(
         invoice.payment_method = data.payment_method
     if data.payment_date:
         invoice.payment_date = data.payment_date
+
+    # Auto-create payment record when marking as paid
+    if data.status == InvoiceStatus.PAID:
+        from sqlalchemy import func as sqla_func
+        count_result = await db.execute(
+            select(sqla_func.count(Payment.id)).where(Payment.user_id == user.id)
+        )
+        payment_number = str((count_result.scalar() or 0) + 1)
+        payment = Payment(
+            user_id=user.id,
+            invoice_id=invoice.id,
+            client_id=invoice.client_id,
+            payment_number=payment_number,
+            amount=invoice.total,
+            currency=invoice.currency,
+            payment_date=data.payment_date or date.today(),
+            payment_mode=data.payment_method.value if data.payment_method else None,
+        )
+        db.add(payment)
 
     return invoice
 

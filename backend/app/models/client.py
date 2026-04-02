@@ -66,3 +66,4 @@ class Client(Base):
     # Relationships
     user = relationship("User", back_populates="clients")
     invoices = relationship("Invoice", back_populates="client")
+    payments = relationship("Payment", back_populates="client")

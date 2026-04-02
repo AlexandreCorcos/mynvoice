@@ -145,6 +145,21 @@ export interface InvoiceListItem {
   created_at: string;
 }
 
+// Payments
+export interface Payment {
+  id: string;
+  invoice_id: string | null;
+  client_id: string | null;
+  payment_number: string;
+  amount: number;
+  currency: string;
+  payment_date: string;
+  payment_mode: string | null;
+  reference: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
 // Expenses
 export type ExpenseType = "fixed" | "variable";
 

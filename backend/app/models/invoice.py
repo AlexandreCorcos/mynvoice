@@ -115,3 +115,4 @@ class Invoice(Base):
         cascade="all, delete-orphan",
         order_by="InvoiceItem.sort_order",
     )
+    payments = relationship("Payment", back_populates="invoice")

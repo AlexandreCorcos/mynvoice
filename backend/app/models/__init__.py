@@ -7,6 +7,7 @@ from app.models.expense import Expense
 from app.models.expense_category import ExpenseCategory
 from app.models.donation import DonationConfig, Donation
 from app.models.item import Item
+from app.models.payment import Payment
 
 __all__ = [
     "User",
@@ -19,4 +20,5 @@ __all__ = [
     "DonationConfig",
     "Donation",
     "Item",
+    "Payment",
 ]

@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { api } from "@/lib/api";
+import Toast from "@/components/ui/toast";
+import type { ToastType } from "@/components/ui/toast";
+import { Upload, X as XIcon, Image as ImageIcon } from "lucide-react";
 import type { Company } from "@/types";
 
 export default function SettingsPage() {
@@ -10,7 +13,10 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<"profile" | "business">("profile");
   const [company, setCompany] = useState<Company | null>(null);
   const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState("");
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   // Profile form
   const [profile, setProfile] = useState({
@@ -91,9 +97,8 @@ export default function SettingsPage() {
       .catch(() => {});
   }, []);
 
-  const flash = (msg: string) => {
-    setSuccess(msg);
-    setTimeout(() => setSuccess(""), 3000);
+  const flash = (msg: string, type: ToastType = "success") => {
+    setToast({ message: msg, type });
   };
 
   const saveProfile = async (e: React.FormEvent) => {
@@ -104,7 +109,7 @@ export default function SettingsPage() {
       await refreshUser();
       flash("Profile updated successfully.");
     } catch {
-      // handle
+      flash("Failed to save profile.", "error");
     } finally {
       setSaving(false);
     }
@@ -128,9 +133,53 @@ export default function SettingsPage() {
       }
       flash("Business profile saved successfully.");
     } catch {
-      // handle
+      flash("Failed to save business profile.", "error");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      flash("Please select an image file.", "error");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      flash("Image must be under 5MB.", "error");
+      return;
+    }
+
+    setUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const result = await api.upload<{ logo_url: string }>("/profile/company/logo", formData);
+      setLogoPreview(result.logo_url);
+      if (company) {
+        setCompany({ ...company, logo_url: result.logo_url });
+      }
+      flash("Logo uploaded successfully.");
+    } catch {
+      flash("Failed to upload logo.", "error");
+    } finally {
+      setUploadingLogo(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleLogoRemove = async () => {
+    try {
+      await api.delete("/profile/company/logo");
+      setLogoPreview(null);
+      if (company) {
+        setCompany({ ...company, logo_url: null });
+      }
+      flash("Logo removed.");
+    } catch {
+      flash("Failed to remove logo.", "error");
     }
   };
 
@@ -142,12 +191,16 @@ export default function SettingsPage() {
   const inputClass =
     "w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2.5 text-sm focus:border-petrol-mid focus:outline-none";
 
+  const currentLogo = logoPreview || company?.logo_url;
+
   return (
     <div className="mx-auto max-w-3xl">
-      {success && (
-        <div className="mb-6 rounded-[var(--radius-input)] bg-emerald-50 px-4 py-3 text-sm text-emerald-600">
-          {success}
-        </div>
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
 
       {/* Tabs */}
@@ -269,6 +322,57 @@ export default function SettingsPage() {
             <h2 className="text-base font-semibold text-text-primary">
               Business Information
             </h2>
+
+            {/* Logo Upload */}
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-2">
+                Business Logo
+              </label>
+              <div className="flex items-center gap-4">
+                {currentLogo ? (
+                  <div className="relative group">
+                    <img
+                      src={currentLogo}
+                      alt="Business logo"
+                      className="h-20 w-20 rounded-xl object-contain border border-gray-200 bg-gray-50 p-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleLogoRemove}
+                      className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                    >
+                      <XIcon className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50">
+                    <ImageIcon className="h-8 w-8 text-gray-300" />
+                  </div>
+                )}
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingLogo}
+                    className="inline-flex items-center gap-2 rounded-[var(--radius-button)] border border-gray-300 px-3 py-2 text-sm font-medium text-text-primary hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                  >
+                    <Upload className="h-4 w-4" />
+                    {uploadingLogo ? "Uploading..." : currentLogo ? "Change Logo" : "Upload Logo"}
+                  </button>
+                  <p className="mt-1 text-xs text-text-secondary">
+                    PNG, JPG up to 5MB. Will appear on invoices.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-1">
