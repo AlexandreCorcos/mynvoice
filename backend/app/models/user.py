@@ -57,3 +57,4 @@ class User(Base):
     invoices = relationship("Invoice", back_populates="user")
     expenses = relationship("Expense", back_populates="user")
     expense_categories = relationship("ExpenseCategory", back_populates="user")
+    items = relationship("Item", back_populates="user")

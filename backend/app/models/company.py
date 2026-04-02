@@ -51,6 +51,7 @@ class Company(Base):
     default_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     invoice_prefix: Mapped[str] = mapped_column(String(10), default="INV")
     next_invoice_number: Mapped[int] = mapped_column(default=1)
+    use_year_in_number: Mapped[bool] = mapped_column(default=False)
 
     # Bank details (for invoice footer)
     bank_name: Mapped[str | None] = mapped_column(String(255), nullable=True)

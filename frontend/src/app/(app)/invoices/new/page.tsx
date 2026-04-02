@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, GripVertical, Trash2, ArrowLeft } from "lucide-react";
+import { Plus, GripVertical, Trash2, ArrowLeft, Package } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
-import type { Client, Invoice } from "@/types";
+import { useAuth } from "@/contexts/auth-context";
+import type { Client, Invoice, Item } from "@/types";
 
 interface ItemForm {
   id: string;
@@ -29,7 +30,10 @@ function newItem(): ItemForm {
 
 export default function NewInvoicePage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
+  const [catalogItems, setCatalogItems] = useState<Item[]>([]);
+  const [showCatalog, setShowCatalog] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -39,7 +43,7 @@ export default function NewInvoicePage() {
     due_date: "",
     tax_rate: "0",
     discount_amount: "0",
-    currency: "GBP",
+    currency: user?.currency || "GBP",
     notes: "",
     terms: "",
   });
@@ -49,7 +53,22 @@ export default function NewInvoicePage() {
 
   useEffect(() => {
     api.get<Client[]>("/clients/").then(setClients).catch(() => {});
+    api.get<Item[]>("/items/").then(setCatalogItems).catch(() => {});
   }, []);
+
+  const addFromCatalog = (catalogItem: Item) => {
+    setItems((prev) => [
+      ...prev,
+      {
+        id: `new-${nextId++}`,
+        description: catalogItem.name + (catalogItem.description ? ` - ${catalogItem.description}` : ""),
+        quantity: "1",
+        unit_price: String(catalogItem.unit_price),
+        unit: catalogItem.unit || "",
+      },
+    ]);
+    setShowCatalog(false);
+  };
 
   // Calculate totals
   const subtotal = items.reduce((sum, item) => {
@@ -310,14 +329,55 @@ export default function NewInvoicePage() {
             })}
           </div>
 
-          <button
-            type="button"
-            onClick={() => setItems((prev) => [...prev, newItem()])}
-            className="mt-3 inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-text-secondary hover:border-petrol-mid hover:text-petrol-mid transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Add item
-          </button>
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setItems((prev) => [...prev, newItem()])}
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-text-secondary hover:border-petrol-mid hover:text-petrol-mid transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Add item
+            </button>
+            {catalogItems.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowCatalog(!showCatalog)}
+                className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-gray-300 px-3 py-2 text-sm font-medium text-petrol-mid hover:bg-petrol-dark hover:text-white transition-colors"
+              >
+                <Package className="h-4 w-4" />
+                Pick from catalog
+              </button>
+            )}
+          </div>
+
+          {/* Catalog picker dropdown */}
+          {showCatalog && catalogItems.length > 0 && (
+            <div className="mt-2 rounded-xl border border-gray-200 bg-white shadow-[var(--shadow-dropdown)] max-h-60 overflow-y-auto">
+              {catalogItems.map((ci) => (
+                <button
+                  key={ci.id}
+                  type="button"
+                  onClick={() => addFromCatalog(ci)}
+                  className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-surface-light transition-colors border-b border-gray-50 last:border-b-0"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">{ci.name}</p>
+                    {ci.description && (
+                      <p className="text-xs text-text-secondary truncate max-w-xs">{ci.description}</p>
+                    )}
+                  </div>
+                  <div className="text-right ml-4">
+                    <p className="text-sm font-semibold text-text-primary">
+                      {formatCurrency(ci.unit_price, form.currency)}
+                    </p>
+                    {ci.unit && (
+                      <p className="text-xs text-text-secondary">per {ci.unit}</p>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Totals & notes */}

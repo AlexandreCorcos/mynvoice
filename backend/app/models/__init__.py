@@ -6,6 +6,7 @@ from app.models.invoice_item import InvoiceItem
 from app.models.expense import Expense
 from app.models.expense_category import ExpenseCategory
 from app.models.donation import DonationConfig, Donation
+from app.models.item import Item
 
 __all__ = [
     "User",
@@ -17,4 +18,5 @@ __all__ = [
     "ExpenseCategory",
     "DonationConfig",
     "Donation",
+    "Item",
 ]

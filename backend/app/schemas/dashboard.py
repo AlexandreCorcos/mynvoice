@@ -16,6 +16,19 @@ class DashboardStats(BaseModel):
     total_expenses: Decimal
 
 
+class AgingBucket(BaseModel):
+    label: str
+    amount: Decimal
+    count: int
+
+
+class PeriodSummary(BaseModel):
+    label: str  # "Today", "This Week", etc.
+    sales: Decimal
+    receipts: Decimal
+    due: Decimal
+
+
 class MonthlyTrend(BaseModel):
     month: str  # "2026-01"
     revenue: Decimal
@@ -25,3 +38,6 @@ class MonthlyTrend(BaseModel):
 class DashboardResponse(BaseModel):
     stats: DashboardStats
     monthly_trends: list[MonthlyTrend]
+    aging: list[AgingBucket]
+    period_summary: list[PeriodSummary]
+    currency: str

@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Menu,
   X,
+  Package,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -22,6 +23,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/invoices", label: "Invoices", icon: FileText },
   { href: "/clients", label: "Clients", icon: Users },
+  { href: "/items", label: "Items & Services", icon: Package },
   { href: "/expenses", label: "Expenses", icon: Wallet },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

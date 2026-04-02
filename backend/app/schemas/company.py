@@ -23,6 +23,7 @@ class CompanyCreate(BaseModel):
     default_payment_terms_days: int | None = 30
     default_notes: str | None = None
     invoice_prefix: str = "INV"
+    use_year_in_number: bool = False
     bank_name: str | None = None
     bank_account_name: str | None = None
     bank_account_number: str | None = None
@@ -57,6 +58,7 @@ class CompanyResponse(BaseModel):
     default_notes: str | None
     invoice_prefix: str
     next_invoice_number: int
+    use_year_in_number: bool
     bank_name: str | None
     bank_account_name: str | None
     bank_account_number: str | None

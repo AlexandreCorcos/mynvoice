@@ -1,7 +1,8 @@
+from datetime import date, timedelta
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import case, extract, func, select
+from sqlalchemy import and_, case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -10,7 +11,13 @@ from app.models.client import Client
 from app.models.expense import Expense
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.user import User
-from app.schemas.dashboard import DashboardResponse, DashboardStats, MonthlyTrend
+from app.schemas.dashboard import (
+    AgingBucket,
+    DashboardResponse,
+    DashboardStats,
+    MonthlyTrend,
+    PeriodSummary,
+)
 
 router = APIRouter()
 
@@ -20,6 +27,8 @@ async def get_dashboard(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    today = date.today()
+
     # Invoice stats
     invoice_result = await db.execute(
         select(
@@ -97,7 +106,94 @@ async def get_dashboard(
         total_expenses=total_expenses,
     )
 
-    # Monthly trends (last 12 months)
+    # --- Receivables Aging ---
+    unpaid_statuses = [InvoiceStatus.SENT, InvoiceStatus.OVERDUE]
+    aging_buckets = []
+
+    for label, min_days, max_days in [
+        ("Current", None, 0),
+        ("1-15 Days", 1, 15),
+        ("16-30 Days", 16, 30),
+        ("31-45 Days", 31, 45),
+        ("Above 45 Days", 46, None),
+    ]:
+        conditions = [
+            Invoice.user_id == user.id,
+            Invoice.status.in_(unpaid_statuses),
+        ]
+        if min_days is not None and max_days is not None:
+            conditions.append(today - Invoice.due_date >= min_days)
+            conditions.append(today - Invoice.due_date <= max_days)
+        elif min_days is not None:
+            conditions.append(today - Invoice.due_date >= min_days)
+        else:
+            # Current = not yet due
+            conditions.append(Invoice.due_date >= today)
+
+        result = await db.execute(
+            select(
+                func.count(Invoice.id),
+                func.coalesce(func.sum(Invoice.total), 0),
+            ).where(and_(*conditions))
+        )
+        row = result.one()
+        aging_buckets.append(
+            AgingBucket(label=label, amount=row[1], count=row[0])
+        )
+
+    # --- Period Summary (Sales / Receipts / Due) ---
+    week_start = today - timedelta(days=today.weekday())
+    month_start = today.replace(day=1)
+    quarter_month = ((today.month - 1) // 3) * 3 + 1
+    quarter_start = today.replace(month=quarter_month, day=1)
+    year_start = today.replace(month=1, day=1)
+
+    period_summary = []
+    for label, start_date in [
+        ("Today", today),
+        ("This Week", week_start),
+        ("This Month", month_start),
+        ("This Quarter", quarter_start),
+        ("This Year", year_start),
+    ]:
+        result = await db.execute(
+            select(
+                func.coalesce(
+                    func.sum(Invoice.total), 0
+                ).label("sales"),
+                func.coalesce(
+                    func.sum(
+                        case((Invoice.status == InvoiceStatus.PAID, Invoice.total))
+                    ),
+                    0,
+                ).label("receipts"),
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (
+                                Invoice.status.in_(unpaid_statuses),
+                                Invoice.total,
+                            )
+                        )
+                    ),
+                    0,
+                ).label("due"),
+            ).where(
+                Invoice.user_id == user.id,
+                Invoice.issue_date >= start_date,
+            )
+        )
+        row = result.one()
+        period_summary.append(
+            PeriodSummary(
+                label=label,
+                sales=row.sales,
+                receipts=row.receipts,
+                due=row.due,
+            )
+        )
+
+    # --- Monthly Trends ---
     monthly_revenue = await db.execute(
         select(
             func.to_char(Invoice.issue_date, "YYYY-MM").label("month"),
@@ -132,4 +228,10 @@ async def get_dashboard(
         for m in all_months[-12:]
     ]
 
-    return DashboardResponse(stats=stats, monthly_trends=trends)
+    return DashboardResponse(
+        stats=stats,
+        monthly_trends=trends,
+        aging=aging_buckets,
+        period_summary=period_summary,
+        currency=user.currency,
+    )

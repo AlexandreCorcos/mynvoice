@@ -35,6 +35,21 @@ class Client(Base):
     # Tax
     vat_number: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
+    # Invoice settings (per-client)
+    invoice_prefix: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    next_invoice_number: Mapped[int] = mapped_column(default=1)
+    use_year_in_number: Mapped[bool] = mapped_column(default=False)
+    default_payment_terms_days: Mapped[int | None] = mapped_column(nullable=True)
+    default_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Bank details (for invoices to this client)
+    bank_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    bank_account_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    bank_account_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    bank_sort_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    bank_iban: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    bank_swift: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
     # Notes
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 

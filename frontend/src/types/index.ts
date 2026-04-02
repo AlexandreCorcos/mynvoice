@@ -42,6 +42,7 @@ export interface Company {
   default_notes: string | null;
   invoice_prefix: string;
   next_invoice_number: number;
+  use_year_in_number: boolean;
   bank_name: string | null;
   bank_account_name: string | null;
   bank_account_number: string | null;
@@ -65,7 +66,30 @@ export interface Client {
   postcode: string | null;
   country: string;
   vat_number: string | null;
+  invoice_prefix: string | null;
+  next_invoice_number: number;
+  use_year_in_number: boolean;
+  default_payment_terms_days: number | null;
+  default_notes: string | null;
+  bank_name: string | null;
+  bank_account_name: string | null;
+  bank_account_number: string | null;
+  bank_sort_code: string | null;
+  bank_iban: string | null;
+  bank_swift: string | null;
   notes: string | null;
+  total_receivables: number;
+  created_at: string;
+}
+
+// Item (Services/Products catalog)
+export interface Item {
+  id: string;
+  name: string;
+  description: string | null;
+  unit_price: number;
+  unit: string | null;
+  is_active: boolean;
   created_at: string;
 }
 
@@ -165,9 +189,25 @@ export interface MonthlyTrend {
   expenses: number;
 }
 
+export interface AgingBucket {
+  label: string;
+  amount: number;
+  count: number;
+}
+
+export interface PeriodSummary {
+  label: string;
+  sales: number;
+  receipts: number;
+  due: number;
+}
+
 export interface DashboardData {
   stats: DashboardStats;
   monthly_trends: MonthlyTrend[];
+  aging: AgingBucket[];
+  period_summary: PeriodSummary[];
+  currency: string;
 }
 
 // Donations

@@ -1,4 +1,5 @@
 import uuid
+from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -8,6 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
+from app.models.client import Client as ClientModel
 from app.models.company import Company
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.invoice_item import InvoiceItem
@@ -30,18 +32,48 @@ def _calculate_totals(items_data, tax_rate: Decimal, discount: Decimal):
     return subtotal, tax_amount, total
 
 
-async def _generate_invoice_number(db: AsyncSession, user_id: uuid.UUID) -> str:
+async def _generate_invoice_number(
+    db: AsyncSession, user_id: uuid.UUID, client_id: uuid.UUID | None = None
+) -> str:
+    # Get company defaults
     result = await db.execute(
         select(Company).where(Company.user_id == user_id)
     )
     company = result.scalar_one_or_none()
-    prefix = company.invoice_prefix if company else "INV"
-    number = company.next_invoice_number if company else 1
 
-    invoice_number = f"{prefix}-{number:05d}"
+    # Check client-level invoice settings
+    client = None
+    if client_id:
+        result = await db.execute(
+            select(ClientModel).where(
+                ClientModel.id == client_id, ClientModel.user_id == user_id
+            )
+        )
+        client = result.scalar_one_or_none()
 
-    if company:
+    # Client prefix takes priority, then company, then default
+    if client and client.invoice_prefix:
+        prefix = client.invoice_prefix
+        use_year = client.use_year_in_number
+        number = client.next_invoice_number or 1
+        # Increment client counter
+        client.next_invoice_number = number + 1
+    elif company:
+        prefix = company.invoice_prefix
+        use_year = company.use_year_in_number
+        number = company.next_invoice_number or 1
+        # Increment company counter
         company.next_invoice_number = number + 1
+    else:
+        prefix = "INV"
+        use_year = False
+        number = 1
+
+    if use_year:
+        year_suffix = datetime.now(timezone.utc).strftime("%y")
+        invoice_number = f"{prefix}-{year_suffix}-{number:05d}"
+    else:
+        invoice_number = f"{prefix}-{number:05d}"
 
     return invoice_number
 
@@ -96,7 +128,7 @@ async def create_invoice(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    invoice_number = await _generate_invoice_number(db, user.id)
+    invoice_number = await _generate_invoice_number(db, user.id, data.client_id)
 
     subtotal, tax_amount, total = _calculate_totals(
         data.items, data.tax_rate, data.discount_amount

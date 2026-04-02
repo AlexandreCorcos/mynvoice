@@ -40,15 +40,45 @@
 - [x] Contributing guide (docs/contributing.md - workflow, conventions, design system)
 - [x] MIT License
 
-## Remaining (Future Work)
+## Phase 5: Enhancements -- DONE
 
+- [x] Dashboard: receivables aging bar (Current, 1-15d, 16-30d, 31-45d, 45+d)
+- [x] Dashboard: Sales/Receipts/Dues summary table by period
+- [x] Dashboard: currency from user settings (not hardcoded £)
+- [x] Invoice list: card/table toggle view
+- [x] Invoice list: descriptive status ("Overdue by 3 days", "Due today")
+- [x] Invoice cards: Mark as Sent / Mark as Paid quick actions
+- [x] Invoice creation: pick items from catalog
+- [x] Invoice numbering: per-client prefix + optional year (INV-26-00001)
+- [x] Items & Services catalog (CRUD, sidebar nav)
+- [x] Client: invoice settings per client (prefix, year flag, payment terms)
+- [x] Client: bank details with "Import from your business" button
+- [x] Client: total receivables on cards
+- [x] Settings: "Your Business" label (self-employed friendly)
+- [x] Settings: use_year_in_number toggle
+- [x] Settings: refreshUser after profile save
+
+## Remaining (To Implement)
+
+### High Priority (core features)
+- [ ] PDF invoice generation (WeasyPrint already in deps)
+- [ ] Email sending with PDF attachment (aiosmtplib + Jinja2 templates already in deps)
+- [ ] Invoice edit page (/invoices/[id]/edit for drafts)
+- [ ] Partial payments support (Balance Due tracking)
+
+### Medium Priority (UX improvements)
+- [ ] Reports page (revenue by period/client)
+- [ ] Billable expenses (mark expense as billable to client, convert to invoice item)
+- [ ] Expense import (CSV upload)
+- [ ] Dark mode activation (structure is prepared, needs wiring up)
+- [ ] Logo/file upload for company profile
+- [ ] Onboarding flow ("Getting Started" checklist for new users)
+
+### Low Priority (future features)
 - [ ] Google OAuth callback implementation
 - [ ] Password reset flow (email token)
-- [ ] Logo/file upload endpoint
-- [ ] PDF invoice generation (WeasyPrint)
-- [ ] Email sending service (aiosmtplib + Jinja2 templates)
+- [ ] Notifications/reminders for overdue invoices
 - [ ] Stripe/PayPal donation integration
 - [ ] Recurring invoices
 - [ ] Multi-user teams & roles
-- [ ] Notifications system
 - [ ] Mobile app (React Native)

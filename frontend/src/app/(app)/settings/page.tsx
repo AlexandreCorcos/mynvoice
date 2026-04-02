@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { api } from "@/lib/api";
 import type { Company } from "@/types";
 
 export default function SettingsPage() {
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<"profile" | "company">("profile");
+  const { user, refreshUser } = useAuth();
+  const [activeTab, setActiveTab] = useState<"profile" | "business">("profile");
   const [company, setCompany] = useState<Company | null>(null);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState("");
@@ -21,7 +21,20 @@ export default function SettingsPage() {
     currency: user?.currency || "GBP",
   });
 
-  // Company form
+  // Keep profile form in sync when user data loads/changes
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        first_name: user.first_name || "",
+        last_name: user.last_name || "",
+        phone: user.phone || "",
+        language: user.language || "en-GB",
+        currency: user.currency || "GBP",
+      });
+    }
+  }, [user]);
+
+  // Company / Business form
   const [companyForm, setCompanyForm] = useState({
     name: "",
     legal_name: "",
@@ -35,6 +48,7 @@ export default function SettingsPage() {
     postcode: "",
     country: "United Kingdom",
     invoice_prefix: "INV",
+    use_year_in_number: false,
     default_payment_terms_days: "30",
     default_notes: "",
     bank_name: "",
@@ -62,6 +76,7 @@ export default function SettingsPage() {
             postcode: c.postcode || "",
             country: c.country || "United Kingdom",
             invoice_prefix: c.invoice_prefix || "INV",
+            use_year_in_number: c.use_year_in_number ?? false,
             default_payment_terms_days: String(
               c.default_payment_terms_days || 30
             ),
@@ -86,7 +101,8 @@ export default function SettingsPage() {
     setSaving(true);
     try {
       await api.put("/profile/me", profile);
-      flash("Profile updated");
+      await refreshUser();
+      flash("Profile updated successfully.");
     } catch {
       // handle
     } finally {
@@ -104,11 +120,13 @@ export default function SettingsPage() {
           parseInt(companyForm.default_payment_terms_days) || 30,
       };
       if (company) {
-        await api.put("/profile/company", data);
+        const updated = await api.put<Company>("/profile/company", data);
+        setCompany(updated);
       } else {
-        await api.post("/profile/company", data);
+        const created = await api.post<Company>("/profile/company", data);
+        setCompany(created);
       }
-      flash("Company profile saved");
+      flash("Business profile saved successfully.");
     } catch {
       // handle
     } finally {
@@ -118,7 +136,7 @@ export default function SettingsPage() {
 
   const tabs = [
     { key: "profile" as const, label: "Profile" },
-    { key: "company" as const, label: "Company" },
+    { key: "business" as const, label: "Your Business" },
   ];
 
   const inputClass =
@@ -225,8 +243,8 @@ export default function SettingsPage() {
                 }
                 className={`${inputClass} bg-white`}
               >
-                <option value="GBP">GBP (£)</option>
-                <option value="EUR">EUR (€)</option>
+                <option value="GBP">GBP ({"\u00A3"})</option>
+                <option value="EUR">EUR ({"\u20AC"})</option>
                 <option value="USD">USD ($)</option>
               </select>
             </div>
@@ -243,12 +261,10 @@ export default function SettingsPage() {
         </form>
       )}
 
-      {/* Company Tab */}
-      {activeTab === "company" && (
-        <form
-          onSubmit={saveCompany}
-          className="space-y-6"
-        >
+      {/* Your Business Tab */}
+      {activeTab === "business" && (
+        <form onSubmit={saveCompany} className="space-y-6">
+          {/* Business Information */}
           <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] space-y-5">
             <h2 className="text-base font-semibold text-text-primary">
               Business Information
@@ -256,7 +272,7 @@ export default function SettingsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-1">
-                  Company name *
+                  Business name *
                 </label>
                 <input
                   type="text"
@@ -276,13 +292,16 @@ export default function SettingsPage() {
                   type="text"
                   value={companyForm.legal_name}
                   onChange={(e) =>
-                    setCompanyForm((f) => ({ ...f, legal_name: e.target.value }))
+                    setCompanyForm((f) => ({
+                      ...f,
+                      legal_name: e.target.value,
+                    }))
                   }
                   className={inputClass}
                 />
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-1">
                   VAT number
@@ -291,11 +310,29 @@ export default function SettingsPage() {
                   type="text"
                   value={companyForm.vat_number}
                   onChange={(e) =>
-                    setCompanyForm((f) => ({ ...f, vat_number: e.target.value }))
+                    setCompanyForm((f) => ({
+                      ...f,
+                      vat_number: e.target.value,
+                    }))
                   }
                   className={inputClass}
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-1">
+                  Tax ID
+                </label>
+                <input
+                  type="text"
+                  value={companyForm.tax_id}
+                  onChange={(e) =>
+                    setCompanyForm((f) => ({ ...f, tax_id: e.target.value }))
+                  }
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-1">
                   Email
@@ -322,6 +359,20 @@ export default function SettingsPage() {
                   className={inputClass}
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-1">
+                  Website
+                </label>
+                <input
+                  type="text"
+                  value={companyForm.website}
+                  onChange={(e) =>
+                    setCompanyForm((f) => ({ ...f, website: e.target.value }))
+                  }
+                  placeholder="https://"
+                  className={inputClass}
+                />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
@@ -340,40 +391,58 @@ export default function SettingsPage() {
               />
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <input
-                type="text"
-                placeholder="City"
-                value={companyForm.city}
-                onChange={(e) =>
-                  setCompanyForm((f) => ({ ...f, city: e.target.value }))
-                }
-                className={inputClass}
-              />
-              <input
-                type="text"
-                placeholder="Postcode"
-                value={companyForm.postcode}
-                onChange={(e) =>
-                  setCompanyForm((f) => ({ ...f, postcode: e.target.value }))
-                }
-                className={inputClass}
-              />
-              <input
-                type="text"
-                placeholder="Country"
-                value={companyForm.country}
-                onChange={(e) =>
-                  setCompanyForm((f) => ({ ...f, country: e.target.value }))
-                }
-                className={inputClass}
-              />
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-1">
+                  City
+                </label>
+                <input
+                  type="text"
+                  value={companyForm.city}
+                  onChange={(e) =>
+                    setCompanyForm((f) => ({ ...f, city: e.target.value }))
+                  }
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-1">
+                  Postcode
+                </label>
+                <input
+                  type="text"
+                  value={companyForm.postcode}
+                  onChange={(e) =>
+                    setCompanyForm((f) => ({ ...f, postcode: e.target.value }))
+                  }
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-1">
+                  Country
+                </label>
+                <input
+                  type="text"
+                  value={companyForm.country}
+                  onChange={(e) =>
+                    setCompanyForm((f) => ({ ...f, country: e.target.value }))
+                  }
+                  className={inputClass}
+                />
+              </div>
             </div>
           </div>
 
+          {/* Default Invoice Settings */}
           <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] space-y-5">
-            <h2 className="text-base font-semibold text-text-primary">
-              Invoice Settings
-            </h2>
+            <div>
+              <h2 className="text-base font-semibold text-text-primary">
+                Default Invoice Settings
+              </h2>
+              <p className="mt-1 text-xs text-text-secondary">
+                These are defaults. You can override per client.
+              </p>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-1">
@@ -408,6 +477,43 @@ export default function SettingsPage() {
                 />
               </div>
             </div>
+
+            {/* Year in invoice number toggle */}
+            <div className="flex items-start gap-3">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={companyForm.use_year_in_number}
+                onClick={() =>
+                  setCompanyForm((f) => ({
+                    ...f,
+                    use_year_in_number: !f.use_year_in_number,
+                  }))
+                }
+                className={`relative mt-0.5 inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  companyForm.use_year_in_number
+                    ? "bg-petrol-dark"
+                    : "bg-gray-300"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    companyForm.use_year_in_number
+                      ? "translate-x-5"
+                      : "translate-x-0"
+                  }`}
+                />
+              </button>
+              <div>
+                <p className="text-sm font-medium text-text-primary">
+                  Include year in invoice numbers
+                </p>
+                <p className="text-xs text-text-secondary mt-0.5">
+                  e.g. INV-26-00001 instead of INV-00001
+                </p>
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
                 Default invoice notes
@@ -420,34 +526,83 @@ export default function SettingsPage() {
                     default_notes: e.target.value,
                   }))
                 }
-                rows={2}
+                rows={3}
                 className={`${inputClass} resize-none`}
               />
             </div>
           </div>
 
+          {/* Bank Details */}
           <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] space-y-5">
             <h2 className="text-base font-semibold text-text-primary">
               Bank Details
             </h2>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">Bank name</label>
-                <input type="text" value={companyForm.bank_name} onChange={(e) => setCompanyForm((f) => ({ ...f, bank_name: e.target.value }))} className={inputClass} />
+                <label className="block text-sm font-medium text-text-primary mb-1">
+                  Bank name
+                </label>
+                <input
+                  type="text"
+                  value={companyForm.bank_name}
+                  onChange={(e) =>
+                    setCompanyForm((f) => ({
+                      ...f,
+                      bank_name: e.target.value,
+                    }))
+                  }
+                  className={inputClass}
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">Account name</label>
-                <input type="text" value={companyForm.bank_account_name} onChange={(e) => setCompanyForm((f) => ({ ...f, bank_account_name: e.target.value }))} className={inputClass} />
+                <label className="block text-sm font-medium text-text-primary mb-1">
+                  Account name
+                </label>
+                <input
+                  type="text"
+                  value={companyForm.bank_account_name}
+                  onChange={(e) =>
+                    setCompanyForm((f) => ({
+                      ...f,
+                      bank_account_name: e.target.value,
+                    }))
+                  }
+                  className={inputClass}
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">Account number</label>
-                <input type="text" value={companyForm.bank_account_number} onChange={(e) => setCompanyForm((f) => ({ ...f, bank_account_number: e.target.value }))} className={inputClass} />
+                <label className="block text-sm font-medium text-text-primary mb-1">
+                  Account number
+                </label>
+                <input
+                  type="text"
+                  value={companyForm.bank_account_number}
+                  onChange={(e) =>
+                    setCompanyForm((f) => ({
+                      ...f,
+                      bank_account_number: e.target.value,
+                    }))
+                  }
+                  className={inputClass}
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">Sort code</label>
-                <input type="text" value={companyForm.bank_sort_code} onChange={(e) => setCompanyForm((f) => ({ ...f, bank_sort_code: e.target.value }))} className={inputClass} />
+                <label className="block text-sm font-medium text-text-primary mb-1">
+                  Sort code
+                </label>
+                <input
+                  type="text"
+                  value={companyForm.bank_sort_code}
+                  onChange={(e) =>
+                    setCompanyForm((f) => ({
+                      ...f,
+                      bank_sort_code: e.target.value,
+                    }))
+                  }
+                  className={inputClass}
+                />
               </div>
             </div>
           </div>
@@ -458,7 +613,7 @@ export default function SettingsPage() {
               disabled={saving}
               className="rounded-[var(--radius-button)] bg-petrol-dark px-5 py-2.5 text-sm font-semibold text-white hover:bg-petrol-mid disabled:opacity-50 transition-colors"
             >
-              {saving ? "Saving..." : "Save Company Profile"}
+              {saving ? "Saving..." : "Save Business Profile"}
             </button>
           </div>
         </form>
