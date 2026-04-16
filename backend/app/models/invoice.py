@@ -92,6 +92,9 @@ class Invoice(Base):
     terms: Mapped[str | None] = mapped_column(Text, nullable=True)
     footer: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # PDF template: "classic" | "minimal" | "bold"
+    pdf_template: Mapped[str] = mapped_column(String(50), default="classic")
+
     # Email tracking
     sent_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

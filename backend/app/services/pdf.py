@@ -399,6 +399,607 @@ def _build_html(invoice, client, company) -> str:
 </html>"""
 
 
+def _build_html_minimal(invoice, client, company) -> str:
+    """Minimal template: clean typography, no colored backgrounds, thin lines."""
+    currency = getattr(invoice, "currency", "GBP") or "GBP"
+    items = getattr(invoice, "items", []) or []
+
+    company_html = _build_company_html(company)
+    client_html = _build_client_html(client)
+    items_rows = _build_items_rows(items, currency)
+    totals_html = _build_totals_html(invoice, currency)
+    bank_html = _build_bank_details_html(company)
+    paid_stamp = _build_paid_stamp(invoice)
+
+    notes_html = ""
+    if getattr(invoice, "notes", None):
+        notes_html = (
+            '<div class="section">'
+            '<div class="section-label">Notes</div>'
+            f'<div class="section-body">{_esc(invoice.notes)}</div>'
+            "</div>"
+        )
+
+    terms_html = ""
+    if getattr(invoice, "terms", None):
+        terms_html = (
+            '<div class="section">'
+            '<div class="section-label">Terms &amp; Conditions</div>'
+            f'<div class="section-body">{_esc(invoice.terms)}</div>'
+            "</div>"
+        )
+
+    payment_html = ""
+    payment_method = getattr(invoice, "payment_method", None)
+    payment_date = getattr(invoice, "payment_date", None)
+    if payment_method:
+        pm_str = payment_method.value if hasattr(payment_method, "value") else str(payment_method)
+        payment_html += f'<div class="meta-line">Payment Method: {_esc(pm_str)}</div>'
+    if payment_date:
+        payment_html += f'<div class="meta-line">Payment Date: {_format_date(payment_date)}</div>'
+
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<style>
+    @page {{
+        size: A4;
+        margin: 25mm 20mm 20mm 20mm;
+    }}
+    body {{
+        font-family: Helvetica, Arial, sans-serif;
+        font-size: 12px;
+        color: #1B263B;
+        line-height: 1.6;
+        margin: 0;
+        padding: 0;
+    }}
+    .container {{ position: relative; }}
+    .top-bar {{
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #1B263B;
+        margin-bottom: 30px;
+    }}
+    .company-name {{
+        font-size: 22px;
+        font-weight: bold;
+        color: #1B263B;
+    }}
+    .company-sub {{
+        font-size: 11px;
+        color: #5C677D;
+        margin-top: 4px;
+    }}
+    .invoice-title {{
+        font-size: 36px;
+        font-weight: 300;
+        color: #5C677D;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+    }}
+    .meta-grid {{
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 35px;
+    }}
+    .meta-block {{
+        min-width: 45%;
+    }}
+    .meta-label {{
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: #5C677D;
+        margin-bottom: 6px;
+        font-weight: bold;
+    }}
+    .meta-value {{
+        font-size: 12px;
+        color: #1B263B;
+        line-height: 1.7;
+    }}
+    .meta-row {{
+        display: flex;
+        gap: 40px;
+        margin-bottom: 6px;
+    }}
+    .meta-item {{
+        min-width: 120px;
+    }}
+    .meta-item .meta-label {{ margin-bottom: 2px; }}
+    table.items {{
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 10px;
+    }}
+    table.items thead th {{
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #5C677D;
+        font-weight: bold;
+        padding: 8px 0;
+        border-bottom: 1px solid #1B263B;
+        text-align: left;
+    }}
+    table.items thead th.right {{ text-align: right; }}
+    table.items thead th.center {{ text-align: center; }}
+    table.items tbody td {{
+        padding: 10px 0;
+        border-bottom: 1px solid #e8ecef;
+        font-size: 12px;
+        color: #1B263B;
+    }}
+    .totals-wrapper {{
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 10px;
+    }}
+    table.totals {{ font-size: 12px; }}
+    table.totals td {{ padding: 4px 0 4px 40px; }}
+    table.totals td:last-child {{ text-align: right; }}
+    .section {{
+        margin-top: 25px;
+    }}
+    .section-label {{
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #5C677D;
+        font-weight: bold;
+        margin-bottom: 4px;
+    }}
+    .section-body {{
+        font-size: 11px;
+        color: #5C677D;
+    }}
+    .meta-line {{
+        font-size: 11px;
+        color: #5C677D;
+        margin-top: 4px;
+    }}
+    .footer {{
+        margin-top: 50px;
+        padding-top: 12px;
+        border-top: 1px solid #e8ecef;
+        text-align: center;
+        font-size: 9px;
+        color: #5C677D;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+    }}
+</style>
+</head>
+<body>
+<div class="container">
+    {paid_stamp}
+
+    <div class="top-bar">
+        <div>
+            <div class="company-name">{_esc(getattr(company, "legal_name", None) or getattr(company, "name", "") if company else "")}</div>
+            <div class="company-sub">{_esc(getattr(company, "email", "") if company else "")}</div>
+        </div>
+        <div class="invoice-title">Invoice</div>
+    </div>
+
+    <div class="meta-grid">
+        <div class="meta-block">
+            <div class="meta-label">Bill To</div>
+            <div class="meta-value">{client_html}</div>
+        </div>
+        <div>
+            <div class="meta-row">
+                <div class="meta-item">
+                    <div class="meta-label">Invoice No.</div>
+                    <div class="meta-value">{_esc(invoice.invoice_number)}</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">Issue Date</div>
+                    <div class="meta-value">{_format_date(getattr(invoice, "issue_date", None))}</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">Due Date</div>
+                    <div class="meta-value">{_format_date(getattr(invoice, "due_date", None))}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <table class="items">
+        <thead>
+            <tr>
+                <th style="width:50%;">Description</th>
+                <th class="center" style="width:15%;">Qty</th>
+                <th class="right" style="width:17%;">Unit Price</th>
+                <th class="right" style="width:18%;">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {items_rows}
+        </tbody>
+    </table>
+
+    <div class="totals-wrapper">
+        <table class="totals">
+            {totals_html}
+        </table>
+    </div>
+
+    {payment_html}
+    {bank_html}
+    {notes_html}
+    {terms_html}
+
+    <div class="footer">Generated by MYNVOICE &mdash; Your business. Your invoices.</div>
+</div>
+</body>
+</html>"""
+
+
+def _build_html_bold(invoice, client, company) -> str:
+    """Bold/Corporate template: full-width header, accent boxes, strong typography."""
+    currency = getattr(invoice, "currency", "GBP") or "GBP"
+    items = getattr(invoice, "items", []) or []
+
+    brand = getattr(company, "brand_colour", None) if company else None
+    accent = brand if brand else "#0F4C5C"
+
+    items_rows = _build_items_rows(items, currency)
+    bank_html = _build_bank_details_html(company)
+    paid_stamp = _build_paid_stamp(invoice)
+
+    # Company details for header (inline, no <br/> based helper)
+    company_name = _esc(getattr(company, "legal_name", None) or getattr(company, "name", "") if company else "")
+    company_address_parts = []
+    if company:
+        for f in ("address_line1", "city", "postcode"):
+            v = getattr(company, f, None)
+            if v:
+                company_address_parts.append(_esc(v))
+        if getattr(company, "email", None):
+            company_address_parts.append(_esc(company.email))
+        if getattr(company, "vat_number", None):
+            company_address_parts.append(f"VAT: {_esc(company.vat_number)}")
+    company_sub = "  &bull;  ".join(company_address_parts)
+
+    logo_html = _build_logo_html(company)
+
+    # Client details
+    client_lines = []
+    if client:
+        if getattr(client, "company_name", None):
+            client_lines.append(f"<strong>{_esc(client.company_name)}</strong>")
+        if getattr(client, "contact_person", None):
+            client_lines.append(_esc(client.contact_person))
+        for f in ("address_line1", "city", "postcode"):
+            v = getattr(client, f, None)
+            if v:
+                client_lines.append(_esc(v))
+        if getattr(client, "email", None):
+            client_lines.append(_esc(client.email))
+    client_html = "<br/>".join(client_lines) if client_lines else "<em>No client specified</em>"
+
+    # Totals rows
+    totals_rows = []
+    totals_rows.append(
+        f'<tr><td>Subtotal</td><td>{fmt_currency(invoice.subtotal, currency)}</td></tr>'
+    )
+    tax_rate = getattr(invoice, "tax_rate", None)
+    tax_amount = getattr(invoice, "tax_amount", None)
+    if tax_amount and float(tax_amount) > 0:
+        label = f"Tax ({tax_rate}%)" if tax_rate else "Tax"
+        totals_rows.append(f'<tr><td>{label}</td><td>{fmt_currency(tax_amount, currency)}</td></tr>')
+    discount = getattr(invoice, "discount_amount", None)
+    if discount and float(discount) > 0:
+        totals_rows.append(f'<tr><td>Discount</td><td>-{fmt_currency(discount, currency)}</td></tr>')
+    amount_paid = getattr(invoice, "amount_paid", None)
+    if amount_paid and float(amount_paid) > 0:
+        totals_rows.append(f'<tr><td>Amount Paid</td><td>{fmt_currency(amount_paid, currency)}</td></tr>')
+    totals_inner = "\n".join(totals_rows)
+
+    balance_due = getattr(invoice, "balance_due", None)
+    balance_html = ""
+    if balance_due is not None:
+        balance_html = f"""
+        <div class="balance-box">
+            <div class="balance-label">Balance Due</div>
+            <div class="balance-amount">{fmt_currency(balance_due, currency)}</div>
+        </div>"""
+
+    notes_html = ""
+    if getattr(invoice, "notes", None):
+        notes_html = f"""
+        <div class="info-block">
+            <div class="info-label">Notes</div>
+            <div class="info-body">{_esc(invoice.notes)}</div>
+        </div>"""
+
+    terms_html = ""
+    if getattr(invoice, "terms", None):
+        terms_html = f"""
+        <div class="info-block">
+            <div class="info-label">Terms &amp; Conditions</div>
+            <div class="info-body">{_esc(invoice.terms)}</div>
+        </div>"""
+
+    payment_html = ""
+    payment_method = getattr(invoice, "payment_method", None)
+    payment_date = getattr(invoice, "payment_date", None)
+    if payment_method or payment_date:
+        pm_str = ""
+        if payment_method:
+            pm_str = payment_method.value if hasattr(payment_method, "value") else str(payment_method)
+        payment_html = f"""
+        <div class="info-block">
+            <div class="info-label">Payment Details</div>
+            {"<div class='info-body'>Method: " + _esc(pm_str) + "</div>" if pm_str else ""}
+            {"<div class='info-body'>Date: " + _format_date(payment_date) + "</div>" if payment_date else ""}
+        </div>"""
+
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<style>
+    @page {{
+        size: A4;
+        margin: 0 0 15mm 0;
+    }}
+    body {{
+        font-family: Helvetica, Arial, sans-serif;
+        font-size: 12px;
+        color: #1B263B;
+        line-height: 1.5;
+        margin: 0;
+        padding: 0;
+    }}
+    .container {{ position: relative; }}
+
+    /* Full-width header */
+    .header {{
+        background: {accent};
+        color: white;
+        padding: 30px 20mm;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }}
+    .header-company {{
+        max-width: 55%;
+    }}
+    .header-company-name {{
+        font-size: 22px;
+        font-weight: bold;
+        margin-bottom: 4px;
+    }}
+    .header-company-sub {{
+        font-size: 10px;
+        opacity: 0.75;
+    }}
+    .header-invoice {{
+        text-align: right;
+    }}
+    .header-invoice-title {{
+        font-size: 30px;
+        font-weight: bold;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        opacity: 0.9;
+    }}
+    .header-invoice-number {{
+        font-size: 14px;
+        margin-top: 4px;
+        opacity: 0.85;
+    }}
+
+    /* Body area */
+    .body {{ padding: 30px 20mm 0 20mm; }}
+
+    /* Bill-to + dates row */
+    .info-row {{
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 30px;
+    }}
+    .bill-to-box {{
+        background: #f0f3f5;
+        border-radius: 8px;
+        padding: 16px 20px;
+        min-width: 45%;
+        max-width: 50%;
+        font-size: 12px;
+    }}
+    .bill-to-label {{
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: #5C677D;
+        font-weight: bold;
+        margin-bottom: 8px;
+    }}
+    .dates-col {{
+        text-align: right;
+    }}
+    .date-item {{
+        margin-bottom: 8px;
+    }}
+    .date-label {{
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #5C677D;
+        font-weight: bold;
+        margin-bottom: 2px;
+    }}
+    .date-value {{
+        font-size: 13px;
+        font-weight: bold;
+        color: #1B263B;
+    }}
+
+    /* Items table */
+    table.items {{
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }}
+    table.items thead th {{
+        background: #1B263B;
+        color: white;
+        padding: 10px 12px;
+        font-size: 11px;
+        font-weight: 600;
+        text-align: left;
+        letter-spacing: 0.5px;
+    }}
+    table.items thead th.right {{ text-align: right; }}
+    table.items thead th.center {{ text-align: center; }}
+    table.items thead th:first-child {{ border-radius: 6px 0 0 0; }}
+    table.items thead th:last-child {{ border-radius: 0 6px 0 0; }}
+    table.items tbody td {{
+        padding: 10px 12px;
+        border-bottom: 1px solid #e8ecef;
+        font-size: 12px;
+    }}
+    table.items tbody tr:nth-child(even) {{ background: #f8f9fa; }}
+
+    /* Totals area */
+    .totals-area {{
+        display: flex;
+        justify-content: flex-end;
+        align-items: flex-start;
+        gap: 20px;
+        margin-bottom: 20px;
+    }}
+    table.totals {{
+        font-size: 12px;
+        min-width: 220px;
+    }}
+    table.totals td {{
+        padding: 5px 10px;
+        color: #5C677D;
+    }}
+    table.totals td:last-child {{ text-align: right; color: #1B263B; }}
+    .balance-box {{
+        background: {accent};
+        color: white;
+        border-radius: 8px;
+        padding: 16px 24px;
+        text-align: right;
+        min-width: 160px;
+    }}
+    .balance-label {{
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        opacity: 0.8;
+        margin-bottom: 4px;
+    }}
+    .balance-amount {{
+        font-size: 24px;
+        font-weight: bold;
+    }}
+
+    /* Info blocks */
+    .info-block {{
+        margin-top: 20px;
+        padding: 14px 16px;
+        background: #f8f9fa;
+        border-left: 3px solid {accent};
+        border-radius: 0 6px 6px 0;
+        font-size: 12px;
+    }}
+    .info-label {{
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #5C677D;
+        font-weight: bold;
+        margin-bottom: 4px;
+    }}
+    .info-body {{ color: #5C677D; }}
+
+    .footer {{
+        margin-top: 40px;
+        padding: 12px 20mm 0 20mm;
+        border-top: 1px solid #e8ecef;
+        text-align: center;
+        font-size: 10px;
+        color: #5C677D;
+    }}
+</style>
+</head>
+<body>
+<div class="container">
+    {paid_stamp}
+
+    <div class="header">
+        <div class="header-company">
+            {logo_html}
+            <div class="header-company-name">{company_name}</div>
+            <div class="header-company-sub">{company_sub}</div>
+        </div>
+        <div class="header-invoice">
+            <div class="header-invoice-title">Invoice</div>
+            <div class="header-invoice-number"># {_esc(invoice.invoice_number)}</div>
+        </div>
+    </div>
+
+    <div class="body">
+        <div class="info-row">
+            <div class="bill-to-box">
+                <div class="bill-to-label">Bill To</div>
+                {client_html}
+            </div>
+            <div class="dates-col">
+                <div class="date-item">
+                    <div class="date-label">Issue Date</div>
+                    <div class="date-value">{_format_date(getattr(invoice, "issue_date", None))}</div>
+                </div>
+                <div class="date-item">
+                    <div class="date-label">Due Date</div>
+                    <div class="date-value">{_format_date(getattr(invoice, "due_date", None))}</div>
+                </div>
+            </div>
+        </div>
+
+        <table class="items">
+            <thead>
+                <tr>
+                    <th style="width:50%;">Description</th>
+                    <th class="center" style="width:15%;">Qty</th>
+                    <th class="right" style="width:17%;">Unit Price</th>
+                    <th class="right" style="width:18%;">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {items_rows}
+            </tbody>
+        </table>
+
+        <div class="totals-area">
+            <table class="totals">
+                {totals_inner}
+            </table>
+            {balance_html}
+        </div>
+
+        {payment_html}
+        {bank_html}
+        {notes_html}
+        {terms_html}
+
+        <div class="footer">Generated by MYNVOICE &mdash; Your business. Your invoices.</div>
+    </div>
+</div>
+</body>
+</html>"""
+
+
 async def generate_invoice_pdf(invoice, client, company) -> bytes:
     """Generate a professional PDF for the given invoice.
 
@@ -410,6 +1011,14 @@ async def generate_invoice_pdf(invoice, client, company) -> bytes:
     Returns:
         The PDF document as raw bytes.
     """
-    html_string = _build_html(invoice, client, company)
+    template = getattr(invoice, "pdf_template", "classic") or "classic"
+
+    if template == "minimal":
+        html_string = _build_html_minimal(invoice, client, company)
+    elif template == "bold":
+        html_string = _build_html_bold(invoice, client, company)
+    else:
+        html_string = _build_html(invoice, client, company)
+
     pdf_bytes: bytes = HTML(string=html_string).write_pdf()
     return pdf_bytes

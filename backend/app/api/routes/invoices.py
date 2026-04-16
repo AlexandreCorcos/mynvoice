@@ -152,6 +152,7 @@ async def create_invoice(
         notes=data.notes,
         terms=data.terms,
         footer=data.footer,
+        pdf_template=data.pdf_template,
     )
     invoice.balance_due = total
     db.add(invoice)

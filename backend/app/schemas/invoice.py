@@ -38,6 +38,7 @@ class InvoiceCreate(BaseModel):
     notes: str | None = None
     terms: str | None = None
     footer: str | None = None
+    pdf_template: str = "classic"
     items: list[InvoiceItemCreate] = []
 
 
@@ -52,6 +53,7 @@ class InvoiceUpdate(BaseModel):
     notes: str | None = None
     terms: str | None = None
     footer: str | None = None
+    pdf_template: str | None = None
     items: list[InvoiceItemCreate] | None = None
 
 
@@ -82,6 +84,7 @@ class InvoiceResponse(BaseModel):
     notes: str | None
     terms: str | None
     footer: str | None
+    pdf_template: str
     sent_at: datetime | None
     sent_to_email: str | None
     items: list[InvoiceItemResponse]
