@@ -39,7 +39,7 @@ async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
         last_name=data.last_name,
     )
     db.add(user)
-    await db.flush()
+    await db.commit()
 
     return TokenResponse(
         access_token=create_access_token(str(user.id)),
