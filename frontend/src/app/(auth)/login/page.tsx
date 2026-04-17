@@ -21,11 +21,9 @@ export default function LoginPage() {
       await login(email, password);
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(
-          err.status === 401
-            ? "Invalid email or password"
-            : "Something went wrong. Please try again."
-        );
+        if (err.status === 401) setError("Invalid email or password.");
+        else if (err.status === 403) setError("Please verify your email before logging in. Check your inbox.");
+        else setError("Something went wrong. Please try again.");
       } else {
         setError("Unable to connect to the server.");
       }

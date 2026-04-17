@@ -14,12 +14,6 @@ interface AuthState {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (
-    email: string,
-    password: string,
-    firstName: string,
-    lastName: string
-  ) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -61,23 +55,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await fetchUser();
   };
 
-  const register = async (
-    email: string,
-    password: string,
-    firstName: string,
-    lastName: string
-  ) => {
-    const res = await api.post<TokenResponse>("/auth/register", {
-      email,
-      password,
-      first_name: firstName,
-      last_name: lastName,
-    });
-    localStorage.setItem("access_token", res.access_token);
-    localStorage.setItem("refresh_token", res.refresh_token);
-    await fetchUser();
-  };
-
   const logout = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
@@ -85,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser: fetchUser }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser: fetchUser }}>
       {children}
     </AuthContext.Provider>
   );

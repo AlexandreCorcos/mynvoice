@@ -38,6 +38,14 @@ class User(Base):
     language: Mapped[str] = mapped_column(String(10), default="en-GB")
     currency: Mapped[str] = mapped_column(String(3), default="GBP")
 
+    # Email verification
+    verification_token: Mapped[str | None] = mapped_column(
+        String(128), nullable=True, index=True
+    )
+    verification_token_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)

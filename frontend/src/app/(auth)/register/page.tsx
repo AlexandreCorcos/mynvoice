@@ -2,32 +2,26 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useAuth } from "@/contexts/auth-context";
-import { ApiError } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 
 export default function RegisterPage() {
-  const { register } = useAuth();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-
     try {
-      await register(email, password, firstName, lastName);
+      await api.post("/auth/register", { email, first_name: firstName, last_name: lastName });
+      setDone(true);
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(
-          err.status === 409
-            ? "This email is already registered."
-            : "Something went wrong. Please try again."
-        );
+        setError(err.status === 409 ? "This email is already registered." : "Something went wrong. Please try again.");
       } else {
         setError("Unable to connect to the server.");
       }
@@ -36,32 +30,49 @@ export default function RegisterPage() {
     }
   };
 
+  if (done) {
+    return (
+      <div>
+        <div className="mb-8 flex items-center gap-2 lg:hidden">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-coral font-bold text-white">MV</div>
+          <span className="text-xl font-bold text-text-primary">MYNVOICE</span>
+        </div>
+        <div className="rounded-[var(--radius-card)] bg-green-50 px-6 py-8 text-center">
+          <div className="text-4xl mb-4">✉️</div>
+          <h2 className="text-xl font-bold text-text-primary mb-2">Check your email</h2>
+          <p className="text-sm text-text-secondary">
+            We sent a link to <strong>{email}</strong>.<br />
+            Click it to set your password and activate your account.
+          </p>
+        </div>
+        <p className="mt-6 text-center text-sm text-text-secondary">
+          Wrong email?{" "}
+          <button onClick={() => setDone(false)} className="font-medium text-petrol-mid hover:text-petrol-dark transition-colors">
+            Go back
+          </button>
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="mb-8 flex items-center gap-2 lg:hidden">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-coral font-bold text-white">
-          MV
-        </div>
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-coral font-bold text-white">MV</div>
         <span className="text-xl font-bold text-text-primary">MYNVOICE</span>
       </div>
 
       <h2 className="text-2xl font-bold text-text-primary">Create account</h2>
-      <p className="mt-1.5 text-sm text-text-secondary">
-        Start managing your invoices for free
-      </p>
+      <p className="mt-1.5 text-sm text-text-secondary">Start managing your invoices for free</p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-5">
         {error && (
-          <div className="rounded-[var(--radius-input)] bg-red-50 px-4 py-3 text-sm text-coral-dark">
-            {error}
-          </div>
+          <div className="rounded-[var(--radius-input)] bg-red-50 px-4 py-3 text-sm text-coral-dark">{error}</div>
         )}
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1.5">
-              First name
-            </label>
+            <label className="block text-sm font-medium text-text-primary mb-1.5">First name</label>
             <input
               type="text"
               value={firstName}
@@ -71,9 +82,7 @@ export default function RegisterPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1.5">
-              Last name
-            </label>
+            <label className="block text-sm font-medium text-text-primary mb-1.5">Last name</label>
             <input
               type="text"
               value={lastName}
@@ -85,9 +94,7 @@ export default function RegisterPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-text-primary mb-1.5">
-            Email
-          </label>
+          <label className="block text-sm font-medium text-text-primary mb-1.5">Email</label>
           <input
             type="email"
             value={email}
@@ -98,54 +105,18 @@ export default function RegisterPage() {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-text-primary mb-1.5">
-            Password
-          </label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={8}
-            className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-petrol-mid focus:ring-0 focus:outline-none"
-            placeholder="Min. 8 characters"
-          />
-        </div>
-
         <button
           type="submit"
           disabled={loading}
           className="w-full rounded-[var(--radius-button)] bg-coral py-2.5 text-sm font-semibold text-white transition-colors hover:bg-coral-dark disabled:opacity-50"
         >
-          {loading ? "Creating account..." : "Create account"}
-        </button>
-
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-200" />
-          </div>
-          <div className="relative flex justify-center">
-            <span className="bg-white px-3 text-xs text-text-secondary">
-              or
-            </span>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          className="w-full rounded-[var(--radius-button)] border border-gray-300 bg-white py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-gray-50"
-        >
-          Continue with Google
+          {loading ? "Sending..." : "Continue"}
         </button>
       </form>
 
       <p className="mt-8 text-center text-sm text-text-secondary">
         Already have an account?{" "}
-        <Link
-          href="/login"
-          className="font-medium text-petrol-mid hover:text-petrol-dark transition-colors"
-        >
+        <Link href="/login" className="font-medium text-petrol-mid hover:text-petrol-dark transition-colors">
           Sign in
         </Link>
       </p>
