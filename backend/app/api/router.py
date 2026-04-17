@@ -11,6 +11,7 @@ from app.api.routes import (
     profile,
     admin,
     reports,
+    sysctrl,
 )
 
 api_router = APIRouter()
@@ -25,3 +26,4 @@ api_router.include_router(expenses.router, prefix="/expenses", tags=["Expenses"]
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
 api_router.include_router(admin.router, prefix="/admin", tags=["Admin"])
 api_router.include_router(reports.router, prefix="/reports", tags=["Reports"])
+api_router.include_router(sysctrl.router, prefix="/sys", tags=["Sys"])
