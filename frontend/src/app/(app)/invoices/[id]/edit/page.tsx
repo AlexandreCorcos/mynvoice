@@ -51,6 +51,7 @@ export default function EditInvoicePage() {
     currency: "GBP",
     notes: "",
     terms: "",
+    pdf_template: "classic",
   });
 
   const [items, setItems] = useState<ItemForm[]>([newItem()]);
@@ -85,6 +86,7 @@ export default function EditInvoicePage() {
           currency: invoiceData.currency,
           notes: invoiceData.notes || "",
           terms: invoiceData.terms || "",
+          pdf_template: invoiceData.pdf_template || "classic",
         });
 
         // Pre-fill line items
@@ -186,6 +188,7 @@ export default function EditInvoicePage() {
         currency: form.currency,
         notes: form.notes || null,
         terms: form.terms || null,
+        pdf_template: form.pdf_template,
         items: items
           .filter((item) => item.description && item.unit_price)
           .map((item, index) => ({

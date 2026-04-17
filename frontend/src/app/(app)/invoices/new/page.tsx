@@ -46,6 +46,7 @@ export default function NewInvoicePage() {
     currency: user?.currency || "GBP",
     notes: "",
     terms: "",
+    pdf_template: "classic",
   });
 
   const [items, setItems] = useState<ItemForm[]>([newItem()]);
@@ -130,6 +131,7 @@ export default function NewInvoicePage() {
         currency: form.currency,
         notes: form.notes || null,
         terms: form.terms || null,
+        pdf_template: form.pdf_template,
         items: items
           .filter((item) => item.description && item.unit_price)
           .map((item, index) => ({
@@ -236,6 +238,72 @@ export default function NewInvoicePage() {
                 className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2.5 text-sm focus:border-petrol-mid focus:outline-none"
               />
             </div>
+          </div>
+        </div>
+
+        {/* Template selector */}
+        <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)]">
+          <h2 className="text-base font-semibold text-text-primary mb-1">
+            Invoice Template
+          </h2>
+          <p className="text-xs text-text-secondary mb-4">Choose how your PDF will look</p>
+          <div className="grid grid-cols-3 gap-3">
+            {(["classic", "minimal", "bold"] as const).map((tpl) => {
+              const labels: Record<string, { title: string; desc: string }> = {
+                classic: { title: "Classic", desc: "Petrol header, zebra rows" },
+                minimal: { title: "Minimal", desc: "Clean lines, white space" },
+                bold: { title: "Bold", desc: "Full header, accent boxes" },
+              };
+              const selected = form.pdf_template === tpl;
+              return (
+                <button
+                  key={tpl}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, pdf_template: tpl }))}
+                  className={`rounded-xl border-2 p-4 text-left transition-all ${
+                    selected
+                      ? "border-petrol-dark bg-petrol-dark/5"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  {/* Mini preview */}
+                  <div className="mb-3 rounded-lg overflow-hidden border border-gray-100 bg-gray-50 h-16 flex flex-col gap-1 p-2">
+                    {tpl === "classic" && (
+                      <>
+                        <div className="h-2 w-full rounded bg-petrol-dark/80" />
+                        <div className="h-1.5 w-3/4 rounded bg-gray-300" />
+                        <div className="h-1.5 w-1/2 rounded bg-gray-200" />
+                        <div className="h-1.5 w-2/3 rounded bg-gray-200" />
+                      </>
+                    )}
+                    {tpl === "minimal" && (
+                      <>
+                        <div className="flex justify-between items-center">
+                          <div className="h-1.5 w-1/3 rounded bg-gray-800" />
+                          <div className="h-1.5 w-1/4 rounded bg-gray-300" />
+                        </div>
+                        <div className="h-px w-full bg-gray-800 mt-0.5" />
+                        <div className="h-1.5 w-2/3 rounded bg-gray-200 mt-0.5" />
+                        <div className="h-1.5 w-1/2 rounded bg-gray-200" />
+                      </>
+                    )}
+                    {tpl === "bold" && (
+                      <>
+                        <div className="h-4 w-full rounded bg-petrol-dark/80 flex items-center px-1.5">
+                          <div className="h-1 w-1/3 rounded bg-white/60" />
+                        </div>
+                        <div className="h-1.5 w-3/4 rounded bg-gray-300" />
+                        <div className="h-1.5 w-1/2 rounded bg-gray-200" />
+                      </>
+                    )}
+                  </div>
+                  <p className={`text-sm font-semibold ${selected ? "text-petrol-dark" : "text-text-primary"}`}>
+                    {labels[tpl].title}
+                  </p>
+                  <p className="text-xs text-text-secondary mt-0.5">{labels[tpl].desc}</p>
+                </button>
+              );
+            })}
           </div>
         </div>
 

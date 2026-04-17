@@ -128,6 +128,7 @@ export interface Invoice {
   notes: string | null;
   terms: string | null;
   footer: string | null;
+  pdf_template: string;
   sent_at: string | null;
   sent_to_email: string | null;
   items: InvoiceItem[];
