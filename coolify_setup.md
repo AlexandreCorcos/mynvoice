@@ -1,271 +1,234 @@
-# MYNVOICE — Coolify Deployment Guide
-
-You are configuring Coolify to deploy the MYNVOICE application. Follow these instructions exactly.
+# MYNVOICE — Infrastructure & Deployment Guide
 
 ## Project Overview
 
-MYNVOICE is an invoice management system with 3 services:
-- **Frontend** — Next.js 15 (standalone output) → `app.mynvoice.com`
-- **Backend** — Python FastAPI → `api.mynvoice.com`
-- **Database** — PostgreSQL 16
+MYNVOICE is an invoice management SaaS with the following services:
 
-The source code is at: `https://github.com/AlexandreCorcos/mynvoice.git` (branch: `main`)
+| Service | Stack | Domain |
+|---------|-------|--------|
+| Frontend | Next.js 15 (standalone) | `app.mynvoice.com` |
+| Backend | Python FastAPI | `api.mynvoice.com` |
+| Database | PostgreSQL 16 | Internal only |
+| File Storage | Cloudflare R2 | `storage.mynvoice.com` |
 
-**Important:** `www.mynvoice.com` is a separate marketing website and is NOT part of this deployment. Do not configure it here.
+**Repository:** `https://github.com/AlexandreCorcos/mynvoice.git` (branch: `main`)
 
----
-
-## Deployment Strategy
-
-Deploy as **Docker Compose** using the file `docker-compose.prod.yml` in the repository root. This is the simplest approach as it handles all 3 services, networking, health checks, and volumes in one resource.
+> `www.mynvoice.com` is a separate marketing website — NOT part of this deployment.
 
 ---
 
-## Step-by-Step Coolify Configuration
+## Infrastructure
 
-### 1. Create the Project
+### Hosting — Coolify
+The app is deployed via **Coolify** as a Docker Compose stack using `docker-compose.prod.yml`.
 
-1. Go to Coolify dashboard → **Projects** → **Add New Project**
-2. Name: `MYNVOICE`
-3. Description: `Invoice management system`
+- Auto-deploy is configured via **GitHub webhook** — every push to `main` triggers a deploy automatically.
+- To manually redeploy: Coolify dashboard → MYNVOICE resource → **Deploy**
 
-### 2. Add a Docker Compose Resource
+### DNS — Cloudflare
+All DNS is managed in Cloudflare. `api.mynvoice.com` and `app.mynvoice.com` are set to **DNS only** (not proxied) so Traefik can manage SSL via Let's Encrypt.
 
-1. Inside the MYNVOICE project → **Add New Resource**
-2. Select: **Docker Compose**
-3. Source: **GitHub (Public Repository)**
-4. Repository URL: `https://github.com/AlexandreCorcos/mynvoice.git`
-5. Branch: `main`
-6. Docker Compose file path: `docker-compose.prod.yml`
+| Type | Name | Points to | Proxy |
+|------|------|-----------|-------|
+| A | `app` | Server IP | DNS only |
+| A | `api` | Server IP | DNS only |
+| CNAME | `storage` | R2 bucket | Proxied (Cloudflare) |
 
-### 3. Configure Environment Variables
+### File Storage — Cloudflare R2
+Files (company logos, etc.) are stored in Cloudflare R2 — not on the server disk.
 
-In the resource's **Environment Variables** section, add ALL of the following:
+| Setting | Value |
+|---------|-------|
+| Bucket name | `mynvoice` |
+| Region | Western Europe (WEUR) |
+| S3 API endpoint | `https://3e5e419d2a72c57dd4071df3f1f4cde4.r2.cloudflarestorage.com` |
+| Account ID | `3e5e419d2a72c57dd4071df3f1f4cde4` |
+| Public URL | `https://storage.mynvoice.com` |
+
+> **Credentials:** Stored in Coolify env vars (`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`). Never commit to the repo.
+
+### Email — SendGrid (SMTP)
+Transactional emails (email verification, invoice sending) use SendGrid via SMTP.
+
+| Setting | Value |
+|---------|-------|
+| SMTP Host | `smtp.sendgrid.net` |
+| SMTP Port | `587` |
+| SMTP User | `apikey` (literal string) |
+| From email | `invoice@mynvoice.com` |
+
+> **API Key:** Stored in Coolify as `SMTP_PASSWORD`. Never commit to the repo.
+
+---
+
+## Coolify Environment Variables
+
+All variables below must be set in the Coolify resource's **Environment Variables** section:
 
 ```env
 # Database
 DB_USER=mynvoice
-DB_PASSWORD=<GENERATE: openssl rand -base64 32>
+DB_PASSWORD=<strong random password>
 DB_NAME=mynvoice
 
-# Backend Auth (CRITICAL - must be strong and unique)
-SECRET_KEY=<GENERATE: openssl rand -hex 64>
+# Backend Auth
+SECRET_KEY=<strong random secret — openssl rand -hex 64>
 
-# Email/SMTP (configure if you want invoice emails to work)
-SMTP_HOST=
+# Email (SendGrid)
+SMTP_HOST=smtp.sendgrid.net
 SMTP_PORT=587
-SMTP_USER=
-SMTP_PASSWORD=
-SMTP_FROM_EMAIL=noreply@mynvoice.com
+SMTP_USER=apikey
+SMTP_PASSWORD=<SendGrid API Key>
+SMTP_FROM_EMAIL=invoice@mynvoice.com
+SMTP_FROM_NAME=MYNVOICE
+
+# Cloudflare R2
+R2_ACCOUNT_ID=3e5e419d2a72c57dd4071df3f1f4cde4
+R2_ACCESS_KEY_ID=<R2 Access Key ID>
+R2_SECRET_ACCESS_KEY=<R2 Secret Access Key>
+R2_BUCKET=mynvoice
+R2_PUBLIC_URL=https://storage.mynvoice.com
 ```
-
-**How to generate secure values:**
-- `DB_PASSWORD`: Run `openssl rand -base64 32` on the server
-- `SECRET_KEY`: Run `openssl rand -hex 64` on the server
-
-### 4. Configure Domains
-
-Coolify needs to know which domains map to which services. In the **Docker Compose** resource settings:
-
-**For the `backend` service:**
-- Domain: `api.mynvoice.com`
-- Port: `8000`
-
-**For the `frontend` service:**
-- Domain: `app.mynvoice.com`
-- Port: `3000`
-
-**For the `db` service:**
-- No domain needed (internal only)
-- Do NOT expose the database to the internet
-
-The Traefik labels in docker-compose.prod.yml already define routing rules. If Coolify manages Traefik itself, you may need to either:
-- (a) Let Coolify's built-in proxy handle it (preferred — set domains in the Coolify UI and remove the `labels:` sections from docker-compose.prod.yml), OR
-- (b) Use the labels as-is if Coolify uses raw Traefik
-
-**Recommended:** Let Coolify manage proxy/SSL. In that case, the labels in the compose file are informational and Coolify overrides them with its own proxy config.
-
-### 5. Configure SSL
-
-- Enable SSL for both `app.mynvoice.com` and `api.mynvoice.com`
-- Coolify handles Let's Encrypt automatically
-- If using Cloudflare proxy: set SSL/TLS mode to **Full (Strict)** in Cloudflare
-
-### 6. Configure Persistent Volumes
-
-The compose file defines two named volumes that MUST persist across deployments:
-
-| Volume | Purpose | Critical? |
-|--------|---------|-----------|
-| `postgres_data` | Database files | YES — losing this loses all data |
-| `backend_uploads` | Uploaded logos and files | YES — losing this loses uploaded files |
-
-Ensure Coolify is configured to **not delete volumes** on redeployment.
-
-### 7. Build Arguments
-
-The frontend requires a build argument to know where the API is:
-
-```
-NEXT_PUBLIC_API_URL=https://api.mynvoice.com/api/v1
-```
-
-This is already set in `docker-compose.prod.yml` under `frontend.build.args`. If Coolify requires you to set build args separately, add it in the frontend service build settings.
-
-### 8. Deploy
-
-Click **Deploy**. The deployment order will be:
-1. `db` starts first (PostgreSQL)
-2. `backend` waits for `db` health check, then runs migrations and starts FastAPI
-3. `frontend` starts after backend
-
-First deploy takes ~3-5 minutes (building Docker images). Subsequent deploys are faster due to layer caching.
 
 ---
 
-## DNS Configuration Required
+## First Deploy Setup
 
-Before deploying, ensure these DNS records exist (in your domain registrar or Cloudflare):
+### 1. Create the Project in Coolify
+1. **Projects** → **Add New Project** → Name: `MYNVOICE`
+2. **Add New Resource** → **Docker Compose**
+3. Source: GitHub → `https://github.com/AlexandreCorcos/mynvoice.git` → branch `main`
+4. Docker Compose file: `docker-compose.prod.yml`
 
-| Type | Name | Value |
-|------|------|-------|
-| A | `app` | `<SERVER_IP>` |
-| A | `api` | `<SERVER_IP>` |
+### 2. Set Environment Variables
+Add all variables from the section above.
 
-Do NOT create DNS for `www` — that's managed separately.
+### 3. Configure Domains
+- `backend` service → domain `api.mynvoice.com`, port `8000`
+- `frontend` service → domain `app.mynvoice.com`, port `3000`
+
+### 4. Configure Webhook (auto-deploy)
+In the Coolify resource → **Webhooks** → copy the webhook URL → add to GitHub:
+- `github.com/AlexandreCorcos/mynvoice` → Settings → Webhooks → Add webhook
+- Content type: `application/json` — Event: **Just the push event**
+
+### 5. Deploy
+Click **Deploy**. First deploy takes ~5 minutes. Subsequent deploys are faster due to layer caching.
+
+The backend entrypoint automatically runs `alembic upgrade head` on startup — migrations apply automatically.
 
 ---
 
-## Post-Deployment Verification
+## Creating the First Admin User
 
-### Check all services are running:
-```bash
-# SSH into server, then:
-docker ps | grep mynvoice
-# Should show 3 containers: mynvoice-db, mynvoice-backend, mynvoice-frontend
-```
+After first deploy, create and promote the admin user:
 
-### Test the API:
 ```bash
-curl https://api.mynvoice.com/health
-# Expected: {"status":"healthy","app":"MYNVOICE"}
-```
-
-### Test the frontend:
-```bash
-curl -I https://app.mynvoice.com
-# Expected: HTTP/2 200
-```
-
-### Create the first admin user:
-```bash
-# Register
+# 1. Register (new flow — no password at registration, email verification required)
 curl -X POST https://api.mynvoice.com/api/v1/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@mynvoice.com","password":"CHOOSE_A_STRONG_PASSWORD","first_name":"Admin","last_name":"User"}'
+  -d '{"email":"admin@mynvoice.com","first_name":"Admin","last_name":"User"}'
 
-# Promote to admin
-docker exec mynvoice-db psql -U mynvoice -c "UPDATE users SET is_admin = true WHERE email = 'admin@mynvoice.com';"
+# 2. Check the email inbox for the verification link, set the password
+
+# 3. Promote to admin via database
+docker exec mynvoice-db psql -U mynvoice -c \
+  "UPDATE users SET is_admin = true WHERE email = 'admin@mynvoice.com';"
 ```
 
 ---
 
-## Architecture Details
+## Admin Panels
 
-### Services & Ports (all internal, Traefik/Coolify proxy handles external access)
+### In-app Admin (`/admin`)
+Available to users with `is_admin = true`. Shows metrics, donation progress. Requires login.
 
-| Service | Container Name | Internal Port | External Domain |
-|---------|---------------|---------------|-----------------|
-| PostgreSQL 16 | mynvoice-db | 5432 | None (internal) |
-| FastAPI Backend | mynvoice-backend | 8000 | api.mynvoice.com |
-| Next.js Frontend | mynvoice-frontend | 3000 | app.mynvoice.com |
+### System Control Panel (`/sys/ctrl`)
+Secret panel at `https://app.mynvoice.com/sys/ctrl`.
 
-### Backend Details
-- **Image base:** python:3.13-slim
-- **Framework:** FastAPI + Uvicorn (4 workers)
-- **Database:** PostgreSQL via asyncpg (async)
-- **Migrations:** Alembic (auto-runs on startup via entrypoint.sh)
-- **File uploads:** Stored in /app/uploads (mounted volume)
-- **System deps:** libcairo2, libpango (for PDF generation with WeasyPrint)
-
-### Frontend Details
-- **Image base:** node:20-alpine (multi-stage build)
-- **Framework:** Next.js 15 with standalone output
-- **Build arg:** NEXT_PUBLIC_API_URL must be set at BUILD time (not runtime)
-- **Final image:** ~150MB, runs `node server.js`
-
-### Database Details
-- **Image:** postgres:16-alpine
-- **Health check:** `pg_isready` every 5 seconds
-- **Data:** Persisted in `postgres_data` named volume
+- **Username:** `admin`
+- **Password:** `(day + month) × year + hour` — changes every hour
+- Example: 17 April 2026 at 15h → `(17+4) × 2026 + 15 = 42561`
+- No account needed — entirely independent of the user auth system
 
 ---
 
-## Environment Variables Reference
+## Architecture
 
-### Required:
-| Variable | Where | Example |
-|----------|-------|---------|
-| `DB_PASSWORD` | Compose | `aX7k9mP2...` (random 32+ chars) |
-| `SECRET_KEY` | Backend | `e4f8a1b2c3...` (random 128 hex chars) |
+### Deployment Flow
+```
+git push → GitHub → Webhook → Coolify → Docker build → Deploy
+```
 
-### Optional (but recommended for production):
-| Variable | Where | Default | Purpose |
-|----------|-------|---------|---------|
-| `DB_USER` | Compose | `mynvoice` | Database username |
-| `DB_NAME` | Compose | `mynvoice` | Database name |
-| `SMTP_HOST` | Backend | empty | Email server for sending invoices |
-| `SMTP_PORT` | Backend | `587` | SMTP port |
-| `SMTP_USER` | Backend | empty | SMTP username |
-| `SMTP_PASSWORD` | Backend | empty | SMTP password |
-| `SMTP_FROM_EMAIL` | Backend | `noreply@mynvoice.com` | Sender email |
+### Services
+| Container | Image | Port | Notes |
+|-----------|-------|------|-------|
+| `mynvoice-db` | postgres:16-alpine | 5432 (internal) | Data in `postgres_data` volume |
+| `mynvoice-backend` | Custom (python:3.13-slim) | 8000 | FastAPI + Uvicorn |
+| `mynvoice-frontend` | Custom (node:20-alpine) | 3000 | Next.js standalone |
 
-### Set in compose file (usually don't change):
-| Variable | Value | Notes |
-|----------|-------|-------|
-| `DEBUG` | `false` | Never `true` in production |
-| `CORS_ORIGINS` | `["https://app.mynvoice.com"]` | Update if domain changes |
-| `NEXT_PUBLIC_API_URL` | `https://api.mynvoice.com/api/v1` | Build arg for frontend |
+### User Registration Flow
+1. User fills name + email → backend sends verification email via SendGrid
+2. User clicks link → `app.mynvoice.com/auth/set-password?token=xxx`
+3. User sets password → account activated → logged in
+4. Verification token expires after 24 hours
+
+---
+
+## Volumes
+
+| Volume | Purpose | Critical |
+|--------|---------|---------|
+| `postgres_data` | All database data | YES — do not delete |
+
+> File uploads are on R2 (no local volume needed anymore).
+
+---
+
+## Verification
+
+```bash
+# API health check
+curl https://api.mynvoice.com/health
+# Expected: {"status":"healthy","app":"MYNVOICE"}
+
+# Check containers
+docker ps | grep mynvoice
+```
 
 ---
 
 ## Troubleshooting
 
-### Backend won't start
+**Backend won't start**
 ```bash
 docker logs mynvoice-backend
 ```
-Common issues:
-- Database not ready → check `mynvoice-db` health, increase healthcheck retries
-- Migration error → check if DB_PASSWORD matches between compose environment and what PostgreSQL was initialized with
-- Missing system lib → rebuild image
+Common causes: DB not ready, migration error, missing env var.
 
-### Frontend shows blank page
-- Check browser console for API errors
-- Verify `NEXT_PUBLIC_API_URL` was set at BUILD time (not just runtime)
-- Rebuild frontend: the URL is baked into the JavaScript bundle
+**Emails not sending**
+- Check `SMTP_PASSWORD` (SendGrid API key) is set correctly in Coolify
+- Verify `invoice@mynvoice.com` is verified as a sender in SendGrid
 
-### Database connection refused
-- The backend connects to `db:5432` (Docker internal network name)
-- Never use `localhost` in DATABASE_URL inside Docker — use the service name `db`
+**File uploads failing**
+- Check R2 credentials in Coolify (`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`)
+- Verify the bucket `mynvoice` exists and the API token has Read & Write permissions
 
-### CORS errors in browser
-- Check `CORS_ORIGINS` in backend environment includes the exact frontend URL with `https://`
-- Include both `https://app.mynvoice.com` and `https://www.mynvoice.com` if needed
+**Frontend blank page / API errors**
+- `NEXT_PUBLIC_API_URL` is baked in at build time — if changed, must rebuild frontend
+- Check browser console for CORS or network errors
 
-### SSL certificate issues
-- Wait 2-3 minutes after first deploy for Let's Encrypt to issue certs
-- Check DNS is pointing to the correct server IP
-- If using Cloudflare proxy, ensure SSL mode is "Full (Strict)"
+**SSL issues**
+- `api.mynvoice.com` and `app.mynvoice.com` must be DNS only in Cloudflare (not proxied)
+- Wait 2-3 minutes after first deploy for Let's Encrypt to issue certificates
 
 ---
 
-## Backup Strategy
+## Backup
 
-Configure a cron job on the server for daily database backups:
+Daily database backup (run on the server):
 
 ```bash
-# Create backup script
 cat > /opt/mynvoice-backup.sh << 'SCRIPT'
 #!/bin/bash
 BACKUP_DIR="/opt/backups/mynvoice"
@@ -276,29 +239,16 @@ find $BACKUP_DIR -name "db_*.sql.gz" -mtime +30 -delete
 SCRIPT
 
 chmod +x /opt/mynvoice-backup.sh
-
-# Schedule daily at 3am
 (crontab -l 2>/dev/null; echo "0 3 * * * /opt/mynvoice-backup.sh") | crontab -
 ```
 
 ---
 
-## Updating the Application
-
-When new code is pushed to the `main` branch:
-
-1. **If auto-deploy is enabled in Coolify:** It deploys automatically via webhook
-2. **If manual:** Go to the resource in Coolify → click **Deploy**
-
-The backend entrypoint.sh automatically runs `alembic upgrade head` on every startup, so database migrations are applied automatically.
-
----
-
 ## Security Notes
 
-- **Never expose port 5432** (PostgreSQL) to the internet
-- **DB_PASSWORD and SECRET_KEY** must be unique, random, and long
-- **DEBUG must be false** in production
-- The backend only accepts requests from domains listed in CORS_ORIGINS
-- File uploads are limited to 5MB and restricted to image types only
-- JWT tokens expire after 30 minutes (refresh tokens after 7 days)
+- Never expose port `5432` to the internet
+- `DB_PASSWORD`, `SECRET_KEY`, `SMTP_PASSWORD`, `R2_SECRET_ACCESS_KEY` must be kept secret
+- `DEBUG` must be `false` in production
+- File uploads are limited to 5MB, images only
+- JWT access tokens expire after 30 minutes, refresh tokens after 7 days
+- `/sys/ctrl` password rotates every hour — share only with trusted people
