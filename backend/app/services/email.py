@@ -106,7 +106,7 @@ async def send_verification_email(
     token: str,
 ) -> bool:
     app_url = "https://app.mynvoice.com"
-    link = f"{app_url}/auth/set-password?token={token}"
+    link = f"{app_url}/set-password?token={token}"
 
     html = f"""\
 <!DOCTYPE html>
