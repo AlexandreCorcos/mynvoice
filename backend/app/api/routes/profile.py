@@ -123,7 +123,12 @@ async def upload_logo(
 
     ext = (file.filename or "logo.png").rsplit(".", 1)[-1] or "png"
     filename = f"{uuid_mod.uuid4().hex}.{ext}"
-    logo_url = await storage.upload_file(contents, "logos", filename, file.content_type or "image/png")
+
+    try:
+        logo_url = await storage.upload_file(contents, "logos", filename, file.content_type or "image/png")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Storage upload failed: {str(e)}")
+
     company.logo_url = logo_url
 
     return {"logo_url": logo_url}

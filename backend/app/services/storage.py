@@ -28,6 +28,8 @@ def _public_url(key: str) -> str:
 
 def _upload_sync(contents: bytes, key: str, content_type: str) -> str:
     client = _get_client()
+    if client is None:
+        raise RuntimeError("R2 storage is not configured")
     client.put_object(
         Bucket=settings.R2_BUCKET,
         Key=key,
