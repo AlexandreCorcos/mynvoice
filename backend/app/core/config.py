@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_MB: int = 5
 
     # CORS
-    CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+    CORS_ORIGINS: list[str] = ["http://localhost:3000", "https://app.mynvoice.com"]
 
     model_config = {"env_file": ".env", "case_sensitive": True}
 
