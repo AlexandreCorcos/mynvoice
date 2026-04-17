@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 @theme {
   /* Petrol & Coral palette */
   --color-petrol-dark: #0F4C5C;
