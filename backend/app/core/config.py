@@ -34,6 +34,13 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "uploads"
     MAX_UPLOAD_SIZE_MB: int = 5
 
+    # Cloudflare R2
+    R2_ACCOUNT_ID: Optional[str] = None
+    R2_ACCESS_KEY_ID: Optional[str] = None
+    R2_SECRET_ACCESS_KEY: Optional[str] = None
+    R2_BUCKET: str = "mynvoice"
+    R2_PUBLIC_URL: Optional[str] = None  # e.g. https://cdn.mynvoice.com
+
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "https://app.mynvoice.com"]
 

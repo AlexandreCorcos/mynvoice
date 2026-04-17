@@ -1,7 +1,5 @@
-import os
 import uuid as uuid_mod
 
-import aiofiles
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +11,7 @@ from app.models.company import Company
 from app.models.user import User
 from app.schemas.company import CompanyCreate, CompanyResponse, CompanyUpdate
 from app.schemas.user import UserResponse, UserUpdate
+from app.services import storage
 
 router = APIRouter()
 
@@ -105,41 +104,26 @@ async def upload_logo(
     db: AsyncSession = Depends(get_db),
 ):
     if file.content_type not in ALLOWED_IMAGE_TYPES:
-        raise HTTPException(
-            status_code=400, detail="Only JPEG, PNG, WebP, and GIF images are allowed"
-        )
+        raise HTTPException(status_code=400, detail="Only JPEG, PNG, WebP, and GIF images are allowed")
 
     contents = await file.read()
     if len(contents) > settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024:
-        raise HTTPException(
-            status_code=400, detail=f"File too large. Max {settings.MAX_UPLOAD_SIZE_MB}MB"
-        )
+        raise HTTPException(status_code=400, detail=f"File too large. Max {settings.MAX_UPLOAD_SIZE_MB}MB")
 
-    result = await db.execute(
-        select(Company).where(Company.user_id == user.id)
-    )
+    if not storage.is_configured():
+        raise HTTPException(status_code=503, detail="File storage is not configured")
+
+    result = await db.execute(select(Company).where(Company.user_id == user.id))
     company = result.scalar_one_or_none()
     if not company:
         raise HTTPException(status_code=404, detail="Create a business profile first")
 
-    # Delete old logo if exists
     if company.logo_url:
-        old_path = company.logo_url.lstrip("/")
-        if os.path.exists(old_path):
-            os.remove(old_path)
+        await storage.delete_file(company.logo_url)
 
-    # Save file
-    upload_dir = os.path.join(settings.UPLOAD_DIR, "logos")
-    os.makedirs(upload_dir, exist_ok=True)
-
-    ext = os.path.splitext(file.filename or "logo.png")[1] or ".png"
-    filename = f"{uuid_mod.uuid4().hex}{ext}"
-    filepath = os.path.join(upload_dir, filename)
-
-    async with aiofiles.open(filepath, "wb") as f:
-        await f.write(contents)
-
-    logo_url = f"/{filepath.replace(os.sep, '/')}"
+    ext = (file.filename or "logo.png").rsplit(".", 1)[-1] or "png"
+    filename = f"{uuid_mod.uuid4().hex}.{ext}"
+    logo_url = await storage.upload_file(contents, "logos", filename, file.content_type or "image/png")
     company.logo_url = logo_url
 
     return {"logo_url": logo_url}
@@ -157,8 +141,5 @@ async def delete_logo(
     if not company or not company.logo_url:
         return
 
-    old_path = company.logo_url.lstrip("/")
-    if os.path.exists(old_path):
-        os.remove(old_path)
-
+    await storage.delete_file(company.logo_url)
     company.logo_url = None
