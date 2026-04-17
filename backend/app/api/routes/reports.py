@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import case, func, select
+from sqlalchemy import case, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -71,8 +71,8 @@ async def get_reports(
             func.coalesce(func.sum(Invoice.balance_due), 0).label("outstanding"),
         )
         .where(*invoice_filters)
-        .group_by(period_label)
-        .order_by(period_label)
+        .group_by(text("1"))
+        .order_by(text("1"))
     )
 
     revenue_by_period = [

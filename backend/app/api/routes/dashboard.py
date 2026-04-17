@@ -2,7 +2,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import and_, case, func, select
+from sqlalchemy import and_, case, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -200,8 +200,8 @@ async def get_dashboard(
             func.coalesce(func.sum(Invoice.total), 0).label("revenue"),
         )
         .where(Invoice.user_id == user.id, Invoice.status == InvoiceStatus.PAID)
-        .group_by(func.to_char(Invoice.issue_date, "YYYY-MM"))
-        .order_by(func.to_char(Invoice.issue_date, "YYYY-MM").desc())
+        .group_by(text("1"))
+        .order_by(text("1 DESC"))
         .limit(12)
     )
     revenue_rows = {r.month: r.revenue for r in monthly_revenue.all()}
@@ -212,8 +212,8 @@ async def get_dashboard(
             func.coalesce(func.sum(Expense.amount), 0).label("expenses"),
         )
         .where(Expense.user_id == user.id)
-        .group_by(func.to_char(Expense.expense_date, "YYYY-MM"))
-        .order_by(func.to_char(Expense.expense_date, "YYYY-MM").desc())
+        .group_by(text("1"))
+        .order_by(text("1 DESC"))
         .limit(12)
     )
     expense_rows = {r.month: r.expenses for r in monthly_expenses.all()}
