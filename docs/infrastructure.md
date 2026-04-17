@@ -41,8 +41,8 @@ Files (company logos, etc.) are stored in Cloudflare R2 — not on the server di
 |---------|-------|
 | Bucket name | `mynvoice` |
 | Region | Western Europe (WEUR) |
-| S3 API endpoint | `https://3e5e419d2a72c57dd4071df3f1f4cde4.r2.cloudflarestorage.com` |
-| Account ID | `3e5e419d2a72c57dd4071df3f1f4cde4` |
+| S3 API endpoint | `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` |
+| Account ID | See Coolify env vars |
 | Public URL | `https://storage.mynvoice.com` |
 
 > **Credentials:** Stored in Coolify env vars (`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`). Never commit to the repo.
@@ -83,7 +83,7 @@ SMTP_FROM_EMAIL=invoice@mynvoice.com
 SMTP_FROM_NAME=MYNVOICE
 
 # Cloudflare R2
-R2_ACCOUNT_ID=3e5e419d2a72c57dd4071df3f1f4cde4
+R2_ACCOUNT_ID=<Cloudflare Account ID>
 R2_ACCESS_KEY_ID=<R2 Access Key ID>
 R2_SECRET_ACCESS_KEY=<R2 Secret Access Key>
 R2_BUCKET=mynvoice
