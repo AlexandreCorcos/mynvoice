@@ -138,18 +138,9 @@ docker exec mynvoice-db psql -U mynvoice -c \
 
 ---
 
-## Admin Panels
+## Admin Panel
 
-### In-app Admin (`/admin`)
 Available to users with `is_admin = true`. Shows metrics, donation progress. Requires login.
-
-### System Control Panel (`/sys/ctrl`)
-Secret panel at `https://app.mynvoice.com/sys/ctrl`.
-
-- **Username:** `admin`
-- **Password:** `(day + month) × year + hour` — changes every hour
-- Example: 17 April 2026 at 15h → `(17+4) × 2026 + 15 = 42561`
-- No account needed — entirely independent of the user auth system
 
 ---
 
