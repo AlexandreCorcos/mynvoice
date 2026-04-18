@@ -75,6 +75,7 @@ export default function InvoicesPage() {
   );
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
   const [paymentModal, setPaymentModal] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -107,6 +108,7 @@ export default function InvoicesPage() {
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(null);
+        setMenuPosition(null);
       }
     }
     if (menuOpen) {
@@ -114,6 +116,11 @@ export default function InvoicesPage() {
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [menuOpen]);
+
+  function closeMenu() {
+    setMenuOpen(null);
+    setMenuPosition(null);
+  }
 
   const clientMap = Object.fromEntries(clients.map((c) => [c.id, c]));
 
@@ -124,7 +131,7 @@ export default function InvoicesPage() {
     } catch {
       // handle
     }
-    setMenuOpen(null);
+    closeMenu();
   };
 
   const handleMarkPaid = async (id: string, paymentMethod: PaymentMethod) => {
@@ -140,37 +147,48 @@ export default function InvoicesPage() {
       // handle
     }
     setPaymentModal(null);
-    setMenuOpen(null);
+    closeMenu();
   };
 
   const handleDuplicate = async (id: string) => {
     await api.post(`/invoices/${id}/duplicate`);
     fetchData();
-    setMenuOpen(null);
+    closeMenu();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this invoice?")) return;
     await api.delete(`/invoices/${id}`);
     setInvoices((prev) => prev.filter((i) => i.id !== id));
-    setMenuOpen(null);
+    closeMenu();
   };
 
   // Shared action dropdown renderer
   function renderActionsDropdown(inv: InvoiceListItem) {
     return (
-      <div className="relative" ref={menuOpen === inv.id ? menuRef : undefined}>
+      <div className="relative">
         <button
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
-            setMenuOpen(menuOpen === inv.id ? null : inv.id);
+            if (menuOpen === inv.id) {
+              closeMenu();
+            } else {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setMenuPosition({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+              setMenuOpen(inv.id);
+            }
           }}
           className="rounded-lg p-1.5 text-text-secondary opacity-0 transition-opacity hover:bg-surface-light group-hover:opacity-100"
         >
           <MoreHorizontal className="h-4 w-4" />
         </button>
-        {menuOpen === inv.id && (
-          <div className="absolute right-0 top-8 z-10 w-44 rounded-xl bg-white py-1 shadow-[var(--shadow-dropdown)]">
+        {menuOpen === inv.id && menuPosition && (
+          <div
+            ref={menuRef}
+            style={{ top: menuPosition.top, right: menuPosition.right }}
+            className="fixed z-50 w-44 rounded-xl bg-white py-1 shadow-[var(--shadow-dropdown)]"
+          >
             <Link
               href={`/invoices/${inv.id}`}
               className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-surface-light"
@@ -191,7 +209,7 @@ export default function InvoicesPage() {
               <button
                 onClick={() => {
                   setPaymentModal(inv.id);
-                  setMenuOpen(null);
+                  closeMenu();
                 }}
                 className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-surface-light"
               >
