@@ -73,7 +73,7 @@ export default function InvoicesPage() {
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | "all">(
     "all"
   );
-  const [viewMode, setViewMode] = useState<"card" | "table">("card");
+  const [viewMode, setViewMode] = useState<"card" | "table">("table");
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
   const [paymentModal, setPaymentModal] = useState<string | null>(null);
