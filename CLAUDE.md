@@ -29,6 +29,10 @@ Slogan: *"Your business. Your invoices."*
 - **Animations:** Framer Motion
 - **Drag & Drop:** dnd-kit
 
+## Versioning
+
+Every feature or fix commit must bump `frontend/package.json` version **and** update `frontend/public/meta.json` to match. See **`docs/versioning.md`** for the full process, semver guide, and how the in-app update banner works.
+
 ## Commands
 
 No code has been implemented yet. Commands will be added here as the project is scaffolded.

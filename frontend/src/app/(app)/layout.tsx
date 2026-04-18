@@ -6,10 +6,13 @@ import { useAuth } from "@/contexts/auth-context";
 import Sidebar from "@/components/sidebar";
 import Topbar from "@/components/topbar";
 import { PageTransition } from "@/components/motion";
+import UpdateBanner from "@/components/ui/UpdateBanner";
+import { useAppVersion } from "@/hooks/useAppVersion";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const { hasUpdate } = useAppVersion();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -32,6 +35,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-surface-light">
+      {hasUpdate && <UpdateBanner />}
       <Sidebar />
       <div className="lg:ml-64">
         <Topbar />

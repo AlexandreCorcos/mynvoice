@@ -55,9 +55,14 @@ export default function Sidebar() {
         <div className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-button)] bg-coral font-bold text-white text-sm">
           MV
         </div>
-        <span className="text-lg font-bold text-white tracking-tight">
-          MYNVOICE
-        </span>
+        <div className="flex flex-col">
+          <span className="text-lg font-bold text-white tracking-tight leading-none">
+            MYNVOICE
+          </span>
+          <span className="text-[10px] text-white/35 leading-none mt-0.5">
+            v{process.env.NEXT_PUBLIC_APP_VERSION}
+          </span>
+        </div>
       </div>
 
       {/* Nav */}
