@@ -174,7 +174,7 @@ export default function SettingsPage() {
     try {
       const compressed = await compressImage(file);
       const formData = new FormData();
-      formData.append("file", compressed, "logo.jpg");
+      formData.append("file", new File([compressed], "logo.jpg", { type: "image/jpeg" }));
       const result = await api.upload<{ logo_url: string }>("/profile/company/logo", formData);
       setLogoPreview(result.logo_url);
       if (company) {

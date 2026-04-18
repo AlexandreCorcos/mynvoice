@@ -130,6 +130,7 @@ async def upload_logo(
         raise HTTPException(status_code=502, detail=f"Storage upload failed: {str(e)}")
 
     company.logo_url = logo_url
+    await db.commit()
 
     return {"logo_url": logo_url}
 
