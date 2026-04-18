@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import uuid
 from functools import partial
 
@@ -6,6 +7,8 @@ import boto3
 from botocore.exceptions import ClientError
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 def _get_client():
@@ -30,12 +33,16 @@ def _upload_sync(contents: bytes, key: str, content_type: str) -> str:
     client = _get_client()
     if client is None:
         raise RuntimeError("R2 storage is not configured")
-    client.put_object(
-        Bucket=settings.R2_BUCKET,
-        Key=key,
-        Body=contents,
-        ContentType=content_type,
-    )
+    try:
+        client.put_object(
+            Bucket=settings.R2_BUCKET,
+            Key=key,
+            Body=contents,
+            ContentType=content_type,
+        )
+    except Exception as e:
+        logger.error("R2 upload failed: bucket=%s key=%s error=%s", settings.R2_BUCKET, key, e)
+        raise
     return _public_url(key)
 
 
