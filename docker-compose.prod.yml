@@ -28,7 +28,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://${DB_USER:-mynvoice}:${DB_PASSWORD}@db:5432/${DB_NAME:-mynvoice}
       SECRET_KEY: ${SECRET_KEY}
       DEBUG: "false"
-      CORS_ORIGINS: '["https://app.mynvoice.com","https://www.mynvoice.com"]'
+      CORS_ORIGINS: '["https://app.mynvoice.com","https://mynvoice.com","https://www.mynvoice.com"]'
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
@@ -59,7 +59,7 @@ services:
       - backend
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.app.rule=Host(`app.mynvoice.com`)"
+      - "traefik.http.routers.app.rule=Host(`mynvoice.com`) || Host(`www.mynvoice.com`) || Host(`app.mynvoice.com`)"
       - "traefik.http.routers.app.tls=true"
       - "traefik.http.routers.app.tls.certresolver=letsencrypt"
       - "traefik.http.services.app.loadbalancer.server.port=3000"
