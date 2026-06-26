@@ -18,7 +18,7 @@ class DonationConfig(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     monthly_target: Mapped[Decimal] = mapped_column(
-        Numeric(10, 2), default=Decimal("1000.00")
+        Numeric(10, 2), default=Decimal("400.00")
     )
     currency: Mapped[str] = mapped_column(String(3), default="GBP")
     message: Mapped[str | None] = mapped_column(Text, nullable=True)

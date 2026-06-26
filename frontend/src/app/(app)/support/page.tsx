@@ -1,10 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Heart, Coffee, CreditCard } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Heart, Coffee, CreditCard, ExternalLink } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import type { DonationProgress } from "@/types";
+
+const BMAC_URL = process.env.NEXT_PUBLIC_BMAC_URL;
+const STRIPE_URL = process.env.NEXT_PUBLIC_STRIPE_URL;
 
 export default function SupportPage() {
   const [progress, setProgress] = useState<DonationProgress | null>(null);
@@ -47,9 +50,7 @@ export default function SupportPage() {
           <div className="h-4 rounded-full bg-surface-light overflow-hidden">
             <div
               className="h-full rounded-full bg-gradient-to-r from-coral to-coral-light transition-all"
-              style={{
-                width: `${Math.min(progress.percentage, 100)}%`,
-              }}
+              style={{ width: `${Math.min(progress.percentage, 100)}%` }}
             />
           </div>
           <p className="text-sm text-text-secondary mt-2">
@@ -76,9 +77,7 @@ export default function SupportPage() {
               </svg>
             </div>
             <h4 className="text-sm font-semibold text-text-primary">Hosting</h4>
-            <p className="text-xs text-text-secondary mt-1">
-              Servers, databases, and CDN
-            </p>
+            <p className="text-xs text-text-secondary mt-1">Servers, databases, and CDN</p>
           </div>
           <div className="rounded-xl bg-surface-light p-4 text-center">
             <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-petrol-dark/10">
@@ -87,12 +86,8 @@ export default function SupportPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </div>
-            <h4 className="text-sm font-semibold text-text-primary">
-              Infrastructure
-            </h4>
-            <p className="text-xs text-text-secondary mt-1">
-              Email, storage, monitoring
-            </p>
+            <h4 className="text-sm font-semibold text-text-primary">Infrastructure</h4>
+            <p className="text-xs text-text-secondary mt-1">Email, storage, monitoring</p>
           </div>
           <div className="rounded-xl bg-surface-light p-4 text-center">
             <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-petrol-dark/10">
@@ -100,59 +95,72 @@ export default function SupportPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
               </svg>
             </div>
-            <h4 className="text-sm font-semibold text-text-primary">
-              Development
-            </h4>
-            <p className="text-xs text-text-secondary mt-1">
-              New features and maintenance
-            </p>
+            <h4 className="text-sm font-semibold text-text-primary">Development</h4>
+            <p className="text-xs text-text-secondary mt-1">New features and maintenance</p>
           </div>
         </div>
       </div>
 
-      {/* Donation buttons (placeholder) */}
+      {/* Donation buttons */}
       <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)]">
         <h3 className="text-base font-semibold text-text-primary mb-4">
           Ways to Support
         </h3>
         <div className="space-y-3">
-          <button className="w-full flex items-center gap-3 rounded-[var(--radius-button)] border-2 border-coral bg-coral/5 px-5 py-4 text-left hover:bg-coral/10 transition-colors">
-            <Coffee className="h-5 w-5 text-coral" />
-            <div>
-              <p className="text-sm font-semibold text-text-primary">
-                Buy Me a Coffee
-              </p>
-              <p className="text-xs text-text-secondary">
-                Quick one-time donation
-              </p>
+          {/* Buy Me a Coffee */}
+          {BMAC_URL ? (
+            <a
+              href={BMAC_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-between gap-3 rounded-[var(--radius-button)] border-2 border-coral bg-coral/5 px-5 py-4 text-left hover:bg-coral/10 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Coffee className="h-5 w-5 text-coral flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-text-primary">Buy Me a Coffee</p>
+                  <p className="text-xs text-text-secondary">Quick one-time donation</p>
+                </div>
+              </div>
+              <ExternalLink className="h-4 w-4 text-coral flex-shrink-0" />
+            </a>
+          ) : (
+            <div className="w-full flex items-center gap-3 rounded-[var(--radius-button)] border-2 border-gray-200 bg-gray-50 px-5 py-4 opacity-50 cursor-not-allowed">
+              <Coffee className="h-5 w-5 text-gray-400" />
+              <div>
+                <p className="text-sm font-semibold text-text-primary">Buy Me a Coffee</p>
+                <p className="text-xs text-text-secondary">Coming soon</p>
+              </div>
             </div>
-          </button>
-          <button className="w-full flex items-center gap-3 rounded-[var(--radius-button)] border border-gray-200 px-5 py-4 text-left hover:border-petrol-mid hover:bg-surface-light transition-colors">
-            <CreditCard className="h-5 w-5 text-petrol-mid" />
-            <div>
-              <p className="text-sm font-semibold text-text-primary">
-                Stripe
-              </p>
-              <p className="text-xs text-text-secondary">
-                One-time or monthly donation
-              </p>
+          )}
+
+          {/* Stripe */}
+          {STRIPE_URL ? (
+            <a
+              href={STRIPE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-between gap-3 rounded-[var(--radius-button)] border border-gray-200 px-5 py-4 text-left hover:border-petrol-mid hover:bg-surface-light transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <CreditCard className="h-5 w-5 text-petrol-mid flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-text-primary">Card / Stripe</p>
+                  <p className="text-xs text-text-secondary">One-time or monthly donation</p>
+                </div>
+              </div>
+              <ExternalLink className="h-4 w-4 text-petrol-mid flex-shrink-0" />
+            </a>
+          ) : (
+            <div className="w-full flex items-center gap-3 rounded-[var(--radius-button)] border border-gray-200 px-5 py-4 opacity-50 cursor-not-allowed">
+              <CreditCard className="h-5 w-5 text-gray-400" />
+              <div>
+                <p className="text-sm font-semibold text-text-primary">Card / Stripe</p>
+                <p className="text-xs text-text-secondary">Coming soon</p>
+              </div>
             </div>
-          </button>
-          <button className="w-full flex items-center gap-3 rounded-[var(--radius-button)] border border-gray-200 px-5 py-4 text-left hover:border-petrol-mid hover:bg-surface-light transition-colors">
-            <svg className="h-5 w-5 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797H9.603c-.564 0-1.04.382-1.128.942l-.022.132-1.455 9.231-.009.073z"/>
-            </svg>
-            <div>
-              <p className="text-sm font-semibold text-text-primary">PayPal</p>
-              <p className="text-xs text-text-secondary">
-                Donate via PayPal
-              </p>
-            </div>
-          </button>
+          )}
         </div>
-        <p className="mt-4 text-center text-xs text-text-secondary">
-          Payment integrations coming soon. Thank you for your support!
-        </p>
       </div>
     </div>
   );
