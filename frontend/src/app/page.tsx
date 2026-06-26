@@ -629,7 +629,7 @@ export default function LandingPage() {
                   {[
                     [62, 30], [48, 26], [78, 38], [55, 22], [88, 41], [70, 34],
                   ].map((pair, i) => (
-                    <div key={i} className="flex flex-1 items-end justify-center gap-1">
+                    <div key={i} className="flex h-full flex-1 items-end justify-center gap-1">
                       <motion.span
                         initial={{ height: 0 }}
                         whileInView={{ height: `${pair[0]}%` }}
