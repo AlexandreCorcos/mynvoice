@@ -145,7 +145,7 @@ export default function InvoiceDetailPage() {
           <StatusBadge status={invoice.status} />
         </div>
         <div className="flex flex-wrap gap-2">
-          {invoice.status === "draft" && (
+          {invoice.status !== "paid" && (
             <Link
               href={`/invoices/${invoice.id}/edit`}
               className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] bg-petrol-dark px-4 py-2 text-sm font-semibold text-white hover:bg-petrol-mid transition-colors"

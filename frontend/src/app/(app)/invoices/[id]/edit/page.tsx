@@ -66,8 +66,8 @@ export default function EditInvoicePage() {
           api.get<Item[]>("/items/"),
         ]);
 
-        // If not a draft, redirect to invoice detail
-        if (invoiceData.status !== "draft") {
+        // Paid invoices cannot be edited
+        if (invoiceData.status === "paid") {
           router.replace(`/invoices/${invoiceId}`);
           return;
         }

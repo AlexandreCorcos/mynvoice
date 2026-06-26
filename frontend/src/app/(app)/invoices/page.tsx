@@ -14,6 +14,7 @@ import {
   CheckCircle,
   LayoutGrid,
   List,
+  Pencil,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
@@ -196,6 +197,16 @@ export default function InvoicesPage() {
               <Eye className="h-3.5 w-3.5" />
               View
             </Link>
+            {inv.status !== "paid" && (
+              <Link
+                href={`/invoices/${inv.id}/edit`}
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-surface-light"
+                onClick={closeMenu}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Edit
+              </Link>
+            )}
             {inv.status === "draft" && (
               <button
                 onClick={() => handleMarkSent(inv.id)}
