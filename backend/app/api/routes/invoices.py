@@ -485,6 +485,7 @@ async def send_invoice(
         due_date=due_date_formatted,
         pdf_bytes=pdf_bytes,
         company_name=company_name,
+        cc_email=user.email,
     )
 
     if not success:

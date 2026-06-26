@@ -241,11 +241,14 @@ async def send_invoice_email(
     due_date: str,
     pdf_bytes: bytes,
     company_name: str = "MYNVOICE",
+    cc_email: str | None = None,
 ) -> bool:
     try:
         msg = MIMEMultipart("mixed")
         msg["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
         msg["To"] = to_email
+        if cc_email and cc_email != to_email:
+            msg["Cc"] = cc_email
         msg["Subject"] = f"Invoice {invoice_number} from {company_name}"
 
         html_body = _build_html_body(
