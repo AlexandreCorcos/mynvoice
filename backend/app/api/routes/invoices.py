@@ -197,9 +197,9 @@ async def update_invoice(
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
 
-    if invoice.status != InvoiceStatus.DRAFT:
+    if invoice.status == InvoiceStatus.PAID:
         raise HTTPException(
-            status_code=400, detail="Only draft invoices can be edited"
+            status_code=400, detail="Paid invoices cannot be edited"
         )
 
     update_data = data.model_dump(exclude_unset=True, exclude={"items"})
