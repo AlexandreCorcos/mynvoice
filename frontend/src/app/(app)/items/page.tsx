@@ -132,7 +132,7 @@ export default function ItemsPage() {
         </div>
       ) : (
         /* Table */
-        <div className="rounded-[var(--radius-card)] bg-white shadow-[var(--shadow-card)] overflow-hidden">
+        <div className="rounded-[var(--radius-card)] bg-white shadow-[var(--shadow-card)] overflow-visible">
           {/* Table header */}
           <div className="hidden sm:grid sm:grid-cols-[1fr_1.5fr_0.75fr_0.6fr_0.6fr_0.4fr] gap-4 border-b border-gray-100 px-5 py-3 text-xs font-semibold uppercase tracking-wider text-text-secondary">
             <span>Name</span>
@@ -201,7 +201,7 @@ export default function ItemsPage() {
                   </button>
                   {menuOpen === item.id && (
                     <div
-                      className="absolute right-0 top-8 z-10 w-36 rounded-xl bg-white py-1 shadow-[var(--shadow-dropdown)]"
+                      className="absolute right-0 top-8 z-50 w-36 rounded-xl bg-white py-1 shadow-[var(--shadow-dropdown)]"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <button
