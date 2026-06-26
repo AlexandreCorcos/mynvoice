@@ -3,15 +3,30 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
+import { api, ApiError } from "@/lib/api";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: call password reset API
-    setSubmitted(true);
+    setError("");
+    setLoading(true);
+    try {
+      await api.post("/auth/forgot-password", { email });
+      setSubmitted(true);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError("Something went wrong. Please try again.");
+      } else {
+        setError("Unable to connect to the server.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (submitted) {
@@ -54,6 +69,10 @@ export default function ForgotPasswordPage() {
       </p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+        {error && (
+          <div className="rounded-[var(--radius-input)] bg-red-50 px-4 py-3 text-sm text-coral-dark">{error}</div>
+        )}
+
         <div>
           <label className="block text-sm font-medium text-text-primary mb-1.5">
             Email
@@ -70,9 +89,10 @@ export default function ForgotPasswordPage() {
 
         <button
           type="submit"
-          className="w-full rounded-[var(--radius-button)] bg-petrol-dark py-2.5 text-sm font-semibold text-white transition-colors hover:bg-petrol-mid"
+          disabled={loading}
+          className="w-full rounded-[var(--radius-button)] bg-petrol-dark py-2.5 text-sm font-semibold text-white transition-colors hover:bg-petrol-mid disabled:opacity-50"
         >
-          Send reset link
+          {loading ? "Sending..." : "Send reset link"}
         </button>
       </form>
     </div>

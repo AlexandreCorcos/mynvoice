@@ -166,6 +166,72 @@ async def send_verification_email(
     return ok
 
 
+async def send_password_reset_email(
+    to_email: str,
+    first_name: str,
+    token: str,
+) -> bool:
+    app_url = "https://app.mynvoice.com"
+    link = f"{app_url}/reset-password?token={token}"
+
+    html = f"""\
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8" /></head>
+<body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:#F0F3F5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F0F3F5;padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="background:#0F4C5C;padding:28px 32px;">
+              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Reset your password</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <p style="margin:0 0 16px;color:#1B263B;font-size:16px;line-height:1.6;">Hi {first_name},</p>
+              <p style="margin:0 0 24px;color:#1B263B;font-size:16px;line-height:1.6;">
+                We received a request to reset your MYNVOICE password. Click the button below to choose a new one.
+              </p>
+              <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                <tr>
+                  <td style="background:#E05A2B;border-radius:8px;padding:14px 28px;">
+                    <a href="{link}" style="color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;">
+                      Reset my password
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 8px;color:#5C677D;font-size:13px;">
+                This link expires in 1 hour. If you didn&apos;t request a password reset, you can safely ignore this email.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px;border-top:1px solid #e2e8f0;">
+              <p style="margin:0;color:#5C677D;font-size:12px;text-align:center;">Sent via MYNVOICE</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+    msg = MIMEMultipart("alternative")
+    msg["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
+    msg["To"] = to_email
+    msg["Subject"] = "Reset your MYNVOICE password"
+    msg.attach(MIMEText(html, "html", "utf-8"))
+
+    ok = await _send(msg)
+    if ok:
+        logger.info("Password reset email sent to %s", to_email)
+    return ok
+
+
 async def send_invoice_email(
     to_email: str,
     invoice_number: str,

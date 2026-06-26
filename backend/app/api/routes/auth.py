@@ -20,11 +20,12 @@ from app.schemas.auth import (
     RefreshRequest,
     TokenResponse,
 )
-from app.services.email import send_verification_email
+from app.services.email import send_password_reset_email, send_verification_email
 
 router = APIRouter()
 
 VERIFICATION_TOKEN_EXPIRE_HOURS = 24
+PASSWORD_RESET_TOKEN_EXPIRE_HOURS = 1
 
 
 class RegisterRequest(BaseModel):
@@ -85,6 +86,56 @@ async def set_password(data: SetPasswordRequest, db: AsyncSession = Depends(get_
     user.is_verified = True
     user.verification_token = None
     user.verification_token_expires_at = None
+    user.last_login_at = datetime.now(timezone.utc)
+    await db.commit()
+
+    return TokenResponse(
+        access_token=create_access_token(str(user.id)),
+        refresh_token=create_refresh_token(str(user.id)),
+    )
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+@router.post("/forgot-password", status_code=200)
+async def forgot_password(data: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.email == data.email))
+    user = result.scalar_one_or_none()
+
+    # Always return success to avoid email enumeration
+    if user and user.is_verified and user.hashed_password:
+        token = secrets.token_urlsafe(32)
+        user.password_reset_token = token
+        user.password_reset_token_expires_at = datetime.now(timezone.utc) + timedelta(hours=PASSWORD_RESET_TOKEN_EXPIRE_HOURS)
+        await db.commit()
+        await send_password_reset_email(
+            to_email=user.email,
+            first_name=user.first_name,
+            token=token,
+        )
+
+    return {"message": "If an account exists for that email, you'll receive a reset link shortly."}
+
+
+@router.post("/reset-password", response_model=TokenResponse)
+async def reset_password(data: SetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    if len(data.password) < 8:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Password must be at least 8 characters")
+
+    result = await db.execute(select(User).where(User.password_reset_token == data.token))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired link")
+
+    if user.password_reset_token_expires_at and user.password_reset_token_expires_at < datetime.now(timezone.utc):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Link has expired. Please request a new one.")
+
+    user.hashed_password = hash_password(data.password)
+    user.password_reset_token = None
+    user.password_reset_token_expires_at = None
     user.last_login_at = datetime.now(timezone.utc)
     await db.commit()
 
