@@ -239,6 +239,9 @@ async def update_invoice(
         invoice.tax_amount = tax_amount
         invoice.total = total
 
+    # Always keep balance_due in sync with total minus any amount already paid
+    invoice.balance_due = invoice.total - (invoice.amount_paid or Decimal("0.00"))
+
     await db.flush()
 
     result = await db.execute(
