@@ -3,9 +3,38 @@ import { AuthProvider } from "@/contexts/auth-context";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MYNVOICE — Your business. Your invoices.",
+  metadataBase: new URL("https://app.mynvoice.com"),
+  title: {
+    default: "MYNVOICE — Your business. Your invoices.",
+    template: "%s · MYNVOICE",
+  },
   description:
-    "Open-source invoice and expense management for small businesses, freelancers, and self-employed professionals.",
+    "The free, open-source way to create beautiful invoices, track expenses, and get paid faster. Built for freelancers and small businesses.",
+  keywords: [
+    "invoice",
+    "invoicing",
+    "open source",
+    "free invoice software",
+    "expense tracking",
+    "freelancer",
+    "small business",
+  ],
+  openGraph: {
+    type: "website",
+    title: "MYNVOICE — Your business. Your invoices.",
+    description:
+      "Create beautiful invoices, track expenses, and get paid faster. Free & open-source.",
+    url: "https://app.mynvoice.com",
+    siteName: "MYNVOICE",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "MYNVOICE" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MYNVOICE — Your business. Your invoices.",
+    description:
+      "Create beautiful invoices, track expenses, and get paid faster. Free & open-source.",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function RootLayout({

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { ApiError } from "@/lib/api";
+import { Logo } from "@/components/brand/logo";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -35,11 +36,8 @@ export default function LoginPage() {
   return (
     <div>
       {/* Mobile logo */}
-      <div className="mb-8 flex items-center gap-2 lg:hidden">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-coral font-bold text-white">
-          MV
-        </div>
-        <span className="text-xl font-bold text-text-primary">MYNVOICE</span>
+      <div className="mb-8 lg:hidden">
+        <Logo height={28} href={null} />
       </div>
 
       <h2 className="text-2xl font-bold text-text-primary">Welcome back</h2>

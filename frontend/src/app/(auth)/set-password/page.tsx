@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 import type { TokenResponse } from "@/types";
+import { Logo } from "@/components/brand/logo";
 
 function SetPasswordForm() {
   const router = useRouter();
@@ -51,9 +52,8 @@ function SetPasswordForm() {
 
   return (
     <div>
-      <div className="mb-8 flex items-center gap-2 lg:hidden">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-coral font-bold text-white">MV</div>
-        <span className="text-xl font-bold text-text-primary">MYNVOICE</span>
+      <div className="mb-8 lg:hidden">
+        <Logo height={28} href={null} />
       </div>
 
       <h2 className="text-2xl font-bold text-text-primary">Set your password</h2>

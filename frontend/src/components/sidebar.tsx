@@ -20,6 +20,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { useState } from "react";
+import { Logo, LogoMark } from "@/components/brand/logo";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -51,15 +52,11 @@ export default function Sidebar() {
   const nav = (
     <div className="flex h-full flex-col">
       {/* Logo */}
-      <div className="flex items-center gap-2 px-6 py-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-button)] bg-coral font-bold text-white text-sm">
-          MV
-        </div>
+      <div className="flex items-center gap-2.5 px-6 py-5">
+        <LogoMark size={34} />
         <div className="flex flex-col">
-          <span className="text-lg font-bold text-white tracking-tight leading-none">
-            MYNVOICE
-          </span>
-          <span className="text-[10px] text-white/35 leading-none mt-0.5">
+          <Logo variant="white" height={18} href={null} />
+          <span className="text-[10px] text-white/35 leading-none mt-1">
             v{process.env.NEXT_PUBLIC_APP_VERSION}
           </span>
         </div>

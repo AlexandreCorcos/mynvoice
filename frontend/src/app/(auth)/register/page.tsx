@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
+import { Logo } from "@/components/brand/logo";
 
 export default function RegisterPage() {
   const [firstName, setFirstName] = useState("");
@@ -33,9 +34,8 @@ export default function RegisterPage() {
   if (done) {
     return (
       <div>
-        <div className="mb-8 flex items-center gap-2 lg:hidden">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-coral font-bold text-white">MV</div>
-          <span className="text-xl font-bold text-text-primary">MYNVOICE</span>
+        <div className="mb-8 lg:hidden">
+          <Logo height={28} href={null} />
         </div>
         <div className="rounded-[var(--radius-card)] bg-green-50 px-6 py-8 text-center">
           <div className="text-4xl mb-4">✉️</div>
@@ -57,9 +57,8 @@ export default function RegisterPage() {
 
   return (
     <div>
-      <div className="mb-8 flex items-center gap-2 lg:hidden">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-coral font-bold text-white">MV</div>
-        <span className="text-xl font-bold text-text-primary">MYNVOICE</span>
+      <div className="mb-8 lg:hidden">
+        <Logo height={28} href={null} />
       </div>
 
       <h2 className="text-2xl font-bold text-text-primary">Create account</h2>
