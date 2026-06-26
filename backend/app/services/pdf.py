@@ -153,8 +153,10 @@ def _build_totals_html(invoice, currency: str) -> str:
             f'<td style="text-align:right;">{fmt_currency(amount_paid, currency)}</td></tr>'
         )
 
+    # Only show Balance Due when there's a partial payment
+    amount_paid_val = float(getattr(invoice, "amount_paid", None) or 0)
     balance_due = getattr(invoice, "balance_due", None)
-    if balance_due is not None:
+    if balance_due is not None and amount_paid_val > 0:
         rows.append(
             f'<tr style="font-weight:bold; color:#FF6B6B;">'
             f'<td style="text-align:right;">Balance Due:</td>'
@@ -724,8 +726,9 @@ def _build_html_bold(invoice, client, company) -> str:
     totals_inner = "\n".join(totals_rows)
 
     balance_due = getattr(invoice, "balance_due", None)
+    amount_paid_val = float(getattr(invoice, "amount_paid", None) or 0)
     balance_html = ""
-    if balance_due is not None:
+    if balance_due is not None and amount_paid_val > 0:
         balance_html = f"""
         <div class="balance-box">
             <div class="balance-label">Balance Due</div>
