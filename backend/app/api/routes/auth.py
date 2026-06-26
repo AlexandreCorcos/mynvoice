@@ -105,16 +105,29 @@ async def forgot_password(data: ForgotPasswordRequest, db: AsyncSession = Depend
     user = result.scalar_one_or_none()
 
     # Always return success to avoid email enumeration
-    if user and user.is_verified and user.hashed_password:
-        token = secrets.token_urlsafe(32)
-        user.password_reset_token = token
-        user.password_reset_token_expires_at = datetime.now(timezone.utc) + timedelta(hours=PASSWORD_RESET_TOKEN_EXPIRE_HOURS)
-        await db.commit()
-        await send_password_reset_email(
-            to_email=user.email,
-            first_name=user.first_name,
-            token=token,
-        )
+    if user:
+        if not user.is_verified:
+            # Account exists but was never activated — resend the activation email
+            token = secrets.token_urlsafe(32)
+            user.verification_token = token
+            user.verification_token_expires_at = datetime.now(timezone.utc) + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS)
+            await db.commit()
+            await send_verification_email(
+                to_email=user.email,
+                first_name=user.first_name,
+                token=token,
+            )
+        else:
+            # Normal password reset flow
+            token = secrets.token_urlsafe(32)
+            user.password_reset_token = token
+            user.password_reset_token_expires_at = datetime.now(timezone.utc) + timedelta(hours=PASSWORD_RESET_TOKEN_EXPIRE_HOURS)
+            await db.commit()
+            await send_password_reset_email(
+                to_email=user.email,
+                first_name=user.first_name,
+                token=token,
+            )
 
     return {"message": "If an account exists for that email, you'll receive a reset link shortly."}
 
