@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import {
   FileText,
   Send,
@@ -223,6 +223,12 @@ function FeatureCard({
 /* ----------------------------------------------------------------------- */
 
 export default function LandingPage() {
+  // The marketing landing has a fixed light brand look — dark mode is an
+  // app-only preference, so make sure it never leaks onto this page.
+  useEffect(() => {
+    document.documentElement.classList.remove("dark");
+  }, []);
+
   return (
     <div className="min-h-screen bg-surface-light text-text-primary">
       {/* ===== Nav ===== */}

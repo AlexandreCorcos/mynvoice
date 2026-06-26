@@ -21,6 +21,11 @@ export default function AuthLayout({
     }
   }, [user, loading, router]);
 
+  // Auth screens are public and always render in the light brand theme.
+  useEffect(() => {
+    document.documentElement.classList.remove("dark");
+  }, []);
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-surface-light">
