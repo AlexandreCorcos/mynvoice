@@ -53,7 +53,7 @@ function SetPasswordForm() {
   return (
     <div>
       <div className="mb-8 lg:hidden">
-        <Logo height={28} href={null} />
+        <Logo height={34} href={null} />
       </div>
 
       <h2 className="text-2xl font-bold text-text-primary">Set your password</h2>

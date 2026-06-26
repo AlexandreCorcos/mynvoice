@@ -55,7 +55,7 @@ export default function Sidebar() {
       <div className="flex items-center gap-2.5 px-6 py-5">
         <LogoMark size={34} />
         <div className="flex flex-col">
-          <Logo variant="white" height={18} href={null} />
+          <Logo variant="white" height={22} href={null} />
           <span className="text-[10px] text-white/35 leading-none mt-1">
             v{process.env.NEXT_PUBLIC_APP_VERSION}
           </span>

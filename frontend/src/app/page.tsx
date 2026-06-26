@@ -234,7 +234,7 @@ export default function LandingPage() {
       {/* ===== Nav ===== */}
       <header className="sticky top-0 z-50 border-b border-black/5 bg-surface-light/80 backdrop-blur-xl">
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
-          <Logo height={26} priority />
+          <Logo height={34} priority />
           <div className="hidden items-center gap-8 md:flex">
             <a href="#features" className="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary">
               Features
@@ -716,7 +716,7 @@ export default function LandingPage() {
         <div className="mx-auto max-w-6xl px-5 py-12">
           <div className="flex flex-col items-start justify-between gap-8 sm:flex-row">
             <div className="max-w-xs">
-              <Logo height={26} href={null} />
+              <Logo height={30} href={null} />
               <p className="mt-4 text-sm leading-relaxed text-text-secondary">
                 Your business. Your invoices. The free, open-source invoice &amp;
                 expense manager for modern small businesses.

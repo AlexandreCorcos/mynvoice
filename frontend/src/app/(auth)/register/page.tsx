@@ -35,7 +35,7 @@ export default function RegisterPage() {
     return (
       <div>
         <div className="mb-8 lg:hidden">
-          <Logo height={28} href={null} />
+          <Logo height={34} href={null} />
         </div>
         <div className="rounded-[var(--radius-card)] bg-green-50 px-6 py-8 text-center">
           <div className="text-4xl mb-4">✉️</div>
@@ -58,7 +58,7 @@ export default function RegisterPage() {
   return (
     <div>
       <div className="mb-8 lg:hidden">
-        <Logo height={28} href={null} />
+        <Logo height={34} href={null} />
       </div>
 
       <h2 className="text-2xl font-bold text-text-primary">Create account</h2>

@@ -1,8 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
-// Wordmark intrinsic size (generated asset): 454 x 240
-const WORDMARK_RATIO = 454 / 240;
+// Wordmark intrinsic size (generated asset): 475 x 240 (tight-cropped)
+const WORDMARK_RATIO = 475 / 240;
 
 type LogoProps = {
   /** "dark" = petrol ink (light backgrounds) · "white" = white ink (dark backgrounds) */

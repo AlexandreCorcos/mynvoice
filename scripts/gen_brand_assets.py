@@ -38,12 +38,13 @@ def make_transparent(src_path):
     return im
 
 
-def autocrop(im, pad_ratio=0.06):
+def autocrop(im, pad_ratio=0.01):
+    """Crop tight to the inked pixels; keep only a hair of padding."""
     bbox = im.getbbox()
     if bbox:
         im = im.crop(bbox)
     w, h = im.size
-    pad = int(h * pad_ratio)
+    pad = max(1, int(h * pad_ratio))
     out = Image.new("RGBA", (w + pad * 2, h + pad * 2), (0, 0, 0, 0))
     out.paste(im, (pad, pad))
     return out

@@ -61,8 +61,8 @@ export default function AuthLayout({
         />
         <div className="relative flex w-full flex-col justify-between p-12 xl:p-14">
           <Link href="/" className="inline-flex w-fit items-center gap-2.5">
-            <LogoMark size={36} />
-            <Logo variant="white" height={20} href={null} />
+            <LogoMark size={38} />
+            <Logo variant="white" height={24} href={null} />
           </Link>
 
           <div className="max-w-md">
