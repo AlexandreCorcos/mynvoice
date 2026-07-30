@@ -82,6 +82,60 @@ export function Select({
   );
 }
 
+/**
+ * A switch, with its label as part of the control — the whole row is the
+ * hit target, which is the difference between "works on a phone" and
+ * "technically has a checkbox".
+ */
+export function Toggle({
+  checked,
+  onChange,
+  label,
+  hint,
+  className,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  label: string;
+  hint?: string;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className={cn(
+        "flex w-full items-start gap-3 rounded-[10px] p-1 text-left transition-colors",
+        className
+      )}
+    >
+      <span
+        className={cn(
+          "relative mt-0.5 inline-flex h-[22px] w-[38px] flex-none rounded-full transition-colors duration-200",
+          checked ? "bg-brass" : "bg-line"
+        )}
+      >
+        <span
+          className={cn(
+            "pointer-events-none absolute top-[3px] h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200",
+            checked ? "translate-x-[19px]" : "translate-x-[3px]"
+          )}
+        />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[13px] font-semibold text-ink">{label}</span>
+        {hint ? (
+          <span className="mt-0.5 block text-[11.5px] leading-relaxed text-ink-muted">
+            {hint}
+          </span>
+        ) : null}
+      </span>
+    </button>
+  );
+}
+
 export function SearchInput({
   className,
   ...rest

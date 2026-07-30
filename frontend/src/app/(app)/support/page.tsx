@@ -1,9 +1,25 @@
 "use client";
 
+/* =========================================================================
+   Support.
+
+   The one place in the app that asks for something. It should read as an
+   explanation, not a pitch — the honest version ("here's the bill, here's
+   what's covered, chip in if it's worth it to you") converts better than
+   the pleading one, and it's also just true.
+
+   The graphite hero follows the containment rule: the large dark surface
+   is `graphite`, and brass appears only in the glow and the buttons.
+   ========================================================================= */
+
 import { useEffect, useState } from "react";
-import { Heart, Coffee, CreditCard, ExternalLink } from "lucide-react";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { ArrowUpRight, Coffee, CreditCard, Github, Heart, ServerCog } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
+import { EASE_OUT } from "@/components/motion";
+import { Panel, PanelHeader } from "@/components/app/panel";
 import type { DonationProgress } from "@/types";
 
 const BMAC_URL = process.env.NEXT_PUBLIC_BMAC_URL;
@@ -16,152 +32,187 @@ export default function SupportPage() {
     api
       .get<DonationProgress>("/admin/donations")
       .then(setProgress)
-      .catch(() => {});
+      .catch(() => {
+        /* the page still makes sense without the figures */
+      });
   }, []);
 
+  const currency = progress?.currency || "GBP";
+  const money = (n: number) => formatCurrency(n, currency);
+  const pct = progress ? Math.min(100, Math.round(progress.percentage)) : 0;
+
   return (
-    <div className="mx-auto max-w-2xl">
-      {/* Hero */}
-      <div className="rounded-[var(--radius-card)] bg-brass p-8 text-center text-white mb-8">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brass">
-          <Heart className="h-7 w-7 text-white" />
-        </div>
-        <h2 className="text-2xl font-bold mb-2">Support MYNVOICE</h2>
-        <p className="text-white/70 max-w-md mx-auto">
-          MYNVOICE is free and open-source. Your donations help cover hosting,
-          infrastructure, and development costs.
-        </p>
-      </div>
+    <div className="mx-auto max-w-3xl space-y-4">
+      {/* ── the ask ──────────────────────────────────────────────── */}
+      <motion.section
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: EASE_OUT }}
+        className="relative isolate overflow-hidden rounded-[18px] bg-graphite p-8 text-center sm:p-10"
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-28 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full blur-[90px]"
+          style={{ background: "radial-gradient(circle, rgba(199,154,91,0.30), transparent 70%)" }}
+        />
 
-      {/* Progress */}
-      {progress && (
-        <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] mb-8">
-          <h3 className="text-base font-semibold text-ink mb-4">
-            Monthly Costs Coverage
-          </h3>
-          <div className="flex justify-between text-sm mb-2">
-            <span className="text-ink-muted">
-              {formatCurrency(progress.current_month_total)} raised
-            </span>
-            <span className="font-medium text-ink">
-              {formatCurrency(progress.monthly_target)} goal
-            </span>
-          </div>
-          <div className="h-4 rounded-full bg-surface overflow-hidden">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-brass to-brass-soft transition-all"
-              style={{ width: `${Math.min(progress.percentage, 100)}%` }}
-            />
-          </div>
-          <p className="text-sm text-ink-muted mt-2">
-            {progress.percentage.toFixed(0)}% of monthly costs covered
+        <div className="relative">
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-[14px] bg-white/[0.07] text-brass-on-dark ring-1 ring-white/10">
+            <Heart className="h-5 w-5" />
+          </span>
+          <h1 className="mt-5 text-[clamp(1.6rem,3.6vw,2.1rem)] font-extrabold leading-[1.15] tracking-[-0.025em] text-white">
+            MYNVOICE is free because people chip in.
+          </h1>
+          <p className="mx-auto mt-3 max-w-md text-[14.5px] leading-relaxed text-white/55">
+            No tiers, no trial clock, no feature held back. What it does cost
+            is servers, a database and email delivery — and that&apos;s what
+            donations pay for.
           </p>
-          {progress.message && (
-            <p className="mt-3 text-sm text-ink-muted italic">
-              {progress.message}
-            </p>
-          )}
-        </div>
-      )}
 
-      {/* What donations support */}
-      <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] mb-8">
-        <h3 className="text-base font-semibold text-ink mb-4">
-          What Your Support Covers
-        </h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-xl bg-surface p-4 text-center">
-            <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-brass/10">
-              <svg className="h-5 w-5 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" />
-              </svg>
+          {progress ? (
+            <div className="mx-auto mt-8 max-w-md text-left">
+              <div className="flex items-baseline justify-between text-[13px]">
+                <span className="font-semibold text-white">
+                  {money(progress.current_month_total)}
+                  <span className="text-white/40">
+                    {" "}
+                    of {money(progress.monthly_target)} covered
+                  </span>
+                </span>
+                <span className="font-bold tabular-nums text-brass-on-dark">{pct}%</span>
+              </div>
+              <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-white/[0.08]">
+                <motion.span
+                  initial={{ width: 0 }}
+                  animate={{ width: `${pct}%` }}
+                  transition={{ duration: 1.2, delay: 0.25, ease: EASE_OUT }}
+                  className="block h-full rounded-full bg-gradient-to-r from-brass to-brass-on-dark"
+                />
+              </div>
+              {progress.message ? (
+                <p className="mt-3 text-[12.5px] text-white/45">{progress.message}</p>
+              ) : null}
             </div>
-            <h4 className="text-sm font-semibold text-ink">Hosting</h4>
-            <p className="text-xs text-ink-muted mt-1">Servers, databases, and CDN</p>
-          </div>
-          <div className="rounded-xl bg-surface p-4 text-center">
-            <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-brass/10">
-              <svg className="h-5 w-5 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </div>
-            <h4 className="text-sm font-semibold text-ink">Infrastructure</h4>
-            <p className="text-xs text-ink-muted mt-1">Email, storage, monitoring</p>
-          </div>
-          <div className="rounded-xl bg-surface p-4 text-center">
-            <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-brass/10">
-              <svg className="h-5 w-5 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-              </svg>
-            </div>
-            <h4 className="text-sm font-semibold text-ink">Development</h4>
-            <p className="text-xs text-ink-muted mt-1">New features and maintenance</p>
-          </div>
-        </div>
-      </div>
+          ) : null}
 
-      {/* Donation buttons */}
-      <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)]">
-        <h3 className="text-base font-semibold text-ink mb-4">
-          Ways to Support
-        </h3>
-        <div className="space-y-3">
-          {/* Buy Me a Coffee */}
-          {BMAC_URL ? (
+          {/* Both links are env-configured; with neither set this would be an
+              empty gap, so the whole row goes rather than an empty one. */}
+          <div
+            className={
+              BMAC_URL || STRIPE_URL
+                ? "mt-8 flex flex-wrap justify-center gap-2.5"
+                : "hidden"
+            }
+          >
+            {BMAC_URL ? (
+              <a
+                href={BMAC_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-[13.5px] font-semibold text-graphite transition-colors hover:bg-brass-on-dark"
+              >
+                <Coffee className="h-4 w-4" />
+                Buy me a coffee
+                <ArrowUpRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              </a>
+            ) : null}
+            {STRIPE_URL ? (
+              <a
+                href={STRIPE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group inline-flex items-center gap-2 rounded-full border border-white/12 px-6 py-3 text-[13.5px] font-semibold text-white transition-colors hover:border-white/30 hover:bg-white/[0.06]"
+              >
+                <CreditCard className="h-4 w-4" />
+                Donate by card
+                <ArrowUpRight className="h-3.5 w-3.5 text-brass-on-dark transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              </a>
+            ) : null}
+          </div>
+
+          <p className="mt-5 text-[12px] text-white/35">
+            And if you can&apos;t, use it anyway. That&apos;s the deal.
+          </p>
+        </div>
+      </motion.section>
+
+      {/* ── other ways ───────────────────────────────────────────── */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Panel>
+          <PanelHeader
+            title="Where the money goes"
+            caption="No salaries, no marketing budget"
+          />
+          <ul className="mt-4 space-y-2.5">
+            {[
+              "Server and database hosting",
+              "Email delivery for invoices",
+              "Domain and certificates",
+              "Backups and storage",
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-2.5 text-[13px] text-ink">
+                <span className="mt-[7px] h-1.5 w-1.5 flex-none rounded-full bg-brass-soft" />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </Panel>
+
+        <Panel>
+          <PanelHeader
+            title="Other ways to help"
+            caption="Money isn't the only currency"
+          />
+          <div className="mt-4 space-y-2">
             <a
-              href={BMAC_URL}
+              href="https://github.com/AlexandreCorcos/mynvoice"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full flex items-center justify-between gap-3 rounded-[var(--radius-button)] border-2 border-negative bg-brass/5 px-5 py-4 text-left hover:bg-brass/10 transition-colors"
+              className="group flex items-center gap-3 rounded-[12px] p-3 ring-1 ring-line transition-colors hover:bg-elevated"
             >
-              <div className="flex items-center gap-3">
-                <Coffee className="h-5 w-5 text-brass-ink flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-ink">Buy Me a Coffee</p>
-                  <p className="text-xs text-ink-muted">Quick one-time donation</p>
-                </div>
-              </div>
-              <ExternalLink className="h-4 w-4 text-brass-ink flex-shrink-0" />
+              <span className="flex h-9 w-9 flex-none items-center justify-center rounded-[11px] bg-elevated text-ink-muted">
+                <Github className="h-4 w-4" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13px] font-semibold text-ink">
+                  Star the repository
+                </span>
+                <span className="block text-[11.5px] text-ink-muted">
+                  It genuinely helps people find it
+                </span>
+              </span>
+              <ArrowUpRight className="h-4 w-4 flex-none text-ink-muted transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
             </a>
-          ) : (
-            <div className="w-full flex items-center gap-3 rounded-[var(--radius-button)] border-2 border-gray-200 bg-gray-50 px-5 py-4 opacity-50 cursor-not-allowed">
-              <Coffee className="h-5 w-5 text-gray-400" />
-              <div>
-                <p className="text-sm font-semibold text-ink">Buy Me a Coffee</p>
-                <p className="text-xs text-ink-muted">Coming soon</p>
-              </div>
-            </div>
-          )}
 
-          {/* Stripe */}
-          {STRIPE_URL ? (
             <a
-              href={STRIPE_URL}
+              href="https://github.com/AlexandreCorcos/mynvoice/issues"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full flex items-center justify-between gap-3 rounded-[var(--radius-button)] border border-gray-200 px-5 py-4 text-left hover:border-brass-soft hover:bg-surface transition-colors"
+              className="group flex items-center gap-3 rounded-[12px] p-3 ring-1 ring-line transition-colors hover:bg-elevated"
             >
-              <div className="flex items-center gap-3">
-                <CreditCard className="h-5 w-5 text-brass-ink flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-ink">Card / Stripe</p>
-                  <p className="text-xs text-ink-muted">One-time or monthly donation</p>
-                </div>
-              </div>
-              <ExternalLink className="h-4 w-4 text-brass-ink flex-shrink-0" />
+              <span className="flex h-9 w-9 flex-none items-center justify-center rounded-[11px] bg-elevated text-ink-muted">
+                <ServerCog className="h-4 w-4" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13px] font-semibold text-ink">
+                  Report a bug, or self-host it
+                </span>
+                <span className="block text-[11.5px] text-ink-muted">
+                  Every issue filed makes the next release better
+                </span>
+              </span>
+              <ArrowUpRight className="h-4 w-4 flex-none text-ink-muted transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
             </a>
-          ) : (
-            <div className="w-full flex items-center gap-3 rounded-[var(--radius-button)] border border-gray-200 px-5 py-4 opacity-50 cursor-not-allowed">
-              <CreditCard className="h-5 w-5 text-gray-400" />
-              <div>
-                <p className="text-sm font-semibold text-ink">Card / Stripe</p>
-                <p className="text-xs text-ink-muted">Coming soon</p>
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
+        </Panel>
       </div>
+
+      <p className="pt-2 text-center text-[12.5px] text-ink-muted">
+        Thank you for using MYNVOICE.{" "}
+        <Link href="/dashboard" className="font-semibold text-brass-ink hover:underline">
+          Back to your dashboard
+        </Link>
+      </p>
     </div>
   );
 }

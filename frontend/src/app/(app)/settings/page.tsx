@@ -1,46 +1,82 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { useAuth } from "@/contexts/auth-context";
+/* =========================================================================
+   Settings.
+
+   Split three ways rather than two, because "Business" was carrying the
+   company's identity, its address, its invoice numbering and its bank
+   details in one scroll:
+
+     You        — the person signed in
+     Business   — identity, contact, address, logo
+     Invoicing  — numbering, terms, default notes, bank details
+
+   Business and Invoicing both save the same company record, so either
+   save button commits the whole form. Splitting the *view* doesn't need
+   to mean splitting the request.
+   ========================================================================= */
+
+import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
+import { ImageIcon, Loader2, Trash2, Upload } from "lucide-react";
 import { api } from "@/lib/api";
-import Toast from "@/components/ui/toast";
-import type { ToastType } from "@/components/ui/toast";
-import { Upload, X as XIcon, Image as ImageIcon } from "lucide-react";
+import { useAuth } from "@/contexts/auth-context";
+import { EASE_OUT } from "@/components/motion";
+import { PageHeader } from "@/components/app/page-header";
+import { Button } from "@/components/app/button";
+import { Panel, PanelHeader } from "@/components/app/panel";
+import { Field, Input, Select, Textarea, Toggle } from "@/components/app/form";
+import { SegmentedControl } from "@/components/app/segmented-control";
+import Toast, { type ToastType } from "@/components/ui/toast";
 import type { Company } from "@/types";
+
+type Tab = "you" | "business" | "invoicing";
+
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+/** Shrink before upload — a 12MP phone photo as a logo helps nobody. */
+function compressImage(file: File, maxPx = 800, quality = 0.85): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("No canvas context"));
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error("Compression failed"))),
+        "image/jpeg",
+        quality
+      );
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
 
 export default function SettingsPage() {
   const { user, refreshUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<"profile" | "business">("profile");
+  const [tab, setTab] = useState<Tab>("you");
   const [company, setCompany] = useState<Company | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
 
-  // Profile form
   const [profile, setProfile] = useState({
-    first_name: user?.first_name || "",
-    last_name: user?.last_name || "",
-    phone: user?.phone || "",
-    language: user?.language || "en-GB",
-    currency: user?.currency || "GBP",
+    first_name: "",
+    last_name: "",
+    phone: "",
+    language: "en-GB",
+    currency: "GBP",
   });
 
-  // Keep profile form in sync when user data loads/changes
-  useEffect(() => {
-    if (user) {
-      setProfile({
-        first_name: user.first_name || "",
-        last_name: user.last_name || "",
-        phone: user.phone || "",
-        language: user.language || "en-GB",
-        currency: user.currency || "GBP",
-      });
-    }
-  }, [user]);
-
-  // Company / Business form
   const [companyForm, setCompanyForm] = useState({
     name: "",
     legal_name: "",
@@ -64,42 +100,55 @@ export default function SettingsPage() {
   });
 
   useEffect(() => {
+    if (!user) return;
+    setProfile({
+      first_name: user.first_name || "",
+      last_name: user.last_name || "",
+      phone: user.phone || "",
+      language: user.language || "en-GB",
+      currency: user.currency || "GBP",
+    });
+  }, [user]);
+
+  useEffect(() => {
     api
       .get<Company | null>("/profile/company")
       .then((c) => {
-        if (c) {
-          setCompany(c);
-          setCompanyForm({
-            name: c.name || "",
-            legal_name: c.legal_name || "",
-            vat_number: c.vat_number || "",
-            tax_id: c.tax_id || "",
-            email: c.email || "",
-            phone: c.phone || "",
-            website: c.website || "",
-            address_line1: c.address_line1 || "",
-            city: c.city || "",
-            postcode: c.postcode || "",
-            country: c.country || "United Kingdom",
-            invoice_prefix: c.invoice_prefix || "INV",
-            use_year_in_number: c.use_year_in_number ?? false,
-            default_payment_terms_days: String(
-              c.default_payment_terms_days || 30
-            ),
-            default_notes: c.default_notes || "",
-            bank_name: c.bank_name || "",
-            bank_account_name: c.bank_account_name || "",
-            bank_account_number: c.bank_account_number || "",
-            bank_sort_code: c.bank_sort_code || "",
-          });
-        }
+        if (!c) return;
+        setCompany(c);
+        setLogoUrl(c.logo_url ?? null);
+        setCompanyForm({
+          name: c.name || "",
+          legal_name: c.legal_name || "",
+          vat_number: c.vat_number || "",
+          tax_id: c.tax_id || "",
+          email: c.email || "",
+          phone: c.phone || "",
+          website: c.website || "",
+          address_line1: c.address_line1 || "",
+          city: c.city || "",
+          postcode: c.postcode || "",
+          country: c.country || "United Kingdom",
+          invoice_prefix: c.invoice_prefix || "INV",
+          use_year_in_number: c.use_year_in_number ?? false,
+          default_payment_terms_days: String(c.default_payment_terms_days || 30),
+          default_notes: c.default_notes || "",
+          bank_name: c.bank_name || "",
+          bank_account_name: c.bank_account_name || "",
+          bank_account_number: c.bank_account_number || "",
+          bank_sort_code: c.bank_sort_code || "",
+        });
       })
-      .catch(() => {});
+      .catch(() => {
+        /* no company yet — the form creates one on first save */
+      });
   }, []);
 
-  const flash = (msg: string, type: ToastType = "success") => {
-    setToast({ message: msg, type });
-  };
+  const flash = (message: string, type: ToastType = "success") =>
+    setToast({ message, type });
+
+  const setC = (patch: Partial<typeof companyForm>) =>
+    setCompanyForm((f) => ({ ...f, ...patch }));
 
   const saveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,9 +156,9 @@ export default function SettingsPage() {
     try {
       await api.put("/profile/me", profile);
       await refreshUser();
-      flash("Profile updated successfully.");
+      flash("Your details are saved.");
     } catch {
-      flash("Failed to save profile.", "error");
+      flash("Couldn't save your details.", "error");
     } finally {
       setSaving(false);
     }
@@ -119,628 +168,416 @@ export default function SettingsPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      const data = {
+      const payload = {
         ...companyForm,
         default_payment_terms_days:
-          parseInt(companyForm.default_payment_terms_days) || 30,
+          parseInt(companyForm.default_payment_terms_days, 10) || 30,
       };
-      if (company) {
-        const updated = await api.put<Company>("/profile/company", data);
-        setCompany(updated);
-      } else {
-        const created = await api.post<Company>("/profile/company", data);
-        setCompany(created);
-      }
-      flash("Business profile saved successfully.");
+      const saved = company
+        ? await api.put<Company>("/profile/company", payload)
+        : await api.post<Company>("/profile/company", payload);
+      setCompany(saved);
+      flash("Business details are saved.");
     } catch {
-      flash("Failed to save business profile.", "error");
+      flash("Couldn't save your business details.", "error");
     } finally {
       setSaving(false);
     }
   };
 
-  const compressImage = (file: File, maxPx = 800, quality = 0.85): Promise<Blob> =>
-    new Promise((resolve, reject) => {
-      const img = new Image();
-      const url = URL.createObjectURL(file);
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
-        const ctx = canvas.getContext("2d")!;
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Compression failed")), "image/jpeg", quality);
-      };
-      img.onerror = reject;
-      img.src = url;
-    });
-
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const uploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      flash("Please select an image file.", "error");
+      flash("That needs to be an image file.", "error");
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      flash("Image must be under 10MB.", "error");
+    if (file.size > MAX_UPLOAD_BYTES) {
+      flash("Images need to be under 10MB.", "error");
       return;
     }
 
-    setUploadingLogo(true);
+    setUploading(true);
     try {
       const compressed = await compressImage(file);
-      const formData = new FormData();
-      formData.append("file", new File([compressed], "logo.jpg", { type: "image/jpeg" }));
-      const result = await api.upload<{ logo_url: string }>("/profile/company/logo", formData);
-      setLogoPreview(result.logo_url);
-      if (company) {
-        setCompany({ ...company, logo_url: result.logo_url });
-      }
-      flash("Logo uploaded successfully.");
+      const body = new FormData();
+      body.append("file", new File([compressed], "logo.jpg", { type: "image/jpeg" }));
+      const result = await api.upload<{ logo_url: string }>(
+        "/profile/company/logo",
+        body
+      );
+      setLogoUrl(result.logo_url);
+      if (company) setCompany({ ...company, logo_url: result.logo_url });
+      flash("Logo uploaded.");
     } catch {
-      flash("Failed to upload logo.", "error");
+      flash("Couldn't upload that logo.", "error");
     } finally {
-      setUploadingLogo(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      setUploading(false);
+      if (fileInput.current) fileInput.current.value = "";
     }
   };
 
-  const handleLogoRemove = async () => {
+  const removeLogo = async () => {
     try {
       await api.delete("/profile/company/logo");
-      setLogoPreview(null);
-      if (company) {
-        setCompany({ ...company, logo_url: null });
-      }
+      setLogoUrl(null);
+      if (company) setCompany({ ...company, logo_url: null });
       flash("Logo removed.");
     } catch {
-      flash("Failed to remove logo.", "error");
+      flash("Couldn't remove the logo.", "error");
     }
   };
 
-  const tabs = [
-    { key: "profile" as const, label: "Profile" },
-    { key: "business" as const, label: "Your Business" },
-  ];
-
-  const inputClass =
-    "w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2.5 text-sm focus:border-brass-soft focus:outline-none";
-
-  const currentLogo = logoPreview || company?.logo_url;
+  const saveButton = (
+    <Button type="submit" variant="primary" disabled={saving}>
+      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+      {saving ? "Saving…" : "Save changes"}
+    </Button>
+  );
 
   return (
-    <div className="mx-auto max-w-3xl">
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Settings"
+        title="How MYNVOICE knows you."
+        subtitle="Your details, your business, and the defaults every invoice inherits."
+      />
 
-      {/* Tabs */}
-      <div className="flex gap-1 rounded-xl bg-white p-1 shadow-[var(--shadow-card)] w-fit mb-8">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === tab.key
-                ? "bg-brass text-white"
-                : "text-ink-muted hover:text-ink hover:bg-surface"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl<Tab>
+        layoutId="settings-tab"
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: "you", label: "You" },
+          { value: "business", label: "Business" },
+          { value: "invoicing", label: "Invoicing" },
+        ]}
+      />
 
-      {/* Profile Tab */}
-      {activeTab === "profile" && (
-        <form
-          onSubmit={saveProfile}
-          className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] space-y-5"
-        >
-          <h2 className="text-base font-semibold text-ink">
-            Personal Details
-          </h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-ink mb-1">
-                First name
-              </label>
-              <input
-                type="text"
-                value={profile.first_name}
-                onChange={(e) =>
-                  setProfile((p) => ({ ...p, first_name: e.target.value }))
-                }
-                className={inputClass}
+      <motion.div
+        key={tab}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: EASE_OUT }}
+      >
+        {/* ── You ────────────────────────────────────────────────── */}
+        {tab === "you" ? (
+          <form onSubmit={saveProfile} className="max-w-2xl space-y-4">
+            <Panel>
+              <PanelHeader
+                title="Your details"
+                caption="Shown on invoices you send and used to sign you in"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-ink mb-1">
-                Last name
-              </label>
-              <input
-                type="text"
-                value={profile.last_name}
-                onChange={(e) =>
-                  setProfile((p) => ({ ...p, last_name: e.target.value }))
-                }
-                className={inputClass}
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <Field label="First name">
+                  <Input
+                    value={profile.first_name}
+                    onChange={(e) =>
+                      setProfile((p) => ({ ...p, first_name: e.target.value }))
+                    }
+                  />
+                </Field>
+                <Field label="Last name">
+                  <Input
+                    value={profile.last_name}
+                    onChange={(e) =>
+                      setProfile((p) => ({ ...p, last_name: e.target.value }))
+                    }
+                  />
+                </Field>
+                <Field label="Email" hint="Contact support to change your sign-in email.">
+                  <Input value={user?.email ?? ""} disabled />
+                </Field>
+                <Field label="Phone">
+                  <Input
+                    value={profile.phone}
+                    onChange={(e) =>
+                      setProfile((p) => ({ ...p, phone: e.target.value }))
+                    }
+                  />
+                </Field>
+              </div>
+            </Panel>
+
+            <Panel>
+              <PanelHeader title="Preferences" caption="Applied across the app" />
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <Field label="Language">
+                  <Select
+                    value={profile.language}
+                    onChange={(e) =>
+                      setProfile((p) => ({ ...p, language: e.target.value }))
+                    }
+                  >
+                    <option value="en-GB">English (UK)</option>
+                  </Select>
+                </Field>
+                <Field label="Default currency" hint="New invoices start here.">
+                  <Select
+                    value={profile.currency}
+                    onChange={(e) =>
+                      setProfile((p) => ({ ...p, currency: e.target.value }))
+                    }
+                  >
+                    <option value="GBP">GBP (£)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="USD">USD ($)</option>
+                  </Select>
+                </Field>
+              </div>
+            </Panel>
+
+            <div className="flex justify-end">{saveButton}</div>
+          </form>
+        ) : null}
+
+        {/* ── Business ───────────────────────────────────────────── */}
+        {tab === "business" ? (
+          <form onSubmit={saveCompany} className="max-w-3xl space-y-4">
+            <Panel>
+              <PanelHeader
+                title="Logo"
+                caption="Appears at the top of every PDF you send"
               />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-ink mb-1">
-              Phone
-            </label>
-            <input
-              type="text"
-              value={profile.phone}
-              onChange={(e) =>
-                setProfile((p) => ({ ...p, phone: e.target.value }))
-              }
-              className={inputClass}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-ink mb-1">
-                Language
-              </label>
-              <select
-                value={profile.language}
-                onChange={(e) =>
-                  setProfile((p) => ({ ...p, language: e.target.value }))
-                }
-                className={`${inputClass} bg-white`}
-              >
-                <option value="en-GB">English (UK)</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-ink mb-1">
-                Currency
-              </label>
-              <select
-                value={profile.currency}
-                onChange={(e) =>
-                  setProfile((p) => ({ ...p, currency: e.target.value }))
-                }
-                className={`${inputClass} bg-white`}
-              >
-                <option value="GBP">GBP ({"\u00A3"})</option>
-                <option value="EUR">EUR ({"\u20AC"})</option>
-                <option value="USD">USD ($)</option>
-              </select>
-            </div>
-          </div>
-          <div className="flex justify-end pt-2">
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-[var(--radius-button)] bg-brass px-5 py-2.5 text-sm font-semibold text-white hover:bg-brass-strong disabled:opacity-50 transition-colors"
-            >
-              {saving ? "Saving..." : "Save Changes"}
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* Your Business Tab */}
-      {activeTab === "business" && (
-        <form onSubmit={saveCompany} className="space-y-6">
-          {/* Business Information */}
-          <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] space-y-5">
-            <h2 className="text-base font-semibold text-ink">
-              Business Information
-            </h2>
-
-            {/* Logo Upload */}
-            <div>
-              <label className="block text-sm font-medium text-ink mb-2">
-                Business Logo
-              </label>
-              <div className="flex items-center gap-4">
-                {currentLogo ? (
-                  <div className="relative group">
+              <div className="mt-5 flex flex-wrap items-center gap-4">
+                <span className="flex h-20 w-20 flex-none items-center justify-center overflow-hidden rounded-[14px] bg-elevated ring-1 ring-line">
+                  {logoUrl ? (
+                    /* A plain <img>: the logo is user-uploaded, already
+                       compressed client-side, and lives on whatever host the
+                       backend serves uploads from — next/image would want
+                       that hostname allow-listed for no benefit here. */
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={currentLogo}
-                      alt="Business logo"
-                      className="h-20 w-20 rounded-xl object-contain border border-gray-200 bg-gray-50 p-1"
+                      src={logoUrl}
+                      alt="Company logo"
+                      className="h-full w-full object-contain"
                     />
-                    <button
-                      type="button"
-                      onClick={handleLogoRemove}
-                      className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity shadow"
-                    >
-                      <XIcon className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex h-20 w-20 items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50">
-                    <ImageIcon className="h-8 w-8 text-gray-300" />
-                  </div>
-                )}
-                <div>
+                  ) : (
+                    <ImageIcon className="h-6 w-6 text-ink-muted" />
+                  )}
+                </span>
+
+                <div className="flex flex-wrap gap-2">
                   <input
-                    ref={fileInputRef}
+                    ref={fileInput}
                     type="file"
                     accept="image/*"
-                    onChange={handleLogoUpload}
+                    onChange={uploadLogo}
                     className="hidden"
                   />
-                  <button
+                  <Button
                     type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingLogo}
-                    className="inline-flex items-center gap-2 rounded-[var(--radius-button)] border border-gray-300 px-3 py-2 text-sm font-medium text-ink hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                    variant="secondary"
+                    disabled={uploading}
+                    onClick={() => fileInput.current?.click()}
                   >
-                    <Upload className="h-4 w-4" />
-                    {uploadingLogo ? "Uploading..." : currentLogo ? "Change Logo" : "Upload Logo"}
-                  </button>
-                  <p className="mt-1 text-xs text-ink-muted">
-                    PNG, JPG up to 5MB. Will appear on invoices.
+                    {uploading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4" />
+                    )}
+                    {uploading ? "Uploading…" : logoUrl ? "Replace" : "Upload logo"}
+                  </Button>
+                  {logoUrl ? (
+                    <Button type="button" variant="ghost" onClick={removeLogo}>
+                      <Trash2 className="h-4 w-4" />
+                      Remove
+                    </Button>
+                  ) : null}
+                  <p className="w-full text-[11.5px] text-ink-muted">
+                    PNG or JPG, up to 10MB. Resized to 800px before upload.
                   </p>
                 </div>
               </div>
-            </div>
+            </Panel>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1">
-                  Business name *
-                </label>
-                <input
-                  type="text"
-                  value={companyForm.name}
-                  onChange={(e) =>
-                    setCompanyForm((f) => ({ ...f, name: e.target.value }))
-                  }
-                  required
-                  className={inputClass}
-                />
+            <Panel>
+              <PanelHeader title="Identity" caption="How your business is named on paper" />
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <Field label="Trading name" required>
+                  <Input
+                    required
+                    value={companyForm.name}
+                    onChange={(e) => setC({ name: e.target.value })}
+                    placeholder="Corcos Studio"
+                  />
+                </Field>
+                <Field label="Legal name" hint="If it differs from your trading name.">
+                  <Input
+                    value={companyForm.legal_name}
+                    onChange={(e) => setC({ legal_name: e.target.value })}
+                  />
+                </Field>
+                <Field label="VAT number">
+                  <Input
+                    value={companyForm.vat_number}
+                    onChange={(e) => setC({ vat_number: e.target.value })}
+                  />
+                </Field>
+                <Field label="Tax / company number">
+                  <Input
+                    value={companyForm.tax_id}
+                    onChange={(e) => setC({ tax_id: e.target.value })}
+                  />
+                </Field>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1">
-                  Legal name
-                </label>
-                <input
-                  type="text"
-                  value={companyForm.legal_name}
-                  onChange={(e) =>
-                    setCompanyForm((f) => ({
-                      ...f,
-                      legal_name: e.target.value,
-                    }))
-                  }
-                  className={inputClass}
-                />
+            </Panel>
+
+            <Panel>
+              <PanelHeader title="Contact & address" caption="Printed on every invoice" />
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <Field label="Email">
+                  <Input
+                    type="email"
+                    value={companyForm.email}
+                    onChange={(e) => setC({ email: e.target.value })}
+                  />
+                </Field>
+                <Field label="Phone">
+                  <Input
+                    value={companyForm.phone}
+                    onChange={(e) => setC({ phone: e.target.value })}
+                  />
+                </Field>
+                <Field label="Website" className="sm:col-span-2">
+                  <Input
+                    value={companyForm.website}
+                    onChange={(e) => setC({ website: e.target.value })}
+                    placeholder="https://"
+                  />
+                </Field>
+                <Field label="Address" className="sm:col-span-2">
+                  <Input
+                    value={companyForm.address_line1}
+                    onChange={(e) => setC({ address_line1: e.target.value })}
+                  />
+                </Field>
+                <Field label="City">
+                  <Input
+                    value={companyForm.city}
+                    onChange={(e) => setC({ city: e.target.value })}
+                  />
+                </Field>
+                <Field label="Postcode">
+                  <Input
+                    value={companyForm.postcode}
+                    onChange={(e) => setC({ postcode: e.target.value })}
+                  />
+                </Field>
+                <Field label="Country" className="sm:col-span-2">
+                  <Input
+                    value={companyForm.country}
+                    onChange={(e) => setC({ country: e.target.value })}
+                  />
+                </Field>
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1">
-                  VAT number
-                </label>
-                <input
-                  type="text"
-                  value={companyForm.vat_number}
-                  onChange={(e) =>
-                    setCompanyForm((f) => ({
-                      ...f,
-                      vat_number: e.target.value,
-                    }))
-                  }
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1">
-                  Tax ID
-                </label>
-                <input
-                  type="text"
-                  value={companyForm.tax_id}
-                  onChange={(e) =>
-                    setCompanyForm((f) => ({ ...f, tax_id: e.target.value }))
-                  }
-                  className={inputClass}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={companyForm.email}
-                  onChange={(e) =>
-                    setCompanyForm((f) => ({ ...f, email: e.target.value }))
-                  }
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1">
-                  Phone
-                </label>
-                <input
-                  type="text"
-                  value={companyForm.phone}
-                  onChange={(e) =>
-                    setCompanyForm((f) => ({ ...f, phone: e.target.value }))
-                  }
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1">
-                  Website
-                </label>
-                <input
-                  type="text"
-                  value={companyForm.website}
-                  onChange={(e) =>
-                    setCompanyForm((f) => ({ ...f, website: e.target.value }))
-                  }
-                  placeholder="https://"
-                  className={inputClass}
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-ink mb-1">
-                Address
-              </label>
-              <input
-                type="text"
-                value={companyForm.address_line1}
-                onChange={(e) =>
-                  setCompanyForm((f) => ({
-                    ...f,
-                    address_line1: e.target.value,
-                  }))
-                }
-                className={inputClass}
+            </Panel>
+
+            <div className="flex justify-end">{saveButton}</div>
+          </form>
+        ) : null}
+
+        {/* ── Invoicing ──────────────────────────────────────────── */}
+        {tab === "invoicing" ? (
+          <form onSubmit={saveCompany} className="max-w-3xl space-y-4">
+            <Panel>
+              <PanelHeader
+                title="Numbering & terms"
+                caption="What every new invoice starts with"
               />
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1">
-                  City
-                </label>
-                <input
-                  type="text"
-                  value={companyForm.city}
-                  onChange={(e) =>
-                    setCompanyForm((f) => ({ ...f, city: e.target.value }))
-                  }
-                  className={inputClass}
-                />
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <Field label="Invoice prefix">
+                  <Input
+                    value={companyForm.invoice_prefix}
+                    onChange={(e) => setC({ invoice_prefix: e.target.value })}
+                    placeholder="INV"
+                  />
+                </Field>
+                <Field label="Payment terms (days)">
+                  <Input
+                    type="number"
+                    min="0"
+                    value={companyForm.default_payment_terms_days}
+                    onChange={(e) => setC({ default_payment_terms_days: e.target.value })}
+                    className="tabular-nums"
+                  />
+                </Field>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1">
-                  Postcode
-                </label>
-                <input
-                  type="text"
-                  value={companyForm.postcode}
-                  onChange={(e) =>
-                    setCompanyForm((f) => ({ ...f, postcode: e.target.value }))
-                  }
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1">
-                  Country
-                </label>
-                <input
-                  type="text"
-                  value={companyForm.country}
-                  onChange={(e) =>
-                    setCompanyForm((f) => ({ ...f, country: e.target.value }))
-                  }
-                  className={inputClass}
-                />
-              </div>
-            </div>
-          </div>
 
-          {/* Default Invoice Settings */}
-          <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] space-y-5">
-            <div>
-              <h2 className="text-base font-semibold text-ink">
-                Default Invoice Settings
-              </h2>
-              <p className="mt-1 text-xs text-ink-muted">
-                These are defaults. You can override per client.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1">
-                  Invoice prefix
-                </label>
-                <input
-                  type="text"
-                  value={companyForm.invoice_prefix}
-                  onChange={(e) =>
-                    setCompanyForm((f) => ({
-                      ...f,
-                      invoice_prefix: e.target.value,
-                    }))
-                  }
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1">
-                  Payment terms (days)
-                </label>
-                <input
-                  type="number"
-                  value={companyForm.default_payment_terms_days}
-                  onChange={(e) =>
-                    setCompanyForm((f) => ({
-                      ...f,
-                      default_payment_terms_days: e.target.value,
-                    }))
-                  }
-                  className={inputClass}
-                />
-              </div>
-            </div>
-
-            {/* Year in invoice number toggle */}
-            <div className="flex items-start gap-3">
-              <button
-                type="button"
-                role="switch"
-                aria-checked={companyForm.use_year_in_number}
-                onClick={() =>
-                  setCompanyForm((f) => ({
-                    ...f,
-                    use_year_in_number: !f.use_year_in_number,
-                  }))
-                }
-                className={`relative mt-0.5 inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  companyForm.use_year_in_number
-                    ? "bg-brass"
-                    : "bg-gray-300"
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+              <div className="mt-4 rounded-[12px] bg-elevated/50 p-3">
+                <Toggle
+                  checked={companyForm.use_year_in_number}
+                  onChange={(v) => setC({ use_year_in_number: v })}
+                  label="Include the year in invoice numbers"
+                  hint={
                     companyForm.use_year_in_number
-                      ? "translate-x-5"
-                      : "translate-x-0"
-                  }`}
+                      ? `Numbers look like ${companyForm.invoice_prefix || "INV"}-${String(
+                          new Date().getFullYear()
+                        ).slice(2)}-00001`
+                      : `Numbers look like ${companyForm.invoice_prefix || "INV"}-00001`
+                  }
                 />
-              </button>
-              <div>
-                <p className="text-sm font-medium text-ink">
-                  Include year in invoice numbers
-                </p>
-                <p className="text-xs text-ink-muted mt-0.5">
-                  e.g. INV-26-00001 instead of INV-00001
-                </p>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-ink mb-1">
-                Default invoice notes
-              </label>
-              <textarea
-                value={companyForm.default_notes}
-                onChange={(e) =>
-                  setCompanyForm((f) => ({
-                    ...f,
-                    default_notes: e.target.value,
-                  }))
-                }
-                rows={3}
-                className={`${inputClass} resize-none`}
+              <div className="mt-4">
+                <Field
+                  label="Default invoice notes"
+                  hint="Pre-filled on every new invoice — you can still change it per invoice."
+                >
+                  <Textarea
+                    rows={3}
+                    value={companyForm.default_notes}
+                    onChange={(e) => setC({ default_notes: e.target.value })}
+                    placeholder="Thanks for your business."
+                  />
+                </Field>
+              </div>
+            </Panel>
+
+            <Panel>
+              <PanelHeader
+                title="Bank details"
+                caption="Printed on invoices so clients know where to pay"
               />
-            </div>
-          </div>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <Field label="Bank name">
+                  <Input
+                    value={companyForm.bank_name}
+                    onChange={(e) => setC({ bank_name: e.target.value })}
+                  />
+                </Field>
+                <Field label="Account name">
+                  <Input
+                    value={companyForm.bank_account_name}
+                    onChange={(e) => setC({ bank_account_name: e.target.value })}
+                  />
+                </Field>
+                <Field label="Account number">
+                  <Input
+                    value={companyForm.bank_account_number}
+                    onChange={(e) => setC({ bank_account_number: e.target.value })}
+                    className="tabular-nums"
+                  />
+                </Field>
+                <Field label="Sort code">
+                  <Input
+                    value={companyForm.bank_sort_code}
+                    onChange={(e) => setC({ bank_sort_code: e.target.value })}
+                    className="tabular-nums"
+                  />
+                </Field>
+              </div>
+            </Panel>
 
-          {/* Bank Details */}
-          <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] space-y-5">
-            <h2 className="text-base font-semibold text-ink">
-              Bank Details
-            </h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1">
-                  Bank name
-                </label>
-                <input
-                  type="text"
-                  value={companyForm.bank_name}
-                  onChange={(e) =>
-                    setCompanyForm((f) => ({
-                      ...f,
-                      bank_name: e.target.value,
-                    }))
-                  }
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1">
-                  Account name
-                </label>
-                <input
-                  type="text"
-                  value={companyForm.bank_account_name}
-                  onChange={(e) =>
-                    setCompanyForm((f) => ({
-                      ...f,
-                      bank_account_name: e.target.value,
-                    }))
-                  }
-                  className={inputClass}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1">
-                  Account number
-                </label>
-                <input
-                  type="text"
-                  value={companyForm.bank_account_number}
-                  onChange={(e) =>
-                    setCompanyForm((f) => ({
-                      ...f,
-                      bank_account_number: e.target.value,
-                    }))
-                  }
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1">
-                  Sort code
-                </label>
-                <input
-                  type="text"
-                  value={companyForm.bank_sort_code}
-                  onChange={(e) =>
-                    setCompanyForm((f) => ({
-                      ...f,
-                      bank_sort_code: e.target.value,
-                    }))
-                  }
-                  className={inputClass}
-                />
-              </div>
-            </div>
-          </div>
+            <div className="flex justify-end">{saveButton}</div>
+          </form>
+        ) : null}
+      </motion.div>
 
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-[var(--radius-button)] bg-brass px-5 py-2.5 text-sm font-semibold text-white hover:bg-brass-strong disabled:opacity-50 transition-colors"
-            >
-              {saving ? "Saving..." : "Save Business Profile"}
-            </button>
-          </div>
-        </form>
-      )}
+      {toast ? (
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+      ) : null}
     </div>
   );
 }

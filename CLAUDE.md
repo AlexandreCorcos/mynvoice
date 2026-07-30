@@ -167,6 +167,14 @@ one area at a time. Shared pieces live in `src/components/app/`:
 | `segmented-control.tsx` | Filter tabs whose selection slides via `layoutId` |
 | `invoice-editor.tsx` | `InvoiceEditor` shared by /invoices/new and /invoices/[id]/edit |
 
+`form.tsx` also exports `Toggle`; `charts.tsx` also exports `GroupedBarChart`
+and `RankedList`.
+
+**Recharts animation is switched off** on every series. With a dozen
+categories the bar rectangles simply never mount — the panel around the
+chart already animates in, so nothing is lost and the render is
+deterministic.
+
 Motion shared with the landing page (`EASE_OUT`, `useCalmMotion`, `CountUp`)
 lives in `src/components/motion.tsx`; `components/landing/primitives.tsx`
 re-exports it so landing code still imports from one place.
@@ -197,7 +205,9 @@ Rules:
 | Invoices (list, new, detail, edit) | rebuilt |
 | Shared: status badge, empty state, toast | rebuilt |
 | Clients · Items · Payments · Expenses | rebuilt |
-| Reports · Settings · Admin · Support | pending |
+| Reports · Settings · Admin · Support | rebuilt |
+| Onboarding checklist | rebuilt |
+| Auth screens (login, register, password reset) | pending |
 
 `/invoices/new` and `/invoices/[id]/edit` are thin wrappers — behaviour
 changes belong in `InvoiceEditor`, not in either route.

@@ -14,6 +14,7 @@
    No rainbows, no per-series colour picking at the call site.
    ========================================================================= */
 
+import { motion } from "framer-motion";
 import {
   Area,
   Bar,
@@ -24,6 +25,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { EASE_OUT } from "@/components/motion";
 
 export type TrendPoint = { month: string; revenue: number; expenses: number };
 
@@ -129,6 +131,7 @@ export function RevenueTrendChart({
           fillOpacity={0.4}
           radius={[4, 4, 0, 0]}
           maxBarSize={26}
+          isAnimationActive={false}
         />
         <Area
           dataKey="revenue"
@@ -138,6 +141,7 @@ export function RevenueTrendChart({
           strokeWidth={2.5}
           fill="url(#mv-revenue)"
           dot={false}
+          isAnimationActive={false}
           activeDot={{
             r: 4,
             fill: "var(--brass)",
@@ -147,6 +151,135 @@ export function RevenueTrendChart({
         />
       </ComposedChart>
     </ResponsiveContainer>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Grouped bars                                                        */
+/* ------------------------------------------------------------------ */
+
+export type SeriesTone = "brass" | "muted" | "positive" | "negative";
+
+const SERIES_FILL: Record<SeriesTone, string> = {
+  brass: "var(--brass)",
+  muted: "var(--ink-muted)",
+  positive: "var(--positive)",
+  negative: "var(--negative)",
+};
+
+export type BarSeries = { key: string; name: string; tone: SeriesTone };
+
+/**
+ * Several series side by side, for reports where the comparison between
+ * them *is* the point. Tones are semantic, not decorative: brass is what
+ * you billed, positive is what arrived, negative is what's still out.
+ */
+export function GroupedBarChart({
+  data,
+  series,
+  xKey,
+  formatValue,
+  compactValue,
+  height = 320,
+}: {
+  data: Record<string, string | number>[];
+  series: BarSeries[];
+  xKey: string;
+  formatValue: (n: number) => string;
+  compactValue: (n: number) => string;
+  height?: number;
+}) {
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <ComposedChart data={data} margin={{ top: 8, right: 4, bottom: 0, left: -12 }}>
+        <CartesianGrid stroke="var(--line)" vertical={false} />
+        <XAxis dataKey={xKey} {...axis} dy={6} />
+        <YAxis {...axis} width={64} tickFormatter={compactValue} />
+        <Tooltip
+          cursor={{ fill: "var(--elevated)", radius: 6 }}
+          content={(props) => (
+            <ChartTooltip
+              active={props.active}
+              payload={props.payload as TooltipEntry[] | undefined}
+              label={props.label as string | number | undefined}
+              formatValue={formatValue}
+            />
+          )}
+        />
+        {series.map((s) => (
+          <Bar
+            key={s.key}
+            dataKey={s.key}
+            name={s.name}
+            fill={SERIES_FILL[s.tone]}
+            fillOpacity={s.tone === "muted" ? 0.35 : 0.9}
+            radius={[4, 4, 0, 0]}
+            maxBarSize={22}
+            /* Recharts' own grow-in is unreliable here — with a dozen
+               categories the rectangles simply never mount. The panel
+               already animates in around the chart, so nothing is lost. */
+            isAnimationActive={false}
+          />
+        ))}
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Ranked list                                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A ranked breakdown reads better as a list with proportion bars than as
+ * a pie — you can compare the values directly and read the labels without
+ * a legend.
+ */
+export function RankedList({
+  rows,
+  formatValue,
+  tone = "brass",
+  emptyLabel = "Nothing to show yet.",
+}: {
+  rows: { label: string; value: number; caption?: string }[];
+  formatValue: (n: number) => string;
+  tone?: SeriesTone;
+  emptyLabel?: string;
+}) {
+  const max = Math.max(...rows.map((r) => r.value), 0);
+
+  if (rows.length === 0) {
+    return <p className="py-8 text-center text-[13px] text-ink-muted">{emptyLabel}</p>;
+  }
+
+  return (
+    <ul className="space-y-3">
+      {rows.map((r, i) => (
+        <li key={`${r.label}-${i}`}>
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="min-w-0 truncate text-[13px] font-medium text-ink">
+              {r.label}
+            </span>
+            <span className="flex-none text-[13px] font-bold tabular-nums text-ink">
+              {formatValue(r.value)}
+            </span>
+          </div>
+          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-elevated">
+            <motion.span
+              initial={{ width: 0 }}
+              whileInView={{ width: `${max > 0 ? (r.value / max) * 100 : 0}%` }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.7, delay: 0.1 + i * 0.05, ease: EASE_OUT }}
+              className="block h-full rounded-full"
+              style={{ background: SERIES_FILL[tone], opacity: tone === "muted" ? 0.4 : 1 }}
+            />
+          </div>
+          {r.caption ? (
+            <p className="mt-1 text-[11.5px] text-ink-muted">{r.caption}</p>
+          ) : null}
+        </li>
+      ))}
+    </ul>
   );
 }
 

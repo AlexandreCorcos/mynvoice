@@ -1,87 +1,75 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import {
-  BarChart3,
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-  Cell,
-} from "recharts";
+/* =========================================================================
+   Reports.
+
+   One question per block: how much came in against what was billed, who
+   it came from, and what it cost to earn. The period and year controls sit
+   together at the top because changing one almost always means checking
+   the other.
+
+   Three series on the main chart, each with a meaning rather than a
+   palette slot: brass is what you billed, positive is what arrived,
+   negative is what's still out.
+   ========================================================================= */
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { BarChart3, ChevronLeft, ChevronRight, Receipt, TrendingUp, Wallet } from "lucide-react";
 import { api } from "@/lib/api";
-import { formatCurrency } from "@/lib/utils";
+import { formatCompactCurrency, formatCurrency } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
-import StatCard from "@/components/ui/stat-card";
-import { StaggerContainer, StaggerItem, FadeIn } from "@/components/motion";
+import { PageHeader } from "@/components/app/page-header";
+import { Button } from "@/components/app/button";
+import { Panel, PanelHeader } from "@/components/app/panel";
+import { MetricCard } from "@/components/app/metric";
+import { SegmentedControl } from "@/components/app/segmented-control";
+import { ChartLegend, GroupedBarChart, RankedList } from "@/components/app/charts";
+import EmptyState from "@/components/ui/empty-state";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+/* ------------------------------------------------------------------ */
+/* Types                                                               */
+/* ------------------------------------------------------------------ */
 
-interface PeriodRevenue {
+type PeriodRevenue = {
   period: string;
   invoiced: number;
   received: number;
   outstanding: number;
-}
+};
 
-interface ClientRevenue {
+type ClientRevenue = {
   client_id: string | null;
   client_name: string | null;
   invoiced: number;
   received: number;
   outstanding: number;
-}
+};
 
-interface ExpenseCategory {
+type ExpenseCategoryRow = {
   category: string | null;
   total: number;
   count: number;
-}
+};
 
-interface ReportSummary {
-  total_invoiced: number;
-  total_received: number;
-  total_outstanding: number;
-  total_expenses: number;
-}
-
-interface ReportData {
-  summary: ReportSummary;
+type ReportData = {
+  summary: {
+    total_invoiced: number;
+    total_received: number;
+    total_outstanding: number;
+    total_expenses: number;
+  };
   revenue_by_period: PeriodRevenue[];
   revenue_by_client: ClientRevenue[];
-  expenses_by_category: ExpenseCategory[];
-}
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
+  expenses_by_category: ExpenseCategoryRow[];
+};
 
 type Period = "month" | "quarter" | "year";
 
-const PERIOD_OPTIONS: { label: string; value: Period }[] = [
-  { label: "Month", value: "month" },
-  { label: "Quarter", value: "quarter" },
-  { label: "Year", value: "year" },
-];
-
 const CURRENT_YEAR = new Date().getFullYear();
 
-// ---------------------------------------------------------------------------
-// Page
-// ---------------------------------------------------------------------------
+/* ------------------------------------------------------------------ */
+/* Screen                                                              */
+/* ------------------------------------------------------------------ */
 
 export default function ReportsPage() {
   const { user } = useAuth();
@@ -95,12 +83,9 @@ export default function ReportsPage() {
   const fetchReports = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get<ReportData>(
-        `/reports/?period=${period}&year=${year}`
-      );
-      setData(res);
+      setData(await api.get<ReportData>(`/reports/?period=${period}&year=${year}`));
     } catch {
-      // keep previous data on error
+      /* keep whatever was on screen rather than blanking it */
     } finally {
       setLoading(false);
     }
@@ -110,335 +95,225 @@ export default function ReportsPage() {
     fetchReports();
   }, [fetchReports]);
 
-  // ---------------------------------------------------------------------------
-  // Loading skeleton
-  // ---------------------------------------------------------------------------
+  const money = (n: number) => formatCurrency(n, currency);
+  const compact = (n: number) => formatCompactCurrency(n, currency);
+
+  const summary = data?.summary;
+  const byPeriod = useMemo(() => data?.revenue_by_period ?? [], [data]);
+  const byClient = data?.revenue_by_client ?? [];
+  const byCategory = data?.expenses_by_category ?? [];
+
+  /* Collection rate is the number this screen exists to surface: of what
+     you billed, how much actually landed. */
+  const collected = summary?.total_invoiced
+    ? Math.round((summary.total_received / summary.total_invoiced) * 100)
+    : 0;
+
+  const net = (summary?.total_received ?? 0) - (summary?.total_expenses ?? 0);
+  const receivedSeries = byPeriod.map((p) => p.received);
+  const hasData = byPeriod.some(
+    (p) => p.invoiced > 0 || p.received > 0 || p.outstanding > 0
+  );
 
   if (loading && !data) {
     return (
       <div className="space-y-6">
-        {/* Header skeleton */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="h-9 w-32 animate-pulse rounded-lg bg-gray-200" />
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-56 animate-pulse rounded-lg bg-gray-200" />
-            <div className="h-9 w-28 animate-pulse rounded-lg bg-gray-200" />
-          </div>
-        </div>
-        {/* Stat cards skeleton */}
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className="h-28 animate-pulse rounded-[var(--radius-card)] bg-white shadow-[var(--shadow-card)]"
-            />
+        <div className="h-4 w-28 animate-pulse rounded-full bg-elevated" />
+        <div className="h-9 w-80 animate-pulse rounded-lg bg-elevated" />
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-[136px] animate-pulse rounded-[16px] bg-elevated" />
           ))}
         </div>
-        {/* Chart skeleton */}
-        <div className="h-96 animate-pulse rounded-[var(--radius-card)] bg-white shadow-[var(--shadow-card)]" />
-        {/* Table skeletons */}
-        <div className="h-64 animate-pulse rounded-[var(--radius-card)] bg-white shadow-[var(--shadow-card)]" />
-        <div className="h-64 animate-pulse rounded-[var(--radius-card)] bg-white shadow-[var(--shadow-card)]" />
+        <div className="h-[420px] animate-pulse rounded-[16px] bg-elevated" />
       </div>
     );
   }
 
-  const summary = data?.summary;
-  const revenueByPeriod = data?.revenue_by_period || [];
-  const revenueByClient = [...(data?.revenue_by_client || [])].sort(
-    (a, b) => b.invoiced - a.invoiced
-  );
-  const expensesByCategory = [...(data?.expenses_by_category || [])].sort(
-    (a, b) => b.total - a.total
-  );
-
-  const netProfit =
-    (summary?.total_received || 0) - (summary?.total_expenses || 0);
-
-  const currencySymbol =
-    currency === "EUR" ? "\u20AC" : currency === "USD" ? "$" : "\u00A3";
-
-  // Max for horizontal expense bars
-  const maxExpense =
-    expensesByCategory.length > 0
-      ? Math.max(...expensesByCategory.map((e) => e.total))
-      : 0;
-
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
-
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-ink dark:text-white">
-          Reports
-        </h1>
+      <PageHeader
+        eyebrow="Reports"
+        title="What the year actually did."
+        subtitle="Billed against collected, who it came from, and what it cost to earn."
+      />
 
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Period selector */}
-          <div className="inline-flex overflow-hidden rounded-[var(--radius-button)] border border-gray-200 dark:border-white/10">
-            {PERIOD_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setPeriod(opt.value)}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${
-                  period === opt.value
-                    ? "bg-brass text-white dark:bg-brass"
-                    : "bg-white text-ink-muted hover:bg-gray-50 dark:bg-graphite dark:text-white/60 dark:hover:bg-white/5"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
+      {/* ── period controls ──────────────────────────────────────── */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <SegmentedControl<Period>
+          layoutId="report-period"
+          value={period}
+          onChange={setPeriod}
+          options={[
+            { value: "month", label: "Monthly" },
+            { value: "quarter", label: "Quarterly" },
+            { value: "year", label: "Yearly" },
+          ]}
+        />
 
-          {/* Year selector */}
-          <div className="inline-flex items-center gap-1 rounded-[var(--radius-button)] border border-gray-200 bg-white dark:border-white/10 dark:bg-graphite">
-            <button
-              onClick={() => setYear((y) => y - 1)}
-              className="p-2 text-ink-muted transition-colors hover:text-ink dark:text-white/50 dark:hover:text-white"
-              aria-label="Previous year"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="min-w-[3.5rem] text-center text-sm font-semibold text-ink dark:text-white">
-              {year}
-            </span>
-            <button
-              onClick={() => setYear((y) => y + 1)}
-              disabled={year >= CURRENT_YEAR}
-              className="p-2 text-ink-muted transition-colors hover:text-ink disabled:opacity-30 dark:text-white/50 dark:hover:text-white"
-              aria-label="Next year"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
+        <div className="flex items-center gap-1 rounded-[12px] bg-elevated p-1 ring-1 ring-line">
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label="Previous year"
+            onClick={() => setYear((y) => y - 1)}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="min-w-[4rem] text-center text-[13.5px] font-bold tabular-nums text-ink">
+            {year}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label="Next year"
+            disabled={year >= CURRENT_YEAR}
+            onClick={() => setYear((y) => Math.min(CURRENT_YEAR, y + 1))}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
-      {/* Summary cards */}
-      <StaggerContainer className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        <StaggerItem>
-          <StatCard
-            label="Total Invoiced"
-            value={formatCurrency(summary?.total_invoiced || 0, currency)}
-            icon={BarChart3}
-            accent
-          />
-        </StaggerItem>
-        <StaggerItem>
-          <StatCard
-            label="Total Received"
-            value={formatCurrency(summary?.total_received || 0, currency)}
-            icon={TrendingUp}
-            trend="Payments collected"
-            trendUp
-          />
-        </StaggerItem>
-        <StaggerItem>
-          <StatCard
-            label="Total Outstanding"
-            value={formatCurrency(summary?.total_outstanding || 0, currency)}
-            icon={TrendingDown}
-            trend={
-              (summary?.total_outstanding || 0) > 0
-                ? "Awaiting payment"
-                : undefined
-            }
-          />
-        </StaggerItem>
-        <StaggerItem>
-          <StatCard
-            label="Net Profit"
-            value={formatCurrency(netProfit, currency)}
-            icon={DollarSign}
-            trend={
-              netProfit >= 0 ? "Received minus expenses" : "Expenses exceed received"
-            }
-            trendUp={netProfit >= 0}
-          />
-        </StaggerItem>
-      </StaggerContainer>
+      {/* ── the four figures ─────────────────────────────────────── */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          index={0}
+          label="Invoiced"
+          value={summary?.total_invoiced ?? 0}
+          format={money}
+          icon={Receipt}
+          tone="brass"
+          caption={`in ${year}`}
+          series={receivedSeries}
+        />
+        <MetricCard
+          index={1}
+          label="Received"
+          value={summary?.total_received ?? 0}
+          format={money}
+          icon={TrendingUp}
+          tone="positive"
+          delta={summary?.total_invoiced ? `${collected}%` : undefined}
+          deltaUp={collected >= 70}
+          caption="of what you billed"
+        />
+        <MetricCard
+          index={2}
+          label="Still outstanding"
+          value={summary?.total_outstanding ?? 0}
+          format={money}
+          icon={BarChart3}
+          tone={(summary?.total_outstanding ?? 0) > 0 ? "negative" : "default"}
+          caption="not yet collected"
+        />
+        <MetricCard
+          index={3}
+          label="Expenses"
+          value={summary?.total_expenses ?? 0}
+          format={money}
+          icon={Wallet}
+          caption={`net ${money(net)}`}
+        />
+      </div>
 
-      {/* Revenue by Period chart */}
-      <FadeIn delay={0.15}>
-        <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] dark:border dark:border-white/10 dark:bg-graphite">
-          <div className="mb-6">
-            <h3 className="text-base font-semibold text-ink dark:text-white">
-              Revenue by Period
-            </h3>
-            <p className="text-sm text-ink-muted dark:text-white/50">
-              Invoiced vs received vs outstanding
-            </p>
-          </div>
+      {/* ── the trend ────────────────────────────────────────────── */}
+      <Panel>
+        <PanelHeader
+          title={
+            period === "month"
+              ? "Month by month"
+              : period === "quarter"
+                ? "Quarter by quarter"
+                : "Year by year"
+          }
+          caption="Billed, collected, and what's still out"
+          action={
+            <ChartLegend
+              items={[
+                { label: "Invoiced", tone: "brass" },
+                { label: "Received", tone: "positive" },
+                { label: "Outstanding", tone: "negative" },
+              ]}
+            />
+          }
+        />
 
-          {revenueByPeriod.length > 0 ? (
-            <ResponsiveContainer width="100%" height={360}>
-              <BarChart data={revenueByPeriod} barGap={4}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
-                <XAxis
-                  dataKey="period"
-                  tick={{ fontSize: 12, fill: "var(--ink-muted)" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 12, fill: "var(--ink-muted)" }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v) => `${currencySymbol}${v}`}
-                />
-                <Tooltip
-                  formatter={(value: number, name: string) => [
-                    formatCurrency(value, currency),
-                    name,
-                  ]}
-                  contentStyle={{
-                    borderRadius: "10px",
-                    border: "1px solid var(--line)",
-                    background: "var(--card)",
-                    color: "var(--ink)",
-                    boxShadow: "var(--shadow-dropdown-v)",
-                  }}
-                />
-                <Legend />
-                {/* Invoiced = brass · Received = positive · Outstanding = at risk */}
-                <Bar
-                  name="Invoiced"
-                  dataKey="invoiced"
-                  fill="var(--brass)"
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={40}
-                />
-                <Bar
-                  name="Received"
-                  dataKey="received"
-                  fill="var(--positive)"
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={40}
-                />
-                <Bar
-                  name="Outstanding"
-                  dataKey="outstanding"
-                  fill="var(--negative)"
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={40}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+        <div className="mt-6">
+          {hasData ? (
+            <GroupedBarChart
+              data={byPeriod as unknown as Record<string, string | number>[]}
+              xKey="period"
+              series={[
+                { key: "invoiced", name: "Invoiced", tone: "brass" },
+                { key: "received", name: "Received", tone: "positive" },
+                { key: "outstanding", name: "Outstanding", tone: "negative" },
+              ]}
+              formatValue={money}
+              compactValue={compact}
+              height={340}
+            />
           ) : (
-            <div className="flex h-64 items-center justify-center text-sm text-ink-muted dark:text-white/50">
-              No revenue data for this period.
+            <div className="flex h-[340px] items-center justify-center rounded-xl border border-dashed border-line">
+              <p className="max-w-[18rem] text-center text-[13px] text-ink-muted">
+                Nothing recorded for {year} yet. Send an invoice and this fills in.
+              </p>
             </div>
           )}
         </div>
-      </FadeIn>
+      </Panel>
 
-      {/* Revenue by Client table */}
-      <FadeIn delay={0.2}>
-        <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] dark:border dark:border-white/10 dark:bg-graphite">
-          <h3 className="mb-4 text-base font-semibold text-ink dark:text-white">
-            Revenue by Client
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-gray-100 dark:border-white/10">
-                  <th className="pb-3 pr-4 text-xs font-semibold uppercase tracking-wider text-ink-muted dark:text-white/50">
-                    Client Name
-                  </th>
-                  <th className="pb-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-ink-muted dark:text-white/50">
-                    Invoiced
-                  </th>
-                  <th className="pb-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-ink-muted dark:text-white/50">
-                    Received
-                  </th>
-                  <th className="pb-3 pl-4 text-right text-xs font-semibold uppercase tracking-wider text-ink-muted dark:text-white/50">
-                    Outstanding
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {revenueByClient.map((row, index) => (
-                  <tr
-                    key={row.client_id || `no-client-${index}`}
-                    className="border-b border-gray-50 last:border-0 dark:border-white/5"
-                  >
-                    <td className="py-3 pr-4 text-sm font-medium text-ink dark:text-white">
-                      {row.client_name || "No client"}
-                    </td>
-                    <td className="py-3 px-4 text-right text-sm text-ink dark:text-white">
-                      {formatCurrency(row.invoiced, currency)}
-                    </td>
-                    <td className="py-3 px-4 text-right text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                      {formatCurrency(row.received, currency)}
-                    </td>
-                    <td className="py-3 pl-4 text-right text-sm font-medium text-negative">
-                      {formatCurrency(row.outstanding, currency)}
-                    </td>
-                  </tr>
-                ))}
-                {revenueByClient.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="py-8 text-center text-sm text-ink-muted dark:text-white/50"
-                    >
-                      No client revenue data available.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+      {/* ── who and what ─────────────────────────────────────────── */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Panel>
+          <PanelHeader title="Top clients" caption="By what they've actually paid" />
+          <div className="mt-5">
+            <RankedList
+              tone="positive"
+              formatValue={money}
+              emptyLabel="No client revenue recorded for this year."
+              rows={[...byClient]
+                .sort((a, b) => b.received - a.received)
+                .slice(0, 6)
+                .map((c) => ({
+                  label: c.client_name ?? "No client",
+                  value: c.received,
+                  caption:
+                    c.outstanding > 0
+                      ? `${money(c.outstanding)} still outstanding`
+                      : undefined,
+                }))}
+            />
           </div>
-        </div>
-      </FadeIn>
+        </Panel>
 
-      {/* Expenses by Category */}
-      <FadeIn delay={0.25}>
-        <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] dark:border dark:border-white/10 dark:bg-graphite">
-          <h3 className="mb-4 text-base font-semibold text-ink dark:text-white">
-            Expenses by Category
-          </h3>
+        <Panel>
+          <PanelHeader title="Expenses by category" caption="Where the money went" />
+          <div className="mt-5">
+            <RankedList
+              tone="muted"
+              formatValue={money}
+              emptyLabel="No expenses recorded for this year."
+              rows={[...byCategory]
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 6)
+                .map((c) => ({
+                  label: c.category ?? "Uncategorised",
+                  value: c.total,
+                  caption: `${c.count} ${c.count === 1 ? "entry" : "entries"}`,
+                }))}
+            />
+          </div>
+        </Panel>
+      </div>
 
-          {expensesByCategory.length > 0 ? (
-            <div className="space-y-3">
-              {expensesByCategory.map((cat, index) => {
-                const pct = maxExpense > 0 ? (cat.total / maxExpense) * 100 : 0;
-                return (
-                  <div key={cat.category || `uncat-${index}`} className="group">
-                    <div className="mb-1 flex items-center justify-between">
-                      <span className="text-sm font-medium text-ink dark:text-white">
-                        {cat.category || "Uncategorised"}
-                      </span>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-ink-muted dark:text-white/40">
-                          {cat.count} {cat.count === 1 ? "expense" : "expenses"}
-                        </span>
-                        <span className="text-sm font-semibold text-ink dark:text-white">
-                          {formatCurrency(cat.total, currency)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="h-2.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
-                      <div
-                        className="h-full rounded-full bg-brass transition-all duration-500 dark:bg-brass"
-                        style={{ width: `${pct}%`, minWidth: pct > 0 ? "4px" : "0" }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex h-32 items-center justify-center text-sm text-ink-muted dark:text-white/50">
-              No expense data available for this period.
-            </div>
-          )}
-        </div>
-      </FadeIn>
+      {!loading && !hasData && byClient.length === 0 && byCategory.length === 0 ? (
+        <EmptyState
+          icon={BarChart3}
+          title={`Nothing to report for ${year}`}
+          description="Reports fill in as you send invoices, record payments and log expenses."
+        />
+      ) : null}
     </div>
   );
 }

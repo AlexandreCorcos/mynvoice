@@ -1,221 +1,203 @@
 "use client";
 
+/* =========================================================================
+   Onboarding checklist.
+
+   Sits at the top of the dashboard until all three steps are done, then
+   retires itself — a setup prompt that has to be dismissed manually is a
+   setup prompt that gets ignored.
+
+   Graphite, so it reads as a system message rather than another data card.
+   ========================================================================= */
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowRight, Check, Rocket, X } from "lucide-react";
 import { api } from "@/lib/api";
-import {
-  Rocket,
-  CheckCircle,
-  Circle,
-  ArrowRight,
-  X,
-} from "lucide-react";
+import { EASE_OUT } from "@/components/motion";
+import { cn } from "@/lib/utils";
 
 const DISMISSED_KEY = "mynvoice_onboarding_dismissed";
 
-interface ChecklistItem {
-  key: string;
+type Step = {
+  key: "business" | "client" | "invoice";
   title: string;
   description: string;
   href: string;
   complete: boolean;
+};
+
+const STEPS: Step[] = [
+  {
+    key: "business",
+    title: "Set up your business",
+    description: "Name, address and logo — they land on every invoice",
+    href: "/settings",
+    complete: false,
+  },
+  {
+    key: "client",
+    title: "Add your first client",
+    description: "Saved once, reused every time you bill them",
+    href: "/clients",
+    complete: false,
+  },
+  {
+    key: "invoice",
+    title: "Send your first invoice",
+    description: "About a minute, start to sent",
+    href: "/invoices/new",
+    complete: false,
+  },
+];
+
+/** The list endpoints have returned bare arrays and wrapped shapes; accept both. */
+function hasAny(value: unknown): boolean {
+  if (Array.isArray(value)) return value.length > 0;
+  if (value && typeof value === "object") {
+    const v = value as { items?: unknown[]; results?: unknown[] };
+    if (Array.isArray(v.items)) return v.items.length > 0;
+    if (Array.isArray(v.results)) return v.results.length > 0;
+  }
+  return false;
 }
 
 export function OnboardingChecklist() {
   const [dismissed, setDismissed] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState<ChecklistItem[]>([
-    {
-      key: "business",
-      title: "Set up your business",
-      description: "Add your business name, address, and logo",
-      href: "/settings?tab=business",
-      complete: false,
-    },
-    {
-      key: "client",
-      title: "Add your first client",
-      description: "Create a client to start invoicing",
-      href: "/clients",
-      complete: false,
-    },
-    {
-      key: "invoice",
-      title: "Create your first invoice",
-      description: "Send your first professional invoice",
-      href: "/invoices/new",
-      complete: false,
-    },
-  ]);
+  const [steps, setSteps] = useState<Step[]>(STEPS);
 
   useEffect(() => {
-    const wasDismissed = localStorage.getItem(DISMISSED_KEY) === "true";
-    if (wasDismissed) {
-      setDismissed(true);
+    if (localStorage.getItem(DISMISSED_KEY) === "true") {
       setLoading(false);
       return;
     }
-
     setDismissed(false);
 
-    async function fetchStatus() {
+    (async () => {
       try {
-        const [profileRes, clientsRes, invoicesRes] = await Promise.allSettled([
+        const [company, clients, invoices] = await Promise.allSettled([
           api.get<{ name?: string } | null>("/profile/company"),
-          api.get<{ items?: unknown[]; results?: unknown[] }>("/clients/?limit=1"),
-          api.get<{ items?: unknown[]; results?: unknown[] }>("/invoices/?limit=1"),
+          api.get<unknown>("/clients/?limit=1"),
+          api.get<unknown>("/invoices/?limit=1"),
         ]);
 
-        const hasBusiness =
-          profileRes.status === "fulfilled" &&
-          profileRes.value !== null &&
-          typeof profileRes.value === "object" &&
-          !!(profileRes.value as { name?: string }).name;
+        const done = {
+          business:
+            company.status === "fulfilled" &&
+            Boolean((company.value as { name?: string } | null)?.name),
+          client: clients.status === "fulfilled" && hasAny(clients.value),
+          invoice: invoices.status === "fulfilled" && hasAny(invoices.value),
+        };
 
-        const hasClient =
-          clientsRes.status === "fulfilled" &&
-          clientsRes.value !== null &&
-          typeof clientsRes.value === "object" &&
-          (Array.isArray(clientsRes.value)
-            ? clientsRes.value.length > 0
-            : Array.isArray((clientsRes.value as { items?: unknown[] }).items)
-              ? ((clientsRes.value as { items: unknown[] }).items).length > 0
-              : Array.isArray((clientsRes.value as { results?: unknown[] }).results)
-                ? ((clientsRes.value as { results: unknown[] }).results).length > 0
-                : false);
+        setSteps((prev) => prev.map((s) => ({ ...s, complete: done[s.key] })));
 
-        const hasInvoice =
-          invoicesRes.status === "fulfilled" &&
-          invoicesRes.value !== null &&
-          typeof invoicesRes.value === "object" &&
-          (Array.isArray(invoicesRes.value)
-            ? invoicesRes.value.length > 0
-            : Array.isArray((invoicesRes.value as { items?: unknown[] }).items)
-              ? ((invoicesRes.value as { items: unknown[] }).items).length > 0
-              : Array.isArray((invoicesRes.value as { results?: unknown[] }).results)
-                ? ((invoicesRes.value as { results: unknown[] }).results).length > 0
-                : false);
-
-        setItems((prev) =>
-          prev.map((item) => {
-            if (item.key === "business") return { ...item, complete: hasBusiness };
-            if (item.key === "client") return { ...item, complete: hasClient };
-            if (item.key === "invoice") return { ...item, complete: hasInvoice };
-            return item;
-          })
-        );
-
-        if (hasBusiness && hasClient && hasInvoice) {
+        /* All three done: retire it rather than showing an all-green
+           checklist forever. */
+        if (done.business && done.client && done.invoice) {
+          localStorage.setItem(DISMISSED_KEY, "true");
           setDismissed(true);
         }
       } catch {
-        // If fetching fails, still show the checklist with defaults
+        /* fall through and show the checklist with defaults */
       } finally {
         setLoading(false);
       }
-    }
-
-    fetchStatus();
+    })();
   }, []);
 
-  function handleDismiss() {
+  const dismiss = () => {
     localStorage.setItem(DISMISSED_KEY, "true");
     setDismissed(true);
-  }
+  };
 
   if (loading || dismissed) return null;
 
-  const completedCount = items.filter((i) => i.complete).length;
-  const progressPercent = (completedCount / items.length) * 100;
+  const doneCount = steps.filter((s) => s.complete).length;
 
   return (
-    <div className="relative rounded-xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-      {/* Dismiss button */}
-      <button
-        onClick={handleDismiss}
-        className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
-        aria-label="Dismiss getting started checklist"
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, height: 0 }}
+        transition={{ duration: 0.5, ease: EASE_OUT }}
+        className="relative isolate overflow-hidden rounded-[16px] bg-graphite p-5 sm:p-6"
       >
-        <X className="h-5 w-5" />
-      </button>
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full blur-[80px]"
+          style={{
+            background: "radial-gradient(circle, rgba(199,154,91,0.25), transparent 70%)",
+          }}
+        />
 
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-1">
-        <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-brass/10 dark:bg-brass/20">
-          <Rocket className="h-5 w-5 text-brass-ink" />
-        </div>
-        <h2 className="text-lg font-semibold text-ink">Getting Started</h2>
-      </div>
-      <p className="text-sm text-ink-muted mb-4 ml-12">
-        Complete these steps to set up your account
-      </p>
+        <div className="relative flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <span className="flex h-9 w-9 flex-none items-center justify-center rounded-[11px] bg-white/[0.07] text-brass-on-dark ring-1 ring-white/10">
+              <Rocket className="h-4 w-4" />
+            </span>
+            <div>
+              <h2 className="text-[15px] font-bold tracking-[-0.01em] text-white">
+                Three things and you&apos;re running
+              </h2>
+              <p className="mt-0.5 text-[12.5px] text-white/45">
+                {doneCount} of {steps.length} done — this disappears when they all are.
+              </p>
+            </div>
+          </div>
 
-      {/* Progress bar */}
-      <div className="mb-5">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-xs font-medium text-ink-muted">
-            {completedCount} of {items.length} complete
-          </span>
-        </div>
-        <div className="h-2 w-full rounded-full bg-elevated overflow-hidden">
-          <div
-            className="h-full rounded-full bg-brass transition-all duration-500 ease-out"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
-      </div>
-
-      {/* Checklist items */}
-      <ul className="space-y-3">
-        {items.map((item) => (
-          <li
-            key={item.key}
-            className="flex items-start gap-3 group"
+          <button
+            onClick={dismiss}
+            aria-label="Dismiss setup checklist"
+            className="flex h-7 w-7 flex-none items-center justify-center rounded-lg text-white/35 transition-colors hover:bg-white/10 hover:text-white"
           >
-            {/* Icon */}
-            <div className="mt-0.5 flex-shrink-0">
-              {item.complete ? (
-                <CheckCircle className="h-5 w-5 text-emerald-500" />
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        <div className="relative mt-5 grid gap-2 sm:grid-cols-3">
+          {steps.map((step, i) => (
+            <motion.div
+              key={step.key}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, delay: 0.1 + i * 0.07, ease: EASE_OUT }}
+            >
+              {step.complete ? (
+                <div className="flex h-full items-start gap-2.5 rounded-[12px] border border-white/[0.07] bg-white/[0.03] p-3.5">
+                  <span className="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-positive-on-dark/15">
+                    <Check className="h-3 w-3 text-positive-on-dark" />
+                  </span>
+                  <span className="block text-[13px] font-semibold text-white/50 line-through decoration-white/25">
+                    {step.title}
+                  </span>
+                </div>
               ) : (
-                <Circle className="h-5 w-5 text-gray-300 dark:text-gray-600" />
+                <Link
+                  href={step.href}
+                  className={cn(
+                    "group flex h-full items-start gap-2.5 rounded-[12px] border border-white/10 bg-white/[0.04] p-3.5",
+                    "transition-colors duration-200 hover:border-brass-on-dark/40 hover:bg-white/[0.07]"
+                  )}
+                >
+                  <span className="mt-[3px] h-3 w-3 flex-none rounded-full border-2 border-white/25 transition-colors group-hover:border-brass-on-dark" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[13px] font-semibold text-white">
+                      {step.title}
+                    </span>
+                    <span className="mt-0.5 block text-[11.5px] leading-relaxed text-white/45">
+                      {step.description}
+                    </span>
+                  </span>
+                  <ArrowRight className="mt-0.5 h-3.5 w-3.5 flex-none text-brass-on-dark opacity-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-100" />
+                </Link>
               )}
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              <p
-                className={
-                  item.complete
-                    ? "text-sm font-medium text-gray-400 dark:text-gray-600 line-through"
-                    : "text-sm font-medium text-ink"
-                }
-              >
-                {item.title}
-              </p>
-              <p
-                className={
-                  item.complete
-                    ? "text-xs text-gray-300 dark:text-gray-700 line-through"
-                    : "text-xs text-ink-muted"
-                }
-              >
-                {item.description}
-              </p>
-            </div>
-
-            {/* CTA link */}
-            {!item.complete && (
-              <Link
-                href={item.href}
-                className="flex-shrink-0 inline-flex items-center gap-1 text-xs font-medium text-brass-ink hover:text-brass transition-colors mt-0.5"
-              >
-                Start
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            )}
-          </li>
-        ))}
-      </ul>
-    </div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+    </AnimatePresence>
   );
 }
