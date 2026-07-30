@@ -196,8 +196,7 @@ Rules:
 | Dashboard | rebuilt |
 | Invoices (list, new, detail, edit) | rebuilt |
 | Shared: status badge, empty state, toast | rebuilt |
-| Clients · Items · Payments | rebuilt |
-| Expenses | pending |
+| Clients · Items · Payments · Expenses | rebuilt |
 | Reports · Settings · Admin · Support | pending |
 
 `/invoices/new` and `/invoices/[id]/edit` are thin wrappers — behaviour
