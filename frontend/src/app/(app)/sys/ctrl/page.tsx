@@ -21,8 +21,10 @@ import {
   FileText,
   KeyRound,
   Loader2,
+  Mail,
   MailCheck,
   Radio,
+  Send,
   ShieldCheck,
   ShieldOff,
   UserPlus,
@@ -42,7 +44,13 @@ import { PageHeader } from "@/components/app/page-header";
 import { Button, ButtonLink } from "@/components/app/button";
 import { Panel, PanelHeader, Overline } from "@/components/app/panel";
 import { MetricCard } from "@/components/app/metric";
-import { SearchInput, Field, Input } from "@/components/app/form";
+import {
+  SearchInput,
+  Field,
+  Input,
+  Textarea,
+  Checkbox,
+} from "@/components/app/form";
 import { SegmentedControl } from "@/components/app/segmented-control";
 import { Modal } from "@/components/app/modal";
 import { RowMenu, type MenuItem } from "@/components/app/menu";
@@ -117,6 +125,7 @@ const ACTION_LABEL: Record<string, { verb: string; self?: boolean }> = {
   send_password_reset: { verb: "sent a password reset to" },
   enable_totp: { verb: "turned on two-factor", self: true },
   disable_totp: { verb: "removed two-factor", self: true },
+  message_users: { verb: "emailed", self: true },
 };
 
 /* ------------------------------------------------------------------ */
@@ -172,6 +181,14 @@ export default function SysCtrlPage() {
   const [savingTarget, setSavingTarget] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
   const stepUp = useStepUp({ enabled: Boolean(user?.is_admin) });
+
+  /* Messaging. Selection survives filtering and searching — you might pick
+     two people from "online", then find a third by name. */
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [composing, setComposing] = useState(false);
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
 
   const load = useCallback(async () => {
     if (!user?.is_admin) return;
@@ -282,6 +299,85 @@ export default function SysCtrlPage() {
       });
     } finally {
       setBusyId(null);
+    }
+  };
+
+  /* Deactivated accounts are excluded everywhere: the server skips them, and
+     a checkbox that silently does nothing is worse than one you can't tick. */
+  const selectableVisible = useMemo(
+    () => visible.filter((u) => u.is_active),
+    [visible]
+  );
+  const recipients = useMemo(
+    () => users.filter((u) => selected.has(u.id) && u.is_active),
+    [users, selected]
+  );
+  const allVisibleSelected =
+    selectableVisible.length > 0 &&
+    selectableVisible.every((u) => selected.has(u.id));
+
+  const toggleOne = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const toggleAllVisible = () =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) selectableVisible.forEach((u) => next.delete(u.id));
+      else selectableVisible.forEach((u) => next.add(u.id));
+      return next;
+    });
+
+  const sendMessage = async () => {
+    setSending(true);
+    try {
+      await stepUp.guard(async (headers: StepUpHeaders) => {
+        const res = await api.post<{
+          sent: number;
+          failed: number;
+          failed_emails: string[];
+          smtp_configured: boolean;
+        }>(
+          "/sys/message",
+          {
+            user_ids: recipients.map((u) => u.id),
+            subject: subject.trim(),
+            body: message.trim(),
+          },
+          headers
+        );
+
+        if (res.failed === 0) {
+          setToast({
+            message: `Sent to ${res.sent} ${res.sent === 1 ? "person" : "people"}.`,
+            type: "success",
+          });
+          setComposing(false);
+          setSelected(new Set());
+          setSubject("");
+          setMessage("");
+        } else {
+          /* Partial delivery is the honest case to report — don't round it
+             up to "sent", and keep the draft so it can be retried. Nothing
+             configured and everything failing look the same from here, so
+             say which it was. */
+          setToast({
+            message: !res.smtp_configured
+              ? "Nothing went out — SMTP isn't configured on this server."
+              : `Sent ${res.sent}, ${res.failed} failed: ${res.failed_emails.join(", ")}`,
+            type: "warning",
+          });
+        }
+        load();
+      });
+    } catch (err) {
+      setToast({ message: apiDetail(err, "Couldn't send that."), type: "error" });
+    } finally {
+      setSending(false);
     }
   };
 
@@ -442,6 +538,50 @@ export default function SysCtrlPage() {
               />
             </div>
 
+            <AnimatePresence initial={false}>
+              {selected.size > 0 ? (
+                <motion.div
+                  initial={{ opacity: 0, y: -6, height: 0 }}
+                  animate={{ opacity: 1, y: 0, height: "auto" }}
+                  exit={{ opacity: 0, y: -6, height: 0 }}
+                  transition={{ duration: 0.25, ease: EASE_OUT }}
+                  className="overflow-hidden"
+                >
+                  <div className="flex flex-wrap items-center gap-3 rounded-[14px] bg-brass/[0.07] px-4 py-3 ring-1 ring-brass/20">
+                    <span className="text-[13px] font-semibold text-ink">
+                      {selected.size} selected
+                    </span>
+                    <button
+                      onClick={() => setSelected(new Set())}
+                      className="text-[12.5px] font-medium text-ink-muted underline underline-offset-2 transition-colors hover:text-ink"
+                    >
+                      Clear
+                    </button>
+                    <span className="ml-auto flex items-center gap-2">
+                      <Button variant="primary" onClick={() => setComposing(true)}>
+                        <Mail className="h-4 w-4" />
+                        Write to them
+                      </Button>
+                    </span>
+                  </div>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+
+            {selectableVisible.length > 0 ? (
+              <label className="flex w-fit cursor-pointer items-center gap-2.5 pl-4 text-[12.5px] text-ink-muted transition-colors hover:text-ink">
+                <Checkbox
+                  checked={allVisibleSelected}
+                  indeterminate={
+                    !allVisibleSelected &&
+                    selectableVisible.some((u) => selected.has(u.id))
+                  }
+                  onChange={toggleAllVisible}
+                />
+                Select all {selectableVisible.length} shown
+              </label>
+            ) : null}
+
             {visible.length === 0 ? (
               <EmptyState
                 icon={Users}
@@ -511,6 +651,20 @@ export default function SysCtrlPage() {
                         )}
                       >
                         <div className="flex flex-wrap items-start gap-4">
+                          <span className="flex h-10 flex-none items-center">
+                            <Checkbox
+                              checked={selected.has(u.id)}
+                              disabled={!u.is_active}
+                              onChange={() => toggleOne(u.id)}
+                              aria-label={`Select ${u.email}`}
+                              title={
+                                u.is_active
+                                  ? undefined
+                                  : "Deactivated accounts aren't written to"
+                              }
+                            />
+                          </span>
+
                           {/* identity */}
                           <span className="relative flex-none">
                             <span className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-brass text-[12px] font-bold text-white">
@@ -757,6 +911,79 @@ export default function SysCtrlPage() {
           </>
         }
       />
+
+      {/* ── write to people ─────────────────────────────────────── */}
+      <Modal
+        open={composing}
+        onClose={() => setComposing(false)}
+        size="md"
+        title={`Write to ${recipients.length} ${recipients.length === 1 ? "person" : "people"}`}
+        description="Each one gets their own email, addressed to them by name — nobody sees who else you wrote to."
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setComposing(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={sendMessage}
+              disabled={
+                sending ||
+                !subject.trim() ||
+                !message.trim() ||
+                recipients.length === 0
+              }
+            >
+              {sending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              {sending ? "Sending…" : "Send"}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <Overline>Going to</Overline>
+            <div className="mt-2 flex max-h-24 flex-wrap gap-1.5 overflow-y-auto">
+              {recipients.map((r) => (
+                <span
+                  key={r.id}
+                  className="rounded-full bg-elevated px-2.5 py-1 text-[11.5px] font-medium text-ink-muted"
+                >
+                  {r.first_name} {r.last_name}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <Field label="Subject" required>
+            <Input
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder="How's MYNVOICE treating you?"
+              maxLength={140}
+            />
+          </Field>
+
+          <Field
+            label="Message"
+            required
+            hint="A blank line starts a new paragraph. Each email opens with the person's first name already, so don't write a greeting."
+          >
+            <Textarea
+              rows={8}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder={
+                "I wanted to check in — is everything working the way you need?\n\nIf anything's getting in your way, just reply to this and tell me."
+              }
+            />
+          </Field>
+        </div>
+      </Modal>
 
       <StepUpModals ctl={stepUp} />
 

@@ -71,8 +71,12 @@ three actions ask for a code from your authenticator:
 | Grant or revoke admin | required |
 | Deactivate or reactivate an account | required |
 | Force a password reset | required |
+| Email one or more users | required |
 | Remove your own authenticator | required |
 | Reading the panel, marking verified, editing the donation target | not required |
+
+Email is on that list for the same reason as the rest: it cannot be unsent, and
+it is the most externally visible thing the panel does.
 
 **A code opens a five-minute window**, rather than being demanded once per
 click — a run of admin work costs one code, not six.

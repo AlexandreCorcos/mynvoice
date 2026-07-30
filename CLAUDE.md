@@ -166,13 +166,18 @@ shared kit in `src/components/app/`:
 | `menu.tsx` | `RowMenu` — fixed-positioned "…" dropdown that flips near the viewport edge |
 | `segmented-control.tsx` | Filter tabs whose selection slides via `layoutId` |
 | `invoice-editor.tsx` | `InvoiceEditor` shared by /invoices/new and /invoices/[id]/edit |
+| `step-up.tsx` | `useStepUp`, `StepUpChip`, `StepUpModals` — TOTP gate for destructive admin actions |
 
 Auth-only pieces live in `src/components/auth/`: `ui.tsx` (`AuthHeading`,
 `AuthError`, `PasswordInput` with a strength meter) and `password-form.tsx`
 (shared by /set-password and /reset-password).
 
-`form.tsx` also exports `Toggle`; `charts.tsx` also exports `GroupedBarChart`
-and `RankedList`.
+`form.tsx` also exports `Toggle` and `Checkbox`; `charts.tsx` also exports
+`GroupedBarChart` and `RankedList`.
+
+The auth context carries the signed-in person's `company` alongside `user`, so
+the sidebar can show their logo. Anything that changes the company must call
+`refreshCompany()` or the sidebar goes stale.
 
 **Recharts animation is switched off** on every series. With a dozen
 categories the bar rectangles simply never mount — the panel around the

@@ -31,6 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_admin, require_step_up
 from app.core import stepup
+from app.core.config import settings
 from app.db.session import get_db
 from app.models.audit import AdminAuditLog
 from app.models.client import Client
@@ -40,7 +41,7 @@ from app.models.expense import Expense
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.user import User
 from app.schemas.types import Money
-from app.services.email import send_password_reset_email
+from app.services.email import send_admin_message_email, send_password_reset_email
 
 router = APIRouter()
 
@@ -520,3 +521,101 @@ async def sys_totp_disable(
     await _record(db, admin, "disable_totp", admin)
     await db.commit()
     return {"ok": True}
+
+
+# ------------------------------------------------------------------ message
+
+
+# High enough to write to everyone while the product is small, low enough that
+# a mis-click cannot turn into a broadcast.
+MAX_RECIPIENTS = 200
+
+
+class MessageIn(BaseModel):
+    user_ids: list[str]
+    subject: str
+    body: str
+
+
+class MessageResult(BaseModel):
+    sent: int
+    failed: int
+    failed_emails: list[str]
+    # Nothing failing versus nothing configured look identical from the panel,
+    # and the difference is the whole diagnosis.
+    smtp_configured: bool
+
+
+@router.post("/message", response_model=MessageResult)
+async def sys_message_users(
+    payload: MessageIn,
+    admin: User = Depends(require_step_up),
+    db: AsyncSession = Depends(get_db),
+):
+    """Write to one or more users.
+
+    Behind the step-up guard with the other three: an email cannot be
+    unsent, which makes it the most externally visible thing this panel does.
+
+    Deactivated accounts are skipped — writing to someone whose access you
+    have just removed is almost never what was meant.
+    """
+    subject = payload.subject.strip()
+    body = payload.body.strip()
+    if not subject or not body:
+        raise HTTPException(status_code=400, detail="Subject and message are required.")
+    if not payload.user_ids:
+        raise HTTPException(status_code=400, detail="Pick at least one person.")
+    if len(payload.user_ids) > MAX_RECIPIENTS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"That's more than {MAX_RECIPIENTS} people in one go.",
+        )
+
+    try:
+        ids = [uuid.UUID(i) for i in payload.user_ids]
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Unknown recipient.")
+
+    recipients = (
+        (
+            await db.execute(
+                select(User).where(User.id.in_(ids), User.is_active.is_(True))
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if not recipients:
+        raise HTTPException(status_code=400, detail="Nobody active in that selection.")
+
+    from_name = f"{admin.first_name} {admin.last_name}".strip() or "MYNVOICE"
+
+    sent, failed = 0, []
+    for person in recipients:
+        delivered = await send_admin_message_email(
+            to_email=person.email,
+            first_name=person.first_name,
+            subject=subject,
+            body=body,
+            from_name=from_name,
+        )
+        if delivered:
+            sent += 1
+        else:
+            failed.append(person.email)
+
+    await _record(
+        db,
+        admin,
+        "message_users",
+        detail=f'"{subject}" to {sent} of {len(recipients)}',
+    )
+    await db.commit()
+
+    return MessageResult(
+        sent=sent,
+        failed=len(failed),
+        failed_emails=failed,
+        smtp_configured=bool(settings.SMTP_HOST),
+    )

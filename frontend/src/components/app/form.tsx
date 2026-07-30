@@ -8,7 +8,8 @@
    Errors sit next to the field that caused them.
    ========================================================================= */
 
-import { Search } from "lucide-react";
+import { Check, Minus, Search } from "lucide-react";
+import { useEffect, useRef } from "react";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -149,5 +150,58 @@ export function SearchInput({
         {...rest}
       />
     </div>
+  );
+}
+
+/* -------------------------------------------------------------------- */
+
+/**
+ * Checkbox — a real `<input>` underneath, so keyboard and screen readers get
+ * the behaviour for free; the box you see is drawn on top of it.
+ * `indeterminate` is for a "select all" that only some rows satisfy.
+ *
+ * The box and both glyphs are *siblings* of the input, not children of the
+ * box: `peer-checked:` compiles to `.peer:checked ~ X`, which only reaches
+ * siblings.
+ */
+export function Checkbox({
+  className,
+  indeterminate,
+  ...rest
+}: Omit<ComponentProps<"input">, "type"> & { indeterminate?: boolean }) {
+  const ref = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = Boolean(indeterminate);
+  }, [indeterminate]);
+
+  return (
+    <span className={cn("relative inline-flex h-[18px] w-[18px] flex-none", className)}>
+      <input
+        ref={ref}
+        type="checkbox"
+        className="peer absolute inset-0 z-10 m-0 cursor-pointer opacity-0 disabled:cursor-not-allowed"
+        {...rest}
+      />
+      <span
+        aria-hidden
+        className={cn(
+          "absolute inset-0 rounded-[6px] bg-card ring-1 ring-line transition-colors duration-150",
+          "peer-hover:ring-brass-soft",
+          "peer-checked:bg-brass peer-checked:ring-brass",
+          "peer-indeterminate:bg-brass peer-indeterminate:ring-brass",
+          "peer-focus-visible:ring-2 peer-focus-visible:ring-brass-soft",
+          "peer-disabled:opacity-40"
+        )}
+      />
+      <Check
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 transition-opacity duration-150 peer-checked:opacity-100 peer-indeterminate:opacity-0"
+      />
+      <Minus
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 transition-opacity duration-150 peer-indeterminate:opacity-100"
+      />
+    </span>
   );
 }

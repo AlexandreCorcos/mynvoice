@@ -324,3 +324,91 @@ async def send_invoice_email(
     except Exception:
         logger.exception("Failed to send invoice email %s to %s", invoice_number, to_email)
         return False
+
+
+def _escape(text: str) -> str:
+    """Message bodies are typed by a human into a textarea, then dropped into
+    HTML. Escape first, then turn newlines into breaks — the paragraphs are
+    ours, the angle brackets are not."""
+    return (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
+async def send_admin_message_email(
+    to_email: str,
+    first_name: str,
+    subject: str,
+    body: str,
+    from_name: str,
+) -> bool:
+    """A note from whoever runs MYNVOICE to one of its users.
+
+    Deliberately plain. This is a person writing to another person — asking
+    how it's going, whether they need a hand — so it should not arrive dressed
+    as a system notification with a call-to-action button.
+
+    Graphite & Brass, unlike the older templates in this file, which are still
+    on the retired teal palette.
+    """
+    paragraphs = "".join(
+        f'<p style="margin:0 0 16px;color:#1C1917;font-size:15px;line-height:1.75;">{line}</p>'
+        for line in _escape(body).split("\n\n")
+        if line.strip()
+    ).replace("\n", "<br/>")
+
+    html = f"""\
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#FAF9F7;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#FAF9F7;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #E4E0D9;">
+
+          <tr>
+            <td style="background:#1C1917;padding:26px 36px;">
+              <p style="margin:0;color:#C79A5B;font-size:11px;letter-spacing:2px;text-transform:uppercase;">MYNVOICE</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:34px 36px 30px;">
+              <p style="margin:0 0 20px;color:#1C1917;font-size:15px;line-height:1.75;">Hi {_escape(first_name)},</p>
+              {paragraphs}
+              <p style="margin:26px 0 0;color:#6E6862;font-size:14px;line-height:1.7;">
+                — {_escape(from_name)}
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:18px 36px;background:#F1EFEC;border-top:1px solid #E4E0D9;">
+              <p style="margin:0;color:#6E6862;font-size:12px;line-height:1.6;">
+                You're getting this because you have a MYNVOICE account.
+                Just reply if you'd like to talk — a real person reads it.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+    text = f"Hi {first_name},\n\n{body}\n\n— {from_name}\n\nYou're getting this because you have a MYNVOICE account. Just reply if you'd like to talk."
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
+    msg["To"] = to_email
+    msg.attach(MIMEText(text, "plain"))
+    msg.attach(MIMEText(html, "html"))
+
+    return await _send(msg)

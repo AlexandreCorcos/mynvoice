@@ -126,7 +126,7 @@ function NavLink({
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, company, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   /* Close the sheet on navigation — otherwise it hangs around over the page. */
@@ -156,6 +156,28 @@ export default function Sidebar() {
           </span>
         </span>
       </div>
+
+      {/* Their business, above their one action.
+          The tile is white in both themes on purpose: the sidebar is graphite
+          either way, and an uploaded logo is usually dark ink on transparent,
+          which would vanish against it. */}
+      {company?.logo_url ? (
+        <div className="px-3 pb-3">
+          <Link
+            href="/settings"
+            onClick={close}
+            title={company.name ?? "Your business"}
+            className="flex h-14 items-center justify-center rounded-[12px] bg-white px-3 ring-1 ring-white/10 transition-opacity duration-200 hover:opacity-90"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={company.logo_url}
+              alt={company.name ?? "Your business"}
+              className="max-h-9 max-w-full object-contain"
+            />
+          </Link>
+        </div>
+      ) : null}
 
       {/* the one action that matters */}
       <div className="px-3 pb-3">

@@ -60,7 +60,7 @@ function compressImage(file: File, maxPx = 800, quality = 0.85): Promise<Blob> {
 }
 
 export default function SettingsPage() {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, refreshCompany } = useAuth();
   const [tab, setTab] = useState<Tab>("you");
   const [company, setCompany] = useState<Company | null>(null);
   const [saving, setSaving] = useState(false);
@@ -177,6 +177,7 @@ export default function SettingsPage() {
         ? await api.put<Company>("/profile/company", payload)
         : await api.post<Company>("/profile/company", payload);
       setCompany(saved);
+      refreshCompany(); // the sidebar reads the name and logo from the context
       flash("Business details are saved.");
     } catch {
       flash("Couldn't save your business details.", "error");
@@ -209,6 +210,7 @@ export default function SettingsPage() {
       );
       setLogoUrl(result.logo_url);
       if (company) setCompany({ ...company, logo_url: result.logo_url });
+      refreshCompany(); // the sidebar shows this logo
       flash("Logo uploaded.");
     } catch {
       flash("Couldn't upload that logo.", "error");
@@ -223,6 +225,7 @@ export default function SettingsPage() {
       await api.delete("/profile/company/logo");
       setLogoUrl(null);
       if (company) setCompany({ ...company, logo_url: null });
+      refreshCompany();
       flash("Logo removed.");
     } catch {
       flash("Couldn't remove the logo.", "error");
