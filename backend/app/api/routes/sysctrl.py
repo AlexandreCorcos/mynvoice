@@ -14,6 +14,10 @@ Admin is granted out of band with `python -m app.cli grant-admin <email>` on
 the server, so nothing in this repository confers access.
 
 Every state-changing action writes an `AdminAuditLog` row.
+
+The three actions that are hard to take back — granting admin, deactivating an
+account, forcing a password reset — additionally require a TOTP step-up, so an
+unlocked laptop is not enough on its own. See `app/core/stepup.py`.
 """
 
 import secrets
@@ -25,7 +29,8 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_admin
+from app.api.deps import get_current_admin, require_step_up
+from app.core import stepup
 from app.db.session import get_db
 from app.models.audit import AdminAuditLog
 from app.models.client import Client
@@ -253,7 +258,7 @@ async def sys_verify_user(
 @router.post("/users/{user_id}/toggle-active")
 async def sys_toggle_active(
     user_id: str,
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(require_step_up),
     db: AsyncSession = Depends(get_db),
 ):
     user = await _get_target(db, user_id)
@@ -275,7 +280,7 @@ async def sys_toggle_active(
 @router.post("/users/{user_id}/toggle-admin")
 async def sys_toggle_admin(
     user_id: str,
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(require_step_up),
     db: AsyncSession = Depends(get_db),
 ):
     user = await _get_target(db, user_id)
@@ -310,7 +315,7 @@ async def sys_toggle_admin(
 @router.post("/users/{user_id}/send-reset")
 async def sys_send_reset(
     user_id: str,
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(require_step_up),
     db: AsyncSession = Depends(get_db),
 ):
     user = await _get_target(db, user_id)
@@ -373,3 +378,133 @@ async def sys_audit(
         )
         for r in rows
     ]
+
+
+# ------------------------------------------------------------- step-up (TOTP)
+
+
+class TotpStatus(BaseModel):
+    enrolled: bool
+    confirmed_at: str | None
+
+
+class TotpEnrolment(BaseModel):
+    secret: str
+    uri: str
+
+
+class CodeIn(BaseModel):
+    code: str
+
+
+class StepUpGranted(BaseModel):
+    token: str
+    expires_at: str
+
+
+def _guard_attempts(admin: User) -> None:
+    wait = stepup.locked_for(admin)
+    if wait:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Too many wrong codes. Try again in {wait} seconds.",
+        )
+
+
+@router.get("/totp", response_model=TotpStatus)
+async def sys_totp_status(admin: User = Depends(get_current_admin)):
+    return TotpStatus(
+        enrolled=stepup.is_enrolled(admin),
+        confirmed_at=(
+            admin.admin_totp_confirmed_at.isoformat()
+            if admin.admin_totp_confirmed_at
+            else None
+        ),
+    )
+
+
+@router.post("/totp/begin", response_model=TotpEnrolment)
+async def sys_totp_begin(
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Hand out a fresh secret to scan.
+
+    It counts for nothing until /totp/confirm proves a code can be read off
+    it, so an abandoned enrolment leaves the account exactly as it was.
+    """
+    if stepup.is_enrolled(admin):
+        raise HTTPException(
+            status_code=400,
+            detail="Already set up. Remove the current authenticator first.",
+        )
+
+    secret = stepup.new_secret()
+    admin.admin_totp_secret = secret
+    admin.admin_totp_confirmed_at = None
+    admin.admin_totp_last_step = None
+    await db.commit()
+
+    return TotpEnrolment(secret=secret, uri=stepup.provisioning_uri(admin, secret))
+
+
+@router.post("/totp/confirm", response_model=StepUpGranted)
+async def sys_totp_confirm(
+    payload: CodeIn,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    if stepup.is_enrolled(admin):
+        raise HTTPException(status_code=400, detail="Already set up.")
+    if not admin.admin_totp_secret:
+        raise HTTPException(status_code=400, detail="Start the setup first.")
+
+    _guard_attempts(admin)
+
+    if not stepup.verify_code(admin, payload.code):
+        await db.commit()  # keep the replay guard's bookkeeping
+        raise HTTPException(status_code=400, detail="That code is not right.")
+
+    admin.admin_totp_confirmed_at = datetime.now(timezone.utc)
+    # You have just proved it works; no reason to ask again immediately.
+    token, expires = stepup.open_window(admin)
+    await _record(db, admin, "enable_totp", admin)
+    await db.commit()
+
+    return StepUpGranted(token=token, expires_at=expires.isoformat())
+
+
+@router.post("/totp/verify", response_model=StepUpGranted)
+async def sys_totp_verify(
+    payload: CodeIn,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Open a step-up window. The token goes to this browser and nowhere else."""
+    if not stepup.is_enrolled(admin):
+        raise HTTPException(status_code=403, detail="totp_enrolment_required")
+
+    _guard_attempts(admin)
+
+    if not stepup.verify_code(admin, payload.code):
+        await db.commit()
+        raise HTTPException(status_code=400, detail="That code is not right.")
+
+    token, expires = stepup.open_window(admin)
+    await db.commit()
+    return StepUpGranted(token=token, expires_at=expires.isoformat())
+
+
+@router.post("/totp/disable")
+async def sys_totp_disable(
+    admin: User = Depends(require_step_up),
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove the authenticator — itself a step-up action."""
+    admin.admin_totp_secret = None
+    admin.admin_totp_confirmed_at = None
+    admin.admin_totp_last_step = None
+    stepup.close_window(admin)
+    await _record(db, admin, "disable_totp", admin)
+    await db.commit()
+    return {"ok": True}

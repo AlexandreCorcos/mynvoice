@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, String, Text
+from sqlalchemy import BigInteger, Boolean, DateTime, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -51,6 +51,28 @@ class User(Base):
         String(128), nullable=True, index=True
     )
     password_reset_token_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # Admin step-up (TOTP)
+    #
+    # Only admins ever populate these. The secret is the authenticator's
+    # shared secret; `confirmed_at` is null between generating one and proving
+    # you can read a code off it, so a half-finished enrolment never counts.
+    # `last_step` is the time step of the last accepted code, which is what
+    # stops the same code being replayed inside its 30-second window.
+    admin_totp_secret: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    admin_totp_confirmed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    admin_totp_last_step: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+
+    # A verified code opens a short window rather than being demanded once per
+    # click. The token is held only by the browser that passed the check, so a
+    # session stolen onto another device does not inherit the unlock; only its
+    # hash is stored, so the database does not hold the bearer value.
+    admin_stepup_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    admin_stepup_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 

@@ -8,6 +8,7 @@ the database.
     docker compose exec backend python -m app.cli list-admins
     docker compose exec backend python -m app.cli grant-admin you@example.com
     docker compose exec backend python -m app.cli revoke-admin them@example.com
+    docker compose exec backend python -m app.cli reset-totp you@example.com
 """
 
 import asyncio
@@ -54,6 +55,35 @@ async def _grant(email: str, value: bool) -> int:
         return 0
 
 
+async def _reset_totp(email: str) -> int:
+    """The way back from a lost authenticator.
+
+    Deliberately only here: if this were in the panel, the second factor would
+    be no factor at all — whoever held the session could simply clear it.
+    """
+    async with async_session() as db:
+        user = (
+            await db.execute(select(User).where(func.lower(User.email) == email.lower()))
+        ).scalar_one_or_none()
+
+        if user is None:
+            print(f"No account for {email}.")
+            return 1
+
+        if not user.admin_totp_secret:
+            print(f"{user.email} has no authenticator set up.")
+            return 0
+
+        user.admin_totp_secret = None
+        user.admin_totp_confirmed_at = None
+        user.admin_totp_last_step = None
+        user.admin_stepup_hash = None
+        user.admin_stepup_expires_at = None
+        await db.commit()
+        print(f"Cleared the authenticator for {user.email}. They can set up a new one.")
+        return 0
+
+
 async def _list() -> int:
     async with async_session() as db:
         admins = (
@@ -66,7 +96,8 @@ async def _list() -> int:
             return 0
         for a in admins:
             seen = a.last_login_at.isoformat() if a.last_login_at else "never"
-            print(f"{a.email:40} last login {seen}")
+            totp = "2FA on " if a.admin_totp_confirmed_at else "2FA off"
+            print(f"{a.email:40} {totp}  last login {seen}")
         return 0
 
 
@@ -80,6 +111,12 @@ def main() -> int:
 
     if command == "list-admins":
         return asyncio.run(_list())
+
+    if command == "reset-totp":
+        if not rest:
+            print("Usage: python -m app.cli reset-totp <email>")
+            return 1
+        return asyncio.run(_reset_totp(rest[0]))
 
     if command in {"grant-admin", "revoke-admin"}:
         if not rest:

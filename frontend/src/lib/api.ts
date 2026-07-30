@@ -104,10 +104,11 @@ class ApiClient {
     return this.request<T>(path);
   }
 
-  post<T>(path: string, body?: unknown) {
+  post<T>(path: string, body?: unknown, headers?: Record<string, string>) {
     return this.request<T>(path, {
       method: "POST",
       body: body ? JSON.stringify(body) : undefined,
+      headers,
     });
   }
 
@@ -152,6 +153,22 @@ export class ApiError extends Error {
   ) {
     super(`API Error ${status}: ${body}`);
   }
+}
+
+/**
+ * FastAPI puts the reason in `{"detail": ...}`. Some of ours are codes the UI
+ * branches on ("totp_required"), most are sentences to show as they are.
+ * Returns the fallback for anything that isn't a plain string detail.
+ */
+export function apiDetail(error: unknown, fallback = "Something went wrong."): string {
+  if (!(error instanceof ApiError)) return fallback;
+  try {
+    const parsed = JSON.parse(error.body);
+    if (typeof parsed?.detail === "string") return parsed.detail;
+  } catch {
+    /* not JSON — fall through */
+  }
+  return fallback;
 }
 
 export const api = new ApiClient();

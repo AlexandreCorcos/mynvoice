@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta, timezone
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import stepup
 from app.core.security import decode_token
 from app.db.session import get_db
 from app.models.user import User
@@ -54,3 +55,25 @@ async def get_current_admin(
             detail="Admin access required",
         )
     return user
+
+
+async def require_step_up(
+    admin: User = Depends(get_current_admin),
+    x_admin_step_up: str | None = Header(default=None),
+) -> User:
+    """Guards the admin actions that are hard to take back.
+
+    The details are machine-readable on purpose — the panel branches on them
+    to offer enrolment or a code prompt. 403 rather than 401 throughout: a 401
+    would send the API client into its "session is dead" path and sign the
+    admin out mid-action.
+    """
+    if not stepup.is_enrolled(admin):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="totp_enrolment_required"
+        )
+
+    if not stepup.window_is_open(admin, x_admin_step_up):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="totp_required")
+
+    return admin

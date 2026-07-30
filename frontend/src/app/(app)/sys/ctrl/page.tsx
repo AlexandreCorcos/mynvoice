@@ -18,7 +18,6 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
-  Check,
   CircleSlash,
   FileText,
   KeyRound,
@@ -30,7 +29,7 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, apiDetail } from "@/lib/api";
 import {
   cn,
   formatCurrency,
@@ -48,6 +47,12 @@ import { SearchInput, Field, Input } from "@/components/app/form";
 import { SegmentedControl } from "@/components/app/segmented-control";
 import { Modal } from "@/components/app/modal";
 import { RowMenu, type MenuItem } from "@/components/app/menu";
+import {
+  StepUpChip,
+  StepUpModals,
+  useStepUp,
+  type StepUpHeaders,
+} from "@/components/app/step-up";
 import EmptyState from "@/components/ui/empty-state";
 import Toast, { type ToastType } from "@/components/ui/toast";
 
@@ -102,13 +107,17 @@ type AuditEntry = {
 type Tab = "people" | "activity" | "donations";
 type PeopleFilter = "all" | "online" | "admins" | "attention";
 
-const ACTION_LABEL: Record<string, string> = {
-  verify_user: "verified",
-  activate_user: "reactivated",
-  deactivate_user: "deactivated",
-  grant_admin: "granted admin to",
-  revoke_admin: "revoked admin from",
-  send_password_reset: "sent a password reset to",
+/* `self` marks actions that are always taken on your own account, where
+   naming the target again just repeats the actor. */
+const ACTION_LABEL: Record<string, { verb: string; self?: boolean }> = {
+  verify_user: { verb: "verified" },
+  activate_user: { verb: "reactivated" },
+  deactivate_user: { verb: "deactivated" },
+  grant_admin: { verb: "granted admin to" },
+  revoke_admin: { verb: "revoked admin from" },
+  send_password_reset: { verb: "sent a password reset to" },
+  enable_totp: { verb: "turned on two-factor", self: true },
+  disable_totp: { verb: "removed two-factor", self: true },
 };
 
 /* ------------------------------------------------------------------ */
@@ -164,6 +173,7 @@ export default function SysCtrlPage() {
   const [target, setTarget] = useState("");
   const [savingTarget, setSavingTarget] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+  const stepUp = useStepUp();
 
   useEffect(() => {
     if (user && !user.is_admin) router.replace("/dashboard");
@@ -233,21 +243,19 @@ export default function SysCtrlPage() {
     });
   }, [users, filter, search]);
 
+  /* Destructive actions go through stepUp.guard: if the server wants a code
+     it opens the prompt and replays this same closure once it has one, so
+     nothing here has to know that step-up exists. */
   const act = async (target: SysUser, action: string, message: string) => {
     setBusyId(target.id);
     try {
-      await api.post(`/sys/users/${target.id}/${action}`);
-      await load();
-      setToast({ message, type: "success" });
+      await stepUp.guard(async (headers: StepUpHeaders) => {
+        await api.post(`/sys/users/${target.id}/${action}`, undefined, headers);
+        await load();
+        setToast({ message, type: "success" });
+      });
     } catch (err) {
-      const detail =
-        err instanceof Error && "body" in err
-          ? String((err as { body?: string }).body ?? "")
-          : "";
-      const parsed = detail.includes("detail")
-        ? JSON.parse(detail).detail
-        : "That didn't work.";
-      setToast({ message: parsed, type: "error" });
+      setToast({ message: apiDetail(err, "That didn't work."), type: "error" });
     } finally {
       setBusyId(null);
     }
@@ -255,21 +263,29 @@ export default function SysCtrlPage() {
 
   const sendReset = async () => {
     if (!resetting) return;
-    setBusyId(resetting.id);
+    const target = resetting;
+    setBusyId(target.id);
     try {
-      const res = await api.post<{ ok: boolean; email_sent: boolean }>(
-        `/sys/users/${resetting.id}/send-reset`
-      );
-      setToast({
-        message: res.email_sent
-          ? `Reset link emailed to ${resetting.email}.`
-          : `Reset link created, but no email went out — SMTP isn't configured.`,
-        type: res.email_sent ? "success" : "warning",
+      await stepUp.guard(async (headers: StepUpHeaders) => {
+        const res = await api.post<{ ok: boolean; email_sent: boolean }>(
+          `/sys/users/${target.id}/send-reset`,
+          undefined,
+          headers
+        );
+        setToast({
+          message: res.email_sent
+            ? `Reset link emailed to ${target.email}.`
+            : `Reset link created, but no email went out — SMTP isn't configured.`,
+          type: res.email_sent ? "success" : "warning",
+        });
+        setResetting(null);
+        load();
       });
-      setResetting(null);
-      load();
-    } catch {
-      setToast({ message: "Couldn't create the reset link.", type: "error" });
+    } catch (err) {
+      setToast({
+        message: apiDetail(err, "Couldn't create the reset link."),
+        type: "error",
+      });
     } finally {
       setBusyId(null);
     }
@@ -316,6 +332,7 @@ export default function SysCtrlPage() {
         eyebrow="Control panel"
         title="Who's using MYNVOICE."
         subtitle="Every account, what they've built with it, and who's here right now."
+        actions={<StepUpChip ctl={stepUp} />}
       />
 
       {/* ── the figures ──────────────────────────────────────────── */}
@@ -578,7 +595,14 @@ export default function SysCtrlPage() {
               </p>
             ) : (
               <ul className="mt-5 space-y-1">
-                {audit.map((entry, i) => (
+                {audit.map((entry, i) => {
+                  const label = ACTION_LABEL[entry.action];
+                  const target = label?.self
+                    ? null
+                    : entry.target_email === entry.actor_email
+                      ? "themselves"
+                      : entry.target_email;
+                  return (
                   <motion.li
                     key={entry.id}
                     initial={{ opacity: 0, x: -6 }}
@@ -596,17 +620,16 @@ export default function SysCtrlPage() {
                     <span className="min-w-0 flex-1 text-[13px] text-ink">
                       <span className="font-semibold">{entry.actor_email}</span>{" "}
                       <span className="text-ink-muted">
-                        {ACTION_LABEL[entry.action] ?? entry.action}
+                        {label?.verb ?? entry.action}
                       </span>{" "}
-                      {entry.target_email ? (
-                        <span className="font-semibold">{entry.target_email}</span>
-                      ) : null}
+                      {target ? <span className="font-semibold">{target}</span> : null}
                     </span>
                     <span className="flex-none text-[11.5px] text-ink-muted">
                       {formatRelativeTime(entry.created_at)}
                     </span>
                   </motion.li>
-                ))}
+                  );
+                })}
               </ul>
             )}
           </Panel>
@@ -708,6 +731,8 @@ export default function SysCtrlPage() {
           </>
         }
       />
+
+      <StepUpModals ctl={stepUp} />
 
       {toast ? (
         <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />

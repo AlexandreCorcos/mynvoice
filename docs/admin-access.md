@@ -60,13 +60,61 @@ demoted through the API.
 minute rather than one per request. "Online" means seen in the last five minutes
 (`ONLINE_WINDOW`); "active" means logged in within thirty days.
 
+## Step-up (two-factor) on destructive actions
+
+The session proves you are an admin. It does not prove you are the one at the
+keyboard — an unlocked laptop is enough to hand someone else your session. So
+three actions ask for a code from your authenticator:
+
+| Action | Step-up |
+|---|---|
+| Grant or revoke admin | required |
+| Deactivate or reactivate an account | required |
+| Force a password reset | required |
+| Remove your own authenticator | required |
+| Reading the panel, marking verified, editing the donation target | not required |
+
+**A code opens a five-minute window**, rather than being demanded once per
+click — a run of admin work costs one code, not six.
+
+**The window is bound to the browser that passed the check.** Verifying returns
+a random token that lives in React state and never touches `localStorage`;
+guarded requests carry it in `X-Admin-Step-Up`. A session copied onto another
+device does not inherit the unlock, and closing the tab ends it. Only the
+token's SHA-256 is stored, so the database never holds the bearer value.
+
+**A code cannot be replayed.** The time step of an accepted code is recorded,
+so the same six digits are refused for the rest of their own thirty seconds.
+
+**Wrong codes are throttled** — five failures and the account waits five
+minutes. That counter is per process, so it resets on deploy and does not span
+replicas; it exists to make guessing pointless, and reaching it at all requires
+an admin session.
+
+The endpoints return machine-readable details so the panel can react without
+guessing: `totp_enrolment_required` (open the setup), `totp_required` (ask for a
+code). Both are **403** rather than 401 — a 401 would send the API client down
+its "session is dead" path and sign the admin out mid-action.
+
+Enrolment is standard TOTP: `/sys/totp/begin` hands out a secret and an
+`otpauth://` URI, the panel renders it as a QR, and the secret counts for
+nothing until `/sys/totp/confirm` proves a code can be read off it. Google
+Authenticator, 1Password, Authy — anything that does TOTP.
+
+### If you lose the authenticator
+
+Only the server can clear it:
+
+```bash
+docker compose exec backend python -m app.cli reset-totp you@example.com
+```
+
+That is deliberate. If the panel could clear it, whoever held the session could
+clear it too, and it would not be a second factor. `list-admins` shows who has
+one set up.
+
 ## Still open
 
-**Step-up authentication for destructive actions.** Granting admin, deactivating
-an account and sending a password reset are currently protected only by the
-session. A stolen laptop with an unlocked browser is enough. A TOTP prompt on
-those three actions specifically would close it. Not implemented — it needs
-`pyotp`, a migration for the secret, and an enrolment screen.
-
-**Rate limiting.** Nothing throttles `/sys/*`. It matters least here (you must
-already be an admin) but it is the obvious next control.
+**Rate limiting on `/sys/*` as a whole.** Nothing throttles the read endpoints.
+It matters least here — you must already be an admin — but it is the obvious
+next control.

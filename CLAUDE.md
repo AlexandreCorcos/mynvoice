@@ -243,6 +243,15 @@ Every privileged action writes an `AdminAuditLog` row. You cannot demote or
 deactivate yourself, and the last admin cannot be removed. Presence comes from
 `users.last_seen_at`, stamped at most once a minute in `get_current_user`.
 
+The three actions that are hard to take back — granting admin, deactivating an
+account, forcing a password reset — additionally need a TOTP step-up
+(`require_step_up` in `deps.py`, logic in `app/core/stepup.py`). A code opens a
+five-minute window bound to that browser via `X-Admin-Step-Up`; the token is
+held in React state, never `localStorage`. The frontend side is
+`components/app/step-up.tsx`: wrap an action in `stepUp.guard()` and it
+prompts, enrols and replays on its own — callers never see the 403. Lost
+authenticator: `python -m app.cli reset-totp <email>`, server-side only.
+
 ## Core Features
 
 1. **Auth:** Email/password + Google OAuth. Design auth structure to accommodate Apple Sign-In later without implementation.
