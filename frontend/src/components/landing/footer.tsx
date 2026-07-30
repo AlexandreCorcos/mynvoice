@@ -11,7 +11,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, Github, Heart } from "lucide-react";
-import { Logo } from "@/components/brand/logo";
+import { LogoLockup } from "@/components/brand/logo";
 import { EASE_OUT, Grain, Magnetic, useCalmMotion } from "./primitives";
 
 const COLUMNS = [
@@ -73,7 +73,7 @@ export function LandingFooter() {
 
         <div className="flex flex-col gap-12 lg:flex-row lg:justify-between">
           <div className="max-w-xs">
-            <Logo variant="white" height={28} href={null} />
+            <LogoLockup variant="white" height={26} href={null} />
             <p className="mt-5 text-[14px] leading-relaxed text-white/45">
               Your business. Your invoices. The free, open-source invoice and
               expense manager for freelancers and small businesses.

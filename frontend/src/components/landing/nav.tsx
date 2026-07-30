@@ -12,7 +12,7 @@ import Link from "next/link";
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion";
 import { useState } from "react";
 import { ArrowRight, Menu, X } from "lucide-react";
-import { Logo } from "@/components/brand/logo";
+import { LogoLockup } from "@/components/brand/logo";
 import { Magnetic, EASE_OUT } from "./primitives";
 import { cn } from "@/lib/utils";
 
@@ -60,7 +60,7 @@ export function LandingNav() {
           )}
         >
           <Link href="/" aria-label="MYNVOICE home" className="flex items-center">
-            <Logo variant="white" height={26} href={null} />
+            <LogoLockup variant="white" height={22} href={null} />
           </Link>
 
           <div className="hidden items-center gap-1 md:flex">
@@ -116,7 +116,7 @@ export function LandingNav() {
             className="fixed inset-0 z-[70] bg-graphite/95 backdrop-blur-2xl md:hidden"
           >
             <div className="flex items-center justify-between px-6 pt-6">
-              <Logo variant="white" height={26} href={null} />
+              <LogoLockup variant="white" height={22} href={null} />
               <button
                 type="button"
                 onClick={() => setOpen(false)}
