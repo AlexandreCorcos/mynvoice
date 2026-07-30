@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
+import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/app/button";
 import { Field } from "@/components/app/form";
 import { AuthError, AuthHeading, PasswordInput } from "./ui";
@@ -36,6 +37,7 @@ export function PasswordSetForm({
   fallbackHref: string;
 }) {
   const router = useRouter();
+  const { refreshUser } = useAuth();
   const token = useSearchParams().get("token");
 
   const [password, setPassword] = useState("");
@@ -67,6 +69,12 @@ export function PasswordSetForm({
       const res = await api.post<TokenResponse>(endpoint, { token, password });
       localStorage.setItem("access_token", res.access_token);
       localStorage.setItem("refresh_token", res.refresh_token);
+
+      /* Storing the tokens isn't enough — the auth context still has
+         `user: null`, so the app layout would bounce straight back to
+         /login and strand you here. Load the user before navigating,
+         exactly as login() does. */
+      await refreshUser();
       router.replace("/dashboard");
     } catch (err) {
       if (err instanceof ApiError) {

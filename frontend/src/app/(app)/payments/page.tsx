@@ -16,7 +16,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { CreditCard, Loader2, Plus, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, num } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
 import { EASE_OUT } from "@/components/motion";
 import { PageHeader } from "@/components/app/page-header";
@@ -101,7 +101,7 @@ function PaymentForm({
     set({
       invoice_id: id,
       client_id: inv.client_id ?? "",
-      amount: String(inv.balance_due || inv.total),
+      amount: String(num(inv.balance_due) || num(inv.total)),
       currency: inv.currency,
     });
   };
@@ -171,7 +171,7 @@ function PaymentForm({
             <option value="">No invoice (standalone payment)</option>
             {outstanding.map((inv) => (
               <option key={inv.id} value={inv.id}>
-                {inv.invoice_number} — {formatCurrency(inv.balance_due, inv.currency)} due
+                {inv.invoice_number} — {formatCurrency(num(inv.balance_due), inv.currency)} due
               </option>
             ))}
           </Select>
@@ -310,7 +310,7 @@ export default function PaymentsPage() {
           p.currency === defaultCurrency
         );
       })
-      .reduce((sum, p) => sum + p.amount, 0);
+      .reduce((sum, p) => sum + num(p.amount), 0);
   }, [payments, defaultCurrency]);
 
   const remove = async () => {
@@ -440,7 +440,7 @@ export default function PaymentsPage() {
                             {modeLabel(p.payment_mode)}
                           </td>
                           <td className="px-4 py-3 text-right text-[14px] font-bold tabular-nums text-positive">
-                            {formatCurrency(p.amount, p.currency)}
+                            {formatCurrency(num(p.amount), p.currency)}
                           </td>
                           <td className="py-3 pr-3">
                             <div className="flex justify-end">
@@ -485,7 +485,7 @@ export default function PaymentsPage() {
                       </p>
                     </div>
                     <span className="flex-none text-[15px] font-bold tabular-nums text-positive">
-                      {formatCurrency(p.amount, p.currency)}
+                      {formatCurrency(num(p.amount), p.currency)}
                     </span>
                   </div>
                   <div className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-3">

@@ -31,6 +31,8 @@ import { useAuth } from "@/contexts/auth-context";
 import {
   formatCompactCurrency,
   formatCurrency,
+  formatPeriodLabel,
+  num,
 } from "@/lib/utils";
 import { EASE_OUT } from "@/components/motion";
 import { PageHeader } from "@/components/app/page-header";
@@ -115,9 +117,9 @@ export default function DashboardPage() {
   const compact = (n: number) => formatCompactCurrency(n, currency);
 
   const chartData = trends.map((t) => ({
-    month: t.month,
-    revenue: Number(t.revenue),
-    expenses: Number(t.expenses),
+    month: formatPeriodLabel(t.month),
+    revenue: num(t.revenue),
+    expenses: num(t.expenses),
   }));
 
   const revenueSeries = chartData.map((d) => d.revenue);
@@ -131,10 +133,10 @@ export default function DashboardPage() {
     return { text: `${Math.abs(pct).toFixed(0)}%`, up: pct >= 0 };
   })();
 
-  const totalReceivables = aging.reduce((sum, b) => sum + b.amount, 0);
+  const totalReceivables = aging.reduce((sum, b) => sum + num(b.amount), 0);
   const segments = aging.map((b, i) => ({
     label: b.label,
-    amount: b.amount,
+    amount: num(b.amount),
     count: b.count,
     tone: AGEING_RAMP[i] ?? AGEING_RAMP[AGEING_RAMP.length - 1],
   }));
@@ -177,7 +179,7 @@ export default function DashboardPage() {
         <MetricCard
           index={0}
           label="Total revenue"
-          value={stats?.total_revenue ?? 0}
+          value={num(stats?.total_revenue)}
           format={money}
           icon={TrendingUp}
           tone="brass"
@@ -190,7 +192,7 @@ export default function DashboardPage() {
         <MetricCard
           index={1}
           label="Paid"
-          value={stats?.total_paid ?? 0}
+          value={num(stats?.total_paid)}
           format={money}
           icon={CheckCircle2}
           tone="positive"
@@ -200,7 +202,7 @@ export default function DashboardPage() {
         <MetricCard
           index={2}
           label="Outstanding"
-          value={stats?.total_unpaid ?? 0}
+          value={num(stats?.total_unpaid)}
           format={money}
           icon={Clock}
           caption={`${stats?.invoices_unpaid_count ?? 0} awaiting payment`}
@@ -209,7 +211,7 @@ export default function DashboardPage() {
         <MetricCard
           index={3}
           label="Overdue"
-          value={stats?.total_overdue ?? 0}
+          value={num(stats?.total_overdue)}
           format={money}
           icon={AlertTriangle}
           tone={overdueCount > 0 ? "negative" : "default"}
@@ -333,14 +335,14 @@ export default function DashboardPage() {
                     {row.label}
                   </td>
                   <td className="px-4 py-3 text-right text-[13.5px] tabular-nums text-ink">
-                    {money(row.sales)}
+                    {money(num(row.sales))}
                   </td>
                   <td className="px-4 py-3 text-right text-[13.5px] font-semibold tabular-nums text-positive">
-                    {money(row.receipts)}
+                    {money(num(row.receipts))}
                   </td>
                   <td className="py-3 pl-4 pr-5 text-right text-[13.5px] font-semibold tabular-nums text-ink sm:pr-6">
-                    <span className={row.due > 0 ? "text-negative" : "text-ink-muted"}>
-                      {money(row.due)}
+                    <span className={num(row.due) > 0 ? "text-negative" : "text-ink-muted"}>
+                      {money(num(row.due))}
                     </span>
                   </td>
                 </motion.tr>
@@ -362,7 +364,7 @@ export default function DashboardPage() {
         {[
           {
             label: "Total expenses",
-            value: money(stats?.total_expenses ?? 0),
+            value: money(num(stats?.total_expenses)),
             caption: "recorded this year",
             icon: Wallet,
             href: "/expenses",

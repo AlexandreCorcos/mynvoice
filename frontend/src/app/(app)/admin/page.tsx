@@ -21,7 +21,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { api } from "@/lib/api";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, num } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
 import { EASE_OUT } from "@/components/motion";
 import { PageHeader } from "@/components/app/page-header";
@@ -48,6 +48,9 @@ export default function AdminPage() {
   }, [user, router]);
 
   const fetchData = useCallback(async () => {
+    /* Both effects run on mount, so without this a non-admin fires two
+       requests that can only 403 before the redirect lands. */
+    if (!user?.is_admin) return;
     try {
       const [m, d] = await Promise.all([
         api.get<AdminMetrics>("/admin/metrics"),
@@ -61,7 +64,7 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     fetchData();
@@ -101,9 +104,9 @@ export default function AdminPage() {
 
   const currency = donations?.currency || "GBP";
   const money = (n: number) => formatCurrency(n, currency);
-  const pct = donations ? Math.min(100, Math.round(donations.percentage)) : 0;
+  const pct = donations ? Math.min(100, Math.round(num(donations.percentage))) : 0;
   const remaining = donations
-    ? Math.max(0, donations.monthly_target - donations.current_month_total)
+    ? Math.max(0, num(donations.monthly_target) - num(donations.current_month_total))
     : 0;
 
   return (
@@ -144,7 +147,7 @@ export default function AdminPage() {
         <MetricCard
           index={3}
           label="Revenue processed"
-          value={metrics?.total_revenue_processed ?? 0}
+          value={num(metrics?.total_revenue_processed)}
           format={money}
           icon={PoundSterling}
           caption="across all accounts"
@@ -160,12 +163,12 @@ export default function AdminPage() {
 
           <div className="mt-5 flex items-baseline justify-between gap-4">
             <p className="text-[30px] font-extrabold leading-none tracking-[-0.025em] tabular-nums text-ink">
-              {money(donations?.current_month_total ?? 0)}
+              {money(num(donations?.current_month_total))}
             </p>
             <span className="text-[13px] font-bold tabular-nums text-brass-ink">{pct}%</span>
           </div>
           <p className="mt-1.5 text-[12.5px] text-ink-muted">
-            of {money(donations?.monthly_target ?? 0)}
+            of {money(num(donations?.monthly_target))}
             {remaining > 0 ? ` · ${money(remaining)} still to find` : " · fully covered"}
           </p>
 

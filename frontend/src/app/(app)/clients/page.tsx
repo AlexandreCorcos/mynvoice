@@ -24,7 +24,7 @@ import {
   Users,
 } from "lucide-react";
 import { api } from "@/lib/api";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency, num } from "@/lib/utils";
 import { EASE_OUT } from "@/components/motion";
 import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/app/button";
@@ -448,7 +448,7 @@ export default function ClientsPage() {
   }, [clients, search]);
 
   const owed = useMemo(
-    () => clients.reduce((sum, c) => sum + (c.total_receivables || 0), 0),
+    () => clients.reduce((sum, c) => sum + num(c.total_receivables), 0),
     [clients]
   );
 
@@ -599,10 +599,10 @@ export default function ClientsPage() {
                   <span
                     className={cn(
                       "text-[15px] font-bold tabular-nums",
-                      c.total_receivables > 0 ? "text-ink" : "text-ink-muted"
+                      num(c.total_receivables) > 0 ? "text-ink" : "text-ink-muted"
                     )}
                   >
-                    {formatCurrency(c.total_receivables || 0)}
+                    {formatCurrency(num(c.total_receivables))}
                   </span>
                 </div>
               </motion.div>

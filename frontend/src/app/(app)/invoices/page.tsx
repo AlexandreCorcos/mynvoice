@@ -25,7 +25,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { api } from "@/lib/api";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatCurrency, formatDate, num } from "@/lib/utils";
 import { EASE_OUT } from "@/components/motion";
 import { PageHeader } from "@/components/app/page-header";
 import { Button, ButtonLink } from "@/components/app/button";
@@ -159,11 +159,11 @@ function InvoiceRow({
         {/* amount — fixed width so it lines up with the column key */}
         <span className="w-28 flex-none text-right">
           <span className="block text-[14.5px] font-bold tabular-nums text-ink">
-            {formatCurrency(inv.total, inv.currency)}
+            {formatCurrency(num(inv.total), inv.currency)}
           </span>
-          {inv.balance_due > 0 && inv.balance_due !== inv.total ? (
+          {num(inv.balance_due) > 0 && num(inv.balance_due) !== num(inv.total) ? (
             <span className="block text-[11px] tabular-nums text-ink-muted">
-              {formatCurrency(inv.balance_due, inv.currency)} left
+              {formatCurrency(num(inv.balance_due), inv.currency)} left
             </span>
           ) : null}
         </span>
@@ -247,7 +247,7 @@ export default function InvoicesPage() {
     () =>
       visible
         .filter((i) => i.status !== "paid")
-        .reduce((sum, i) => sum + i.balance_due, 0),
+        .reduce((sum, i) => sum + num(i.balance_due), 0),
     [visible]
   );
 
@@ -318,13 +318,16 @@ export default function InvoicesPage() {
       <PageHeader
         eyebrow="Invoices"
         title="Everything you've billed."
-        subtitle={
-          outstanding > 0
-            ? `${formatCurrency(outstanding, invoices[0]?.currency ?? "GBP")} still outstanding across ${
-                visible.filter((i) => i.status !== "paid").length
-              } invoices.`
-            : "Nothing outstanding — every invoice on this list is settled."
-        }
+        subtitle={(() => {
+          if (outstanding <= 0) {
+            return "Nothing outstanding — every invoice on this list is settled.";
+          }
+          const open = visible.filter((i) => i.status !== "paid").length;
+          const money = formatCurrency(outstanding, invoices[0]?.currency ?? "GBP");
+          return `${money} still outstanding across ${open} ${
+            open === 1 ? "invoice" : "invoices"
+          }.`;
+        })()}
         actions={
           <ButtonLink href="/invoices/new" variant="primary">
             <Plus className="h-4 w-4" />

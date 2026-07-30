@@ -16,7 +16,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BarChart3, ChevronLeft, ChevronRight, Receipt, TrendingUp, Wallet } from "lucide-react";
 import { api } from "@/lib/api";
-import { formatCompactCurrency, formatCurrency } from "@/lib/utils";
+import {
+  formatCompactCurrency,
+  formatCurrency,
+  formatPeriodLabel,
+  num,
+} from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
 import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/app/button";
@@ -105,14 +110,14 @@ export default function ReportsPage() {
 
   /* Collection rate is the number this screen exists to surface: of what
      you billed, how much actually landed. */
-  const collected = summary?.total_invoiced
-    ? Math.round((summary.total_received / summary.total_invoiced) * 100)
+  const collected = num(summary?.total_invoiced)
+    ? Math.round((num(summary?.total_received) / num(summary?.total_invoiced)) * 100)
     : 0;
 
-  const net = (summary?.total_received ?? 0) - (summary?.total_expenses ?? 0);
-  const receivedSeries = byPeriod.map((p) => p.received);
+  const net = num(summary?.total_received) - num(summary?.total_expenses);
+  const receivedSeries = byPeriod.map((p) => num(p.received));
   const hasData = byPeriod.some(
-    (p) => p.invoiced > 0 || p.received > 0 || p.outstanding > 0
+    (p) => num(p.invoiced) > 0 || num(p.received) > 0 || num(p.outstanding) > 0
   );
 
   if (loading && !data) {
@@ -180,7 +185,7 @@ export default function ReportsPage() {
         <MetricCard
           index={0}
           label="Invoiced"
-          value={summary?.total_invoiced ?? 0}
+          value={num(summary?.total_invoiced)}
           format={money}
           icon={Receipt}
           tone="brass"
@@ -190,27 +195,27 @@ export default function ReportsPage() {
         <MetricCard
           index={1}
           label="Received"
-          value={summary?.total_received ?? 0}
+          value={num(summary?.total_received)}
           format={money}
           icon={TrendingUp}
           tone="positive"
-          delta={summary?.total_invoiced ? `${collected}%` : undefined}
+          delta={num(summary?.total_invoiced) ? `${collected}%` : undefined}
           deltaUp={collected >= 70}
           caption="of what you billed"
         />
         <MetricCard
           index={2}
           label="Still outstanding"
-          value={summary?.total_outstanding ?? 0}
+          value={num(summary?.total_outstanding)}
           format={money}
           icon={BarChart3}
-          tone={(summary?.total_outstanding ?? 0) > 0 ? "negative" : "default"}
+          tone={num(summary?.total_outstanding) > 0 ? "negative" : "default"}
           caption="not yet collected"
         />
         <MetricCard
           index={3}
           label="Expenses"
-          value={summary?.total_expenses ?? 0}
+          value={num(summary?.total_expenses)}
           format={money}
           icon={Wallet}
           caption={`net ${money(net)}`}
@@ -242,7 +247,12 @@ export default function ReportsPage() {
         <div className="mt-6">
           {hasData ? (
             <GroupedBarChart
-              data={byPeriod as unknown as Record<string, string | number>[]}
+              data={byPeriod.map((p) => ({
+                period: formatPeriodLabel(p.period),
+                invoiced: num(p.invoiced),
+                received: num(p.received),
+                outstanding: num(p.outstanding),
+              }))}
               xKey="period"
               series={[
                 { key: "invoiced", name: "Invoiced", tone: "brass" },
@@ -273,14 +283,14 @@ export default function ReportsPage() {
               formatValue={money}
               emptyLabel="No client revenue recorded for this year."
               rows={[...byClient]
-                .sort((a, b) => b.received - a.received)
+                .sort((a, b) => num(b.received) - num(a.received))
                 .slice(0, 6)
                 .map((c) => ({
                   label: c.client_name ?? "No client",
-                  value: c.received,
+                  value: num(c.received),
                   caption:
-                    c.outstanding > 0
-                      ? `${money(c.outstanding)} still outstanding`
+                    num(c.outstanding) > 0
+                      ? `${money(num(c.outstanding))} still outstanding`
                       : undefined,
                 }))}
             />
@@ -295,11 +305,11 @@ export default function ReportsPage() {
               formatValue={money}
               emptyLabel="No expenses recorded for this year."
               rows={[...byCategory]
-                .sort((a, b) => b.total - a.total)
+                .sort((a, b) => num(b.total) - num(a.total))
                 .slice(0, 6)
                 .map((c) => ({
                   label: c.category ?? "Uncategorised",
-                  value: c.total,
+                  value: num(c.total),
                   caption: `${c.count} ${c.count === 1 ? "entry" : "entries"}`,
                 }))}
             />

@@ -25,7 +25,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { api } from "@/lib/api";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatCurrency, formatDate, num } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
 import { CountUp, EASE_OUT } from "@/components/motion";
 import { PageHeader } from "@/components/app/page-header";
@@ -392,7 +392,7 @@ export default function ExpensesPage() {
       const d = new Date(e.expense_date);
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     });
-    const sum = (list: Expense[]) => list.reduce((s, e) => s + e.amount, 0);
+    const sum = (list: Expense[]) => list.reduce((s, e) => s + num(e.amount), 0);
     return {
       month: sum(thisMonth),
       fixed: sum(thisMonth.filter((e) => e.expense_type === "fixed")),
@@ -412,7 +412,7 @@ export default function ExpensesPage() {
         colour: cat?.colour ?? FALLBACK_COLOUR,
         amount: 0,
       };
-      entry.amount += e.amount;
+      entry.amount += num(e.amount);
       totals.set(key, entry);
     }
     const rows = [...totals.values()].sort((a, b) => b.amount - a.amount);
@@ -643,7 +643,7 @@ export default function ExpensesPage() {
                   </span>
 
                   <span className="w-24 flex-none text-right text-[14.5px] font-bold tabular-nums text-ink">
-                    {formatCurrency(e.amount, e.currency || currency)}
+                    {formatCurrency(num(e.amount), e.currency || currency)}
                   </span>
 
                   <RowMenu

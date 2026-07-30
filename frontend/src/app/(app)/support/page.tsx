@@ -17,7 +17,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowUpRight, Coffee, CreditCard, Github, Heart, ServerCog } from "lucide-react";
 import { api } from "@/lib/api";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, num } from "@/lib/utils";
 import { EASE_OUT } from "@/components/motion";
 import { Panel, PanelHeader } from "@/components/app/panel";
 import type { DonationProgress } from "@/types";
@@ -39,7 +39,7 @@ export default function SupportPage() {
 
   const currency = progress?.currency || "GBP";
   const money = (n: number) => formatCurrency(n, currency);
-  const pct = progress ? Math.min(100, Math.round(progress.percentage)) : 0;
+  const pct = progress ? Math.min(100, Math.round(num(progress.percentage))) : 0;
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -73,10 +73,10 @@ export default function SupportPage() {
             <div className="mx-auto mt-8 max-w-md text-left">
               <div className="flex items-baseline justify-between text-[13px]">
                 <span className="font-semibold text-white">
-                  {money(progress.current_month_total)}
+                  {money(num(progress.current_month_total))}
                   <span className="text-white/40">
                     {" "}
-                    of {money(progress.monthly_target)} covered
+                    of {money(num(progress.monthly_target))} covered
                   </span>
                 </span>
                 <span className="font-bold tabular-nums text-brass-on-dark">{pct}%</span>

@@ -27,7 +27,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { api } from "@/lib/api";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatCurrency, formatDate, formatQuantity } from "@/lib/utils";
 import { EASE_OUT } from "@/components/motion";
 import { Panel, PanelHeader, Overline } from "@/components/app/panel";
 import { Button, ButtonLink } from "@/components/app/button";
@@ -154,6 +154,7 @@ export default function InvoiceDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [sendEmail, setSendEmail] = useState("");
   const [sending, setSending] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
 
@@ -208,21 +209,41 @@ export default function InvoiceDetailPage() {
 
   const downloadPdf = async () => {
     if (!invoice) return;
-    const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-    const token = localStorage.getItem("access_token");
-    const res = await fetch(`${base}/invoices/${invoice.id}/pdf`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-    if (!res.ok) {
-      setToast({ message: "Couldn't generate the PDF.", type: "error" });
-      return;
+    setDownloading(true);
+    try {
+      const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+      const token = localStorage.getItem("access_token");
+
+      /* A network or CORS failure *rejects* rather than returning a
+         non-ok response, so this needs a catch as well as an `ok` check —
+         without it the rejection escaped and the button did nothing at
+         all, with no message to the user. */
+      const res = await fetch(`${base}/invoices/${invoice.id}/pdf`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (!res.ok) {
+        setToast({
+          message: "Couldn't generate the PDF. The server rejected the request.",
+          type: "error",
+        });
+        return;
+      }
+
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${invoice.invoice_number}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setToast({
+        message: "Couldn't reach the server to build the PDF.",
+        type: "error",
+      });
+    } finally {
+      setDownloading(false);
     }
-    const url = URL.createObjectURL(await res.blob());
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${invoice.invoice_number}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   const sendInvoice = async () => {
@@ -235,8 +256,11 @@ export default function InvoiceDetailPage() {
       setSendEmail("");
       fetchInvoice();
     } catch {
+      /* Deliberately not blaming SMTP: this also fires when PDF generation
+         fails or the server is unreachable, and sending someone to check
+         mail settings for a PDF fault wastes their afternoon. */
       setToast({
-        message: "Couldn't send it. Check your SMTP settings.",
+        message: "Couldn't send the invoice. Check the server logs.",
         type: "error",
       });
     } finally {
@@ -304,8 +328,12 @@ export default function InvoiceDetailPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="secondary" onClick={downloadPdf}>
-            <Download className="h-4 w-4" />
+          <Button variant="secondary" onClick={downloadPdf} disabled={downloading}>
+            {downloading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
             PDF
           </Button>
           <Button
@@ -397,7 +425,7 @@ export default function InvoiceDetailPage() {
                       {item.description}
                     </td>
                     <td className="py-3 text-right text-[13px] tabular-nums text-ink-muted">
-                      {item.quantity}
+                      {formatQuantity(Number(item.quantity))}
                       {item.unit ? ` ${item.unit}` : ""}
                     </td>
                     <td className="py-3 text-right text-[13px] tabular-nums text-ink-muted">
