@@ -243,12 +243,17 @@ export default function InvoicesPage() {
     });
   }, [invoices, filter, search, clientName]);
 
-  const outstanding = useMemo(
-    () =>
-      visible
-        .filter((i) => i.status !== "paid")
-        .reduce((sum, i) => sum + num(i.balance_due), 0),
+  /* Outstanding means money asked for and not received, so drafts are out —
+     the same rule the dashboard and reports use. Counting them here would
+     make this header disagree with every other screen. */
+  const openInvoices = useMemo(
+    () => visible.filter((i) => i.status === "sent" || i.status === "overdue"),
     [visible]
+  );
+
+  const outstanding = useMemo(
+    () => openInvoices.reduce((sum, i) => sum + num(i.balance_due), 0),
+    [openInvoices]
   );
 
   /* ---- actions ---- */
@@ -322,7 +327,7 @@ export default function InvoicesPage() {
           if (outstanding <= 0) {
             return "Nothing outstanding — every invoice on this list is settled.";
           }
-          const open = visible.filter((i) => i.status !== "paid").length;
+          const open = openInvoices.length;
           const money = formatCurrency(outstanding, invoices[0]?.currency ?? "GBP");
           return `${money} still outstanding across ${open} ${
             open === 1 ? "invoice" : "invoices"

@@ -45,11 +45,16 @@ async def get_reports(
     year_start = date(year, 1, 1)
     year_end = date(year, 12, 31)
 
-    # Common filters for invoices in the given year owned by the user
+    # Common filters for invoices in the given year owned by the user.
+    # Drafts are excluded throughout: you have not billed anything until it
+    # is sent, so counting them would inflate "invoiced", inflate
+    # "outstanding" and understate the collection rate against money you
+    # never actually asked for. Same rule as the dashboard.
     invoice_filters = [
         Invoice.user_id == user.id,
         Invoice.issue_date >= year_start,
         Invoice.issue_date <= year_end,
+        Invoice.status != InvoiceStatus.DRAFT,
     ]
 
     # Common filters for expenses in the given year owned by the user
