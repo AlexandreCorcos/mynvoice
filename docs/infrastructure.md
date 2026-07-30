@@ -131,16 +131,24 @@ curl -X POST https://api.mynvoice.com/api/v1/auth/register \
 
 # 2. Check the email inbox for the verification link, set the password
 
-# 3. Promote to admin via database
-docker exec mynvoice-db psql -U mynvoice -c \
-  "UPDATE users SET is_admin = true WHERE email = 'admin@mynvoice.com';"
+# 3. Promote to admin — on the server, which is the only place it can happen
+docker compose exec backend python -m app.cli grant-admin admin@mynvoice.com
 ```
+
+`list-admins` shows who has admin and who has two-factor set up; `revoke-admin`
+takes it away, and refuses to remove the last admin.
 
 ---
 
 ## Admin Panel
 
-Available to users with `is_admin = true`. Shows metrics, donation progress. Requires login.
+`/sys/ctrl`, for users with `is_admin = true`. Shows who is signed up, what each
+account has built, who is online right now, the audit trail of admin actions,
+and donation progress. `/admin` redirects here.
+
+Granting admin, deactivating an account and forcing a password reset each need a
+TOTP step-up; one code unlocks them for five minutes. Full detail in
+`docs/admin-access.md`.
 
 ---
 
@@ -242,4 +250,9 @@ chmod +x /opt/mynvoice-backup.sh
 - `DEBUG` must be `false` in production
 - File uploads are limited to 5MB, images only
 - JWT access tokens expire after 30 minutes, refresh tokens after 7 days
-- `/sys/ctrl` password rotates every hour — share only with trusted people
+- `/sys/ctrl` has no password of its own. It uses the ordinary login plus
+  `is_admin`, granted only on the server. The panel used to accept an hourly
+  token derived from the date — that is removed; see `docs/admin-access.md`
+- Destructive admin actions need a TOTP code from the admin's authenticator.
+  A lost authenticator is cleared server-side only:
+  `docker compose exec backend python -m app.cli reset-totp <email>`

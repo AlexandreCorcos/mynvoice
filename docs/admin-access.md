@@ -87,9 +87,12 @@ token's SHA-256 is stored, so the database never holds the bearer value.
 so the same six digits are refused for the rest of their own thirty seconds.
 
 **Wrong codes are throttled** — five failures and the account waits five
-minutes. That counter is per process, so it resets on deploy and does not span
-replicas; it exists to make guessing pointless, and reaching it at all requires
-an admin session.
+minutes. Be precise about what that buys: the counter lives in process memory,
+and production runs uvicorn with four workers, so the real ceiling is five
+attempts *per worker* and it resets on every deploy. Twenty guesses per five
+minutes against a six-digit code is still nowhere, and you need a valid admin
+session before you can guess at all. The parts that must not be per-process —
+the replay guard and the window itself — are in the database.
 
 The endpoints return machine-readable details so the panel can react without
 guessing: `totp_enrolment_required` (open the setup), `totp_required` (ask for a
