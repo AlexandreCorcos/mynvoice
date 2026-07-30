@@ -5,9 +5,7 @@ import Link from "next/link";
 const WORDMARK_RATIO = 475 / 240;
 
 type LogoProps = {
-  /** "dark" = dark ink (light backgrounds) · "white" = white ink (dark backgrounds)
-   *  TODO(brand): the PNG assets still carry the retired Petrol & Coral palette.
-   *  They need regenerating in Graphite & Brass — see globals.css tokens. */
+  /** "dark" = brass + ink (light backgrounds) · "white" = white ink (dark backgrounds) */
   variant?: "dark" | "white";
   /** rendered height in px; width is derived from the wordmark ratio */
   height?: number;
@@ -54,8 +52,7 @@ type LogoMarkProps = {
   priority?: boolean;
 };
 
-/** The square brand mark (rounded tile, white "M", accent tittle).
- *  TODO(brand): asset still uses the retired Petrol & Coral palette. */
+/** The square brand mark (rounded graphite tile, white "M", brass tittle). */
 export function LogoMark({ size = 36, className = "", priority = false }: LogoMarkProps) {
   return (
     <Image

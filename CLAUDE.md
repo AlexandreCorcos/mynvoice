@@ -84,9 +84,21 @@ surfaces use `graphite`. This is what keeps the UI calm.
 **Dark mode:** works via the `.dark` class; every token already has a dark value,
 so no per-component overrides should be needed.
 
-**Known debt:** the PNG brand assets (`logo-mynvoice.png`, `logo-mynvoice-white.png`,
-`mark-512.png`, `og-image.png`) still carry the retired Petrol & Coral palette and
-need regenerating in Graphite & Brass.
+**Brand assets** are retinted to Graphite & Brass. The letterforms were never
+redrawn — only the ink was remapped — so the wordmark shapes are unchanged:
+
+| Asset | Treatment |
+|---|---|
+| `public/logo-mynvoice.png` | "MY" → `brass`, "nvoice" → `ink` |
+| `public/logo-mynvoice-white.png` | unchanged — pure white ink, nothing to retint |
+| `public/mark-512.png` | graphite tile, white M, `brass-on-dark` tittle |
+| `public/og-image.png` | graphite background (radial blob preserved), brass pill |
+| `src/app/icon.png` | kept byte-identical to `mark-512.png` |
+| `src/app/apple-icon.png` | same treatment as the mark |
+| `src/app/favicon.ico` | rebuilt at 16 + 32 from the new mark |
+
+The working files `logo/mynvoiceB.png` and `logo_prompt/logo_dark_light.png` are
+source material, are not shipped, and still show the old palette.
 
 ## Core Features
 
