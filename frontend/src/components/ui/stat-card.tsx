@@ -28,8 +28,8 @@ export default function StatCard({
       className={cn(
         "rounded-[var(--radius-card)] p-5 shadow-[var(--shadow-card)] transition-shadow hover:shadow-[var(--shadow-card-hover)]",
         accent
-          ? "bg-petrol-dark text-white dark:bg-petrol-mid"
-          : "bg-white dark:bg-surface-dark dark:border dark:border-white/10"
+          ? "bg-brass text-white dark:bg-brass"
+          : "bg-white dark:bg-graphite dark:border dark:border-white/10"
       )}
     >
       <div className="flex items-start justify-between">
@@ -39,7 +39,7 @@ export default function StatCard({
               "text-sm font-medium",
               accent
                 ? "text-white/70"
-                : "text-text-secondary dark:text-white/50"
+                : "text-ink-muted dark:text-white/50"
             )}
           >
             {label}
@@ -60,15 +60,23 @@ export default function StatCard({
             <p
               className={cn(
                 "mt-1 text-xs font-medium",
-                trendUp
-                  ? accent
-                    ? "text-emerald-300"
-                    : "text-emerald-500"
-                  : accent
-                    ? "text-coral-light"
-                    : "text-coral"
+                // On the brass-filled card no small chromatic text can reach
+                // 4.5:1, so direction is carried by the glyph and the text
+                // stays near-white.
+                accent
+                  ? "text-white/85"
+                  : trendUp === undefined
+                    ? "text-ink-muted dark:text-white/50"
+                    : trendUp
+                      ? "text-positive"
+                      : "text-negative"
               )}
             >
+              {trendUp !== undefined && (
+                <span aria-hidden="true" className="mr-1">
+                  {trendUp ? "▲" : "▼"}
+                </span>
+              )}
               {trend}
             </p>
           )}
@@ -78,13 +86,13 @@ export default function StatCard({
             "flex h-10 w-10 items-center justify-center rounded-xl",
             accent
               ? "bg-white/15"
-              : "bg-surface-light dark:bg-white/10"
+              : "bg-surface dark:bg-white/10"
           )}
         >
           <Icon
             className={cn(
               "h-5 w-5",
-              accent ? "text-white" : "text-petrol-mid dark:text-petrol-light"
+              accent ? "text-white" : "text-brass-ink dark:text-brass-soft"
             )}
           />
         </div>

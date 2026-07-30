@@ -66,10 +66,10 @@ function InvoiceMock() {
         <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" />
         <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
         <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
-        <span className="ml-3 text-xs font-medium text-text-secondary">
+        <span className="ml-3 text-xs font-medium text-ink-muted">
           New invoice
         </span>
-        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
+        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-positive">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
           Draft saved
         </span>
@@ -78,16 +78,16 @@ function InvoiceMock() {
       <div className="p-5 sm:p-6">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-petrol-mid">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-brass-ink">
               Invoice
             </p>
-            <p className="mt-0.5 text-lg font-bold text-text-primary">
+            <p className="mt-0.5 text-lg font-bold text-ink">
               INV-26-00042
             </p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-text-secondary">Due</p>
-            <p className="text-sm font-semibold text-text-primary">
+            <p className="text-xs text-ink-muted">Due</p>
+            <p className="text-sm font-semibold text-ink">
               14 Jul 2026
             </p>
           </div>
@@ -99,20 +99,20 @@ function InvoiceMock() {
               key={i}
               className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-3.5 py-3"
             >
-              <span className="flex h-7 w-7 flex-none cursor-grab items-center justify-center rounded-md bg-surface-light text-text-secondary">
+              <span className="flex h-7 w-7 flex-none cursor-grab items-center justify-center rounded-md bg-surface text-ink-muted">
                 <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="currentColor">
                   <circle cx="5" cy="3" r="1.3" /><circle cx="11" cy="3" r="1.3" />
                   <circle cx="5" cy="8" r="1.3" /><circle cx="11" cy="8" r="1.3" />
                   <circle cx="5" cy="13" r="1.3" /><circle cx="11" cy="13" r="1.3" />
                 </svg>
               </span>
-              <span className="flex-1 truncate text-sm font-medium text-text-primary">
+              <span className="flex-1 truncate text-sm font-medium text-ink">
                 {it.name}
               </span>
-              <span className="hidden text-xs text-text-secondary sm:block">
+              <span className="hidden text-xs text-ink-muted sm:block">
                 {it.qty} ×
               </span>
-              <span className="text-sm font-semibold text-text-primary">
+              <span className="text-sm font-semibold text-ink">
                 {it.price}
               </span>
             </div>
@@ -120,22 +120,22 @@ function InvoiceMock() {
         </div>
 
         <div className="mt-5 flex items-end justify-between border-t border-dashed border-gray-200 pt-4">
-          <button className="inline-flex items-center gap-1.5 rounded-lg bg-surface-light px-3 py-2 text-xs font-semibold text-petrol-dark">
+          <button className="inline-flex items-center gap-1.5 rounded-lg bg-surface px-3 py-2 text-xs font-semibold text-ink">
             <span className="text-base leading-none">+</span> Add line item
           </button>
           <div className="text-right">
-            <p className="text-xs text-text-secondary">Total due</p>
-            <p className="text-2xl font-extrabold tracking-tight text-petrol-dark">
+            <p className="text-xs text-ink-muted">Total due</p>
+            <p className="text-2xl font-extrabold tracking-tight text-ink">
               £4,820.00
             </p>
           </div>
         </div>
 
         <div className="mt-5 flex gap-2.5">
-          <button className="flex-1 rounded-xl bg-coral py-2.5 text-sm font-semibold text-white shadow-lg shadow-coral/25">
+          <button className="flex-1 rounded-xl bg-brass py-2.5 text-sm font-semibold text-white shadow-lg shadow-brass/25">
             Send invoice
           </button>
-          <button className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-text-primary">
+          <button className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-ink">
             Preview
           </button>
         </div>
@@ -156,7 +156,7 @@ function MiniBars() {
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: i * 0.06, ease: "easeOut" }}
           className={`w-full rounded-sm ${
-            i === bars.length - 1 ? "bg-coral" : "bg-petrol-mid/35"
+            i === bars.length - 1 ? "bg-brass" : "bg-brass/35"
           }`}
         />
       ))}
@@ -190,25 +190,25 @@ function FeatureCard({
       transition={{ duration: 0.25 }}
       className={`group relative flex flex-col overflow-hidden rounded-2xl p-6 ring-1 transition-shadow ${
         dark
-          ? "bg-petrol-dark text-white ring-white/10 hover:shadow-[0_20px_50px_-20px_rgba(15,76,92,0.7)]"
+          ? "bg-brass text-white ring-white/10 hover:shadow-[0_20px_50px_-20px_rgba(15,76,92,0.7)]"
           : "bg-white ring-black/5 hover:shadow-[var(--shadow-card-hover)]"
       } ${className}`}
     >
       <div
         className={`mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl ${
-          dark ? "bg-white/10 text-coral-light" : "bg-petrol-dark/5 text-petrol-dark"
+          dark ? "bg-white/10 text-brass-on-dark" : "bg-brass/5 text-ink"
         }`}
       >
         <Icon className="h-5 w-5" />
       </div>
       <h3
-        className={`text-base font-bold ${dark ? "text-white" : "text-text-primary"}`}
+        className={`text-base font-bold ${dark ? "text-white" : "text-ink"}`}
       >
         {title}
       </h3>
       <p
         className={`mt-1.5 text-sm leading-relaxed ${
-          dark ? "text-white/60" : "text-text-secondary"
+          dark ? "text-white/60" : "text-ink-muted"
         }`}
       >
         {desc}
@@ -230,32 +230,32 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-surface-light text-text-primary">
+    <div className="min-h-screen bg-surface text-ink">
       {/* ===== Nav ===== */}
-      <header className="sticky top-0 z-50 border-b border-black/5 bg-surface-light/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-black/5 bg-surface/80 backdrop-blur-xl">
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
           <Logo height={34} priority />
           <div className="hidden items-center gap-8 md:flex">
-            <a href="#features" className="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary">
+            <a href="#features" className="text-sm font-medium text-ink-muted transition-colors hover:text-ink">
               Features
             </a>
-            <a href="#how" className="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary">
+            <a href="#how" className="text-sm font-medium text-ink-muted transition-colors hover:text-ink">
               How it works
             </a>
-            <a href="#pricing" className="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary">
+            <a href="#pricing" className="text-sm font-medium text-ink-muted transition-colors hover:text-ink">
               Pricing
             </a>
           </div>
           <div className="flex items-center gap-2.5">
             <Link
               href="/login"
-              className="hidden rounded-[var(--radius-button)] px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-black/5 sm:block"
+              className="hidden rounded-[var(--radius-button)] px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-black/5 sm:block"
             >
               Sign in
             </Link>
             <Link
               href="/register"
-              className="rounded-[var(--radius-button)] bg-coral px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-coral/20 transition-all hover:bg-coral-dark hover:shadow-coral/30"
+              className="rounded-[var(--radius-button)] bg-brass px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-brass/20 transition-all hover:bg-brass-strong hover:shadow-brass/30"
             >
               Start free
             </Link>
@@ -292,22 +292,22 @@ export default function LandingPage() {
           {/* copy */}
           <div>
             <Reveal>
-              <span className="inline-flex items-center gap-2 rounded-full border border-petrol-mid/20 bg-white/70 px-3.5 py-1.5 text-xs font-semibold text-petrol-dark backdrop-blur">
-                <Sparkles className="h-3.5 w-3.5 text-coral" />
+              <span className="inline-flex items-center gap-2 rounded-full border border-brass-soft/20 bg-white/70 px-3.5 py-1.5 text-xs font-semibold text-ink backdrop-blur">
+                <Sparkles className="h-3.5 w-3.5 text-brass-ink" />
                 Free &amp; open-source · No credit card
               </span>
             </Reveal>
 
             <Reveal delay={0.06}>
-              <h1 className="mt-5 text-[2.7rem] font-extrabold leading-[1.04] tracking-tight text-text-primary sm:text-6xl">
+              <h1 className="mt-5 text-[2.7rem] font-extrabold leading-[1.04] tracking-tight text-ink sm:text-6xl">
                 Invoicing that
                 <br />
                 feels like{" "}
-                <span className="relative whitespace-nowrap text-petrol-dark">
+                <span className="relative whitespace-nowrap text-ink">
                   yours
                   <svg
                     viewBox="0 0 200 16"
-                    className="absolute -bottom-1.5 left-0 h-2.5 w-full text-coral"
+                    className="absolute -bottom-1.5 left-0 h-2.5 w-full text-brass-ink"
                     preserveAspectRatio="none"
                   >
                     <path
@@ -324,7 +324,7 @@ export default function LandingPage() {
             </Reveal>
 
             <Reveal delay={0.12}>
-              <p className="mt-6 max-w-md text-lg leading-relaxed text-text-secondary">
+              <p className="mt-6 max-w-md text-lg leading-relaxed text-ink-muted">
                 Create beautiful invoices, track expenses, and get paid faster.
                 MYNVOICE is the calm, modern way to run the money side of your
                 business — built for freelancers and small teams.
@@ -335,14 +335,14 @@ export default function LandingPage() {
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link
                   href="/register"
-                  className="group inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-coral px-6 py-3.5 text-sm font-semibold text-white shadow-xl shadow-coral/25 transition-all hover:bg-coral-dark hover:shadow-coral/40"
+                  className="group inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-brass px-6 py-3.5 text-sm font-semibold text-white shadow-xl shadow-brass/25 transition-all hover:bg-brass-strong hover:shadow-brass/40"
                 >
                   Start free
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                 </Link>
                 <Link
                   href="/login"
-                  className="inline-flex items-center gap-2 rounded-[var(--radius-button)] border border-petrol-dark/15 bg-white px-6 py-3.5 text-sm font-semibold text-petrol-dark transition-colors hover:bg-white/60"
+                  className="inline-flex items-center gap-2 rounded-[var(--radius-button)] border border-brass/15 bg-white px-6 py-3.5 text-sm font-semibold text-ink transition-colors hover:bg-white/60"
                 >
                   Sign in
                 </Link>
@@ -350,10 +350,10 @@ export default function LandingPage() {
             </Reveal>
 
             <Reveal delay={0.24}>
-              <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-text-secondary">
+              <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-ink-muted">
                 {["Free forever", "Open source", "Multi-currency"].map((t) => (
                   <span key={t} className="inline-flex items-center gap-1.5">
-                    <Check className="h-4 w-4 text-petrol-mid" />
+                    <Check className="h-4 w-4 text-brass-ink" />
                     {t}
                   </span>
                 ))}
@@ -373,10 +373,10 @@ export default function LandingPage() {
                 transition={{ delay: 0.5, duration: 0.6 }}
                 className="absolute -top-8 -left-3 hidden w-40 rounded-2xl bg-white p-3.5 shadow-[0_18px_44px_-16px_rgba(15,76,92,0.5)] ring-1 ring-black/5 sm:-left-7 sm:block"
               >
-                <p className="text-[11px] font-medium text-text-secondary">
+                <p className="text-[11px] font-medium text-ink-muted">
                   Paid this month
                 </p>
-                <p className="text-xl font-extrabold text-petrol-dark">£18,640</p>
+                <p className="text-xl font-extrabold text-ink">£18,640</p>
                 <MiniBars />
               </motion.div>
 
@@ -385,9 +385,9 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 16, rotate: 5 }}
                 animate={{ opacity: 1, y: 0, rotate: 5 }}
                 transition={{ delay: 0.65, duration: 0.6 }}
-                className="absolute -bottom-5 -right-3 hidden items-center gap-3 rounded-2xl bg-petrol-dark p-3.5 pr-5 shadow-[0_18px_44px_-16px_rgba(15,76,92,0.7)] sm:flex"
+                className="absolute -bottom-5 -right-3 hidden items-center gap-3 rounded-2xl bg-brass p-3.5 pr-5 shadow-[0_18px_44px_-16px_rgba(15,76,92,0.7)] sm:flex"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-coral text-sm font-bold text-white">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brass text-sm font-bold text-white">
                   AC
                 </div>
                 <div>
@@ -412,10 +412,10 @@ export default function LandingPage() {
           ].map((s, i) => (
             <Reveal key={s.v} delay={i * 0.05}>
               <div className="text-center sm:text-left">
-                <p className="text-2xl font-extrabold tracking-tight text-petrol-dark">
+                <p className="text-2xl font-extrabold tracking-tight text-ink">
                   {s.k}
                 </p>
-                <p className="mt-0.5 text-sm text-text-secondary">{s.v}</p>
+                <p className="mt-0.5 text-sm text-ink-muted">{s.v}</p>
               </div>
             </Reveal>
           ))}
@@ -426,13 +426,13 @@ export default function LandingPage() {
       <section id="features" className="mx-auto max-w-6xl px-5 py-20 lg:py-28">
         <Reveal>
           <div className="mx-auto max-w-2xl text-center">
-            <p className="text-sm font-bold uppercase tracking-widest text-coral">
+            <p className="text-sm font-bold uppercase tracking-widest text-brass-ink">
               Everything you need
             </p>
-            <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-text-primary sm:text-4xl">
+            <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
               The whole money side, in one calm place
             </h2>
-            <p className="mt-4 text-lg text-text-secondary">
+            <p className="mt-4 text-lg text-ink-muted">
               No bloat, no clutter. Just the tools that move your business
               forward — designed to be genuinely pleasant to use.
             </p>
@@ -489,7 +489,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== How it works ===== */}
-      <section id="how" className="relative overflow-hidden bg-petrol-dark py-20 lg:py-28">
+      <section id="how" className="relative overflow-hidden bg-brass py-20 lg:py-28">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-30"
@@ -501,7 +501,7 @@ export default function LandingPage() {
         <div className="relative mx-auto max-w-6xl px-5">
           <Reveal>
             <div className="mx-auto max-w-2xl text-center">
-              <p className="text-sm font-bold uppercase tracking-widest text-coral-light">
+              <p className="text-sm font-bold uppercase tracking-widest text-brass-ink">
                 How it works
               </p>
               <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
@@ -536,7 +536,7 @@ export default function LandingPage() {
                   <span className="absolute right-6 top-5 text-5xl font-black text-white/[0.07]">
                     {s.step}
                   </span>
-                  <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-coral/15 text-coral-light">
+                  <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-brass/15 text-brass-ink">
                     <s.icon className="h-6 w-6" />
                   </div>
                   <h3 className="mt-5 text-xl font-bold text-white">{s.title}</h3>
@@ -555,13 +555,13 @@ export default function LandingPage() {
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <Reveal>
             <div>
-              <p className="text-sm font-bold uppercase tracking-widest text-coral">
+              <p className="text-sm font-bold uppercase tracking-widest text-brass-ink">
                 Clarity, not clutter
               </p>
-              <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-text-primary sm:text-4xl">
+              <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
                 Know exactly where your money stands
               </h2>
-              <p className="mt-4 text-lg leading-relaxed text-text-secondary">
+              <p className="mt-4 text-lg leading-relaxed text-ink-muted">
                 A dashboard that respects your attention. See revenue versus
                 expenses, what&apos;s paid, what&apos;s overdue, and where your
                 cash is sitting — without drowning in charts.
@@ -572,9 +572,9 @@ export default function LandingPage() {
                   "Receivables aging at a glance",
                   "Paid, unpaid and overdue totals",
                 ].map((t) => (
-                  <li key={t} className="flex items-center gap-3 text-sm font-medium text-text-primary">
-                    <span className="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-petrol-dark/10">
-                      <Check className="h-3 w-3 text-petrol-dark" />
+                  <li key={t} className="flex items-center gap-3 text-sm font-medium text-ink">
+                    <span className="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-brass/10">
+                      <Check className="h-3 w-3 text-ink" />
                     </span>
                     {t}
                   </li>
@@ -591,16 +591,16 @@ export default function LandingPage() {
                   { l: "Paid", v: "£31.2k", up: true },
                   { l: "Overdue", v: "£2.1k", up: false },
                 ].map((s) => (
-                  <div key={s.l} className="rounded-xl bg-surface-light p-3.5">
-                    <p className="text-[11px] font-medium text-text-secondary">
+                  <div key={s.l} className="rounded-xl bg-surface p-3.5">
+                    <p className="text-[11px] font-medium text-ink-muted">
                       {s.l}
                     </p>
-                    <p className="mt-1 text-lg font-extrabold tracking-tight text-text-primary">
+                    <p className="mt-1 text-lg font-extrabold tracking-tight text-ink">
                       {s.v}
                     </p>
                     <span
                       className={`text-[11px] font-semibold ${
-                        s.up ? "text-emerald-600" : "text-coral"
+                        s.up ? "text-positive" : "text-negative"
                       }`}
                     >
                       {s.up ? "▲" : "▼"} this month
@@ -611,16 +611,16 @@ export default function LandingPage() {
 
               <div className="mt-4 rounded-xl border border-gray-100 p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <p className="text-sm font-semibold text-text-primary">
+                  <p className="text-sm font-semibold text-ink">
                     Revenue vs Expenses
                   </p>
-                  <span className="flex items-center gap-3 text-[11px] text-text-secondary">
+                  <span className="flex items-center gap-3 text-[11px] text-ink-muted">
                     <span className="inline-flex items-center gap-1">
-                      <span className="h-2 w-2 rounded-sm bg-petrol-dark" />
+                      <span className="h-2 w-2 rounded-sm bg-brass" />
                       Revenue
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <span className="h-2 w-2 rounded-sm bg-coral" />
+                      <span className="h-2 w-2 rounded-sm bg-brass" />
                       Expenses
                     </span>
                   </span>
@@ -635,19 +635,19 @@ export default function LandingPage() {
                         whileInView={{ height: `${pair[0]}%` }}
                         viewport={{ once: true }}
                         transition={{ duration: 0.6, delay: i * 0.05 }}
-                        className="w-full max-w-[14px] rounded-t bg-petrol-dark"
+                        className="w-full max-w-[14px] rounded-t bg-brass"
                       />
                       <motion.span
                         initial={{ height: 0 }}
                         whileInView={{ height: `${pair[1]}%` }}
                         viewport={{ once: true }}
                         transition={{ duration: 0.6, delay: i * 0.05 + 0.08 }}
-                        className="w-full max-w-[14px] rounded-t bg-coral"
+                        className="w-full max-w-[14px] rounded-t bg-brass"
                       />
                     </div>
                   ))}
                 </div>
-                <div className="mt-2 flex justify-between text-[10px] text-text-secondary">
+                <div className="mt-2 flex justify-between text-[10px] text-ink-muted">
                   {["Jan", "Feb", "Mar", "Apr", "May", "Jun"].map((m) => (
                     <span key={m}>{m}</span>
                   ))}
@@ -661,7 +661,7 @@ export default function LandingPage() {
       {/* ===== Pricing ===== */}
       <section id="pricing" className="mx-auto max-w-6xl px-5 pb-20 lg:pb-28">
         <Reveal>
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-petrol-dark to-[#0a3744] px-6 py-14 text-center sm:px-12">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-graphite to-[#0a3744] px-6 py-14 text-center sm:px-12">
             <div
               aria-hidden
               className="pointer-events-none absolute inset-0 opacity-40"
@@ -672,7 +672,7 @@ export default function LandingPage() {
             />
             <div className="relative mx-auto max-w-xl">
               <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-xs font-semibold text-white">
-                <Globe className="h-3.5 w-3.5 text-coral-light" />
+                <Globe className="h-3.5 w-3.5 text-brass-ink" />
                 Open source · MIT
               </span>
               <h2 className="mt-5 text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
@@ -687,7 +687,7 @@ export default function LandingPage() {
               <div className="mt-8 flex flex-wrap justify-center gap-3">
                 <Link
                   href="/register"
-                  className="group inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-coral px-7 py-3.5 text-sm font-semibold text-white shadow-xl shadow-coral/25 transition-all hover:bg-coral-dark"
+                  className="group inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-brass px-7 py-3.5 text-sm font-semibold text-white shadow-xl shadow-brass/25 transition-all hover:bg-brass-strong"
                 >
                   Create your free account
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -701,7 +701,7 @@ export default function LandingPage() {
                   { icon: Heart, t: "Built with care" },
                 ].map((f) => (
                   <span key={f.t} className="inline-flex items-center gap-1.5">
-                    <f.icon className="h-4 w-4 text-coral-light" />
+                    <f.icon className="h-4 w-4 text-brass-ink" />
                     {f.t}
                   </span>
                 ))}
@@ -717,44 +717,44 @@ export default function LandingPage() {
           <div className="flex flex-col items-start justify-between gap-8 sm:flex-row">
             <div className="max-w-xs">
               <Logo height={30} href={null} />
-              <p className="mt-4 text-sm leading-relaxed text-text-secondary">
+              <p className="mt-4 text-sm leading-relaxed text-ink-muted">
                 Your business. Your invoices. The free, open-source invoice &amp;
                 expense manager for modern small businesses.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-10 sm:gap-16">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-text-secondary">
+                <p className="text-xs font-bold uppercase tracking-wider text-ink-muted">
                   Product
                 </p>
                 <ul className="mt-3 space-y-2.5 text-sm">
-                  <li><a href="#features" className="text-text-primary transition-colors hover:text-petrol-mid">Features</a></li>
-                  <li><a href="#how" className="text-text-primary transition-colors hover:text-petrol-mid">How it works</a></li>
-                  <li><a href="#pricing" className="text-text-primary transition-colors hover:text-petrol-mid">Pricing</a></li>
+                  <li><a href="#features" className="text-ink transition-colors hover:text-brass-ink">Features</a></li>
+                  <li><a href="#how" className="text-ink transition-colors hover:text-brass-ink">How it works</a></li>
+                  <li><a href="#pricing" className="text-ink transition-colors hover:text-brass-ink">Pricing</a></li>
                 </ul>
               </div>
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-text-secondary">
+                <p className="text-xs font-bold uppercase tracking-wider text-ink-muted">
                   Get started
                 </p>
                 <ul className="mt-3 space-y-2.5 text-sm">
-                  <li><Link href="/register" className="text-text-primary transition-colors hover:text-petrol-mid">Create account</Link></li>
-                  <li><Link href="/login" className="text-text-primary transition-colors hover:text-petrol-mid">Sign in</Link></li>
-                  <li><Link href="/support" className="inline-flex items-center gap-1.5 text-text-primary transition-colors hover:text-petrol-mid"><Heart className="h-3.5 w-3.5 text-coral" />Support us</Link></li>
+                  <li><Link href="/register" className="text-ink transition-colors hover:text-brass-ink">Create account</Link></li>
+                  <li><Link href="/login" className="text-ink transition-colors hover:text-brass-ink">Sign in</Link></li>
+                  <li><Link href="/support" className="inline-flex items-center gap-1.5 text-ink transition-colors hover:text-brass-ink"><Heart className="h-3.5 w-3.5 text-brass-ink" />Support us</Link></li>
                 </ul>
               </div>
             </div>
           </div>
 
           <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-black/5 pt-6 sm:flex-row">
-            <p className="text-xs text-text-secondary">
+            <p className="text-xs text-ink-muted">
               © 2026 MYNVOICE · Free &amp; open-source
             </p>
             <a
               href="https://github.com/AlexandreCorcos/mynvoice"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary"
+              className="inline-flex items-center gap-2 text-xs font-medium text-ink-muted transition-colors hover:text-ink"
             >
               <Github className="h-4 w-4" />
               Star on GitHub

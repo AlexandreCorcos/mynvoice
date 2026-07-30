@@ -130,7 +130,7 @@ export default function InvoiceDetailPage() {
     <div className="mx-auto max-w-4xl">
       <Link
         href="/invoices"
-        className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors mb-6"
+        className="inline-flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink transition-colors mb-6"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to invoices
@@ -139,7 +139,7 @@ export default function InvoiceDetailPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-bold text-text-primary">
+          <h2 className="text-2xl font-bold text-ink">
             {invoice.invoice_number}
           </h2>
           <StatusBadge status={invoice.status} />
@@ -148,7 +148,7 @@ export default function InvoiceDetailPage() {
           {invoice.status !== "paid" && (
             <Link
               href={`/invoices/${invoice.id}/edit`}
-              className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] bg-petrol-dark px-4 py-2 text-sm font-semibold text-white hover:bg-petrol-mid transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] bg-brass px-4 py-2 text-sm font-semibold text-white hover:bg-brass-strong transition-colors"
             >
               <Pencil className="h-4 w-4" />
               Edit
@@ -157,7 +157,7 @@ export default function InvoiceDetailPage() {
           {invoice.status === "draft" && (
             <button
               onClick={() => handleStatusChange("sent")}
-              className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-petrol-dark px-4 py-2 text-sm font-semibold text-petrol-dark hover:bg-petrol-dark hover:text-white transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-brass px-4 py-2 text-sm font-semibold text-ink hover:bg-brass-strong hover:text-white transition-colors"
             >
               <Send className="h-4 w-4" />
               Mark as Sent
@@ -183,7 +183,7 @@ export default function InvoiceDetailPage() {
           )}
           <button
             onClick={handleDownloadPdf}
-            className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-text-primary hover:bg-gray-50 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-ink hover:bg-gray-50 transition-colors"
           >
             <Download className="h-4 w-4" />
             PDF
@@ -193,14 +193,14 @@ export default function InvoiceDetailPage() {
               setSendEmail(client?.email || "");
               setShowSendModal(true);
             }}
-            className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-text-primary hover:bg-gray-50 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-ink hover:bg-gray-50 transition-colors"
           >
             <Mail className="h-4 w-4" />
             Send
           </button>
           <button
             onClick={handleDuplicate}
-            className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-text-primary hover:bg-gray-50 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-ink hover:bg-gray-50 transition-colors"
           >
             <Copy className="h-4 w-4" />
             Duplicate
@@ -221,32 +221,32 @@ export default function InvoiceDetailPage() {
         {/* Top section */}
         <div className="grid grid-cols-2 gap-8 mb-8">
           <div>
-            <p className="text-sm text-text-secondary mb-1">Issued</p>
+            <p className="text-sm text-ink-muted mb-1">Issued</p>
             <p className="font-medium">{formatDate(invoice.issue_date)}</p>
           </div>
           <div className="text-right">
-            <p className="text-sm text-text-secondary mb-1">Due</p>
+            <p className="text-sm text-ink-muted mb-1">Due</p>
             <p className="font-medium">{formatDate(invoice.due_date)}</p>
           </div>
         </div>
 
         {/* Client info */}
         {client && (
-          <div className="mb-8 rounded-xl bg-surface-light p-4">
-            <p className="text-xs font-medium text-text-secondary mb-1">
+          <div className="mb-8 rounded-xl bg-surface p-4">
+            <p className="text-xs font-medium text-ink-muted mb-1">
               Bill to
             </p>
-            <p className="font-semibold text-text-primary">
+            <p className="font-semibold text-ink">
               {client.company_name}
             </p>
             {client.contact_person && (
-              <p className="text-sm text-text-secondary">
+              <p className="text-sm text-ink-muted">
                 {client.contact_person}
               </p>
             )}
-            <p className="text-sm text-text-secondary">{client.email}</p>
+            <p className="text-sm text-ink-muted">{client.email}</p>
             {client.address_line1 && (
-              <p className="text-sm text-text-secondary mt-1">
+              <p className="text-sm text-ink-muted mt-1">
                 {client.address_line1}
                 {client.city && `, ${client.city}`}
                 {client.postcode && ` ${client.postcode}`}
@@ -259,16 +259,16 @@ export default function InvoiceDetailPage() {
         <table className="w-full mb-6">
           <thead>
             <tr className="border-b border-gray-200">
-              <th className="pb-3 text-left text-xs font-medium text-text-secondary">
+              <th className="pb-3 text-left text-xs font-medium text-ink-muted">
                 Description
               </th>
-              <th className="pb-3 text-right text-xs font-medium text-text-secondary w-20">
+              <th className="pb-3 text-right text-xs font-medium text-ink-muted w-20">
                 Qty
               </th>
-              <th className="pb-3 text-right text-xs font-medium text-text-secondary w-28">
+              <th className="pb-3 text-right text-xs font-medium text-ink-muted w-28">
                 Unit Price
               </th>
-              <th className="pb-3 text-right text-xs font-medium text-text-secondary w-28">
+              <th className="pb-3 text-right text-xs font-medium text-ink-muted w-28">
                 Amount
               </th>
             </tr>
@@ -276,14 +276,14 @@ export default function InvoiceDetailPage() {
           <tbody>
             {invoice.items.map((item) => (
               <tr key={item.id} className="border-b border-gray-100">
-                <td className="py-3 text-sm text-text-primary">
+                <td className="py-3 text-sm text-ink">
                   {item.description}
                 </td>
-                <td className="py-3 text-right text-sm text-text-secondary">
+                <td className="py-3 text-right text-sm text-ink-muted">
                   {item.quantity}
                   {item.unit && ` ${item.unit}`}
                 </td>
-                <td className="py-3 text-right text-sm text-text-secondary">
+                <td className="py-3 text-right text-sm text-ink-muted">
                   {formatCurrency(item.unit_price, invoice.currency)}
                 </td>
                 <td className="py-3 text-right text-sm font-medium">
@@ -297,12 +297,12 @@ export default function InvoiceDetailPage() {
         {/* Totals */}
         <div className="ml-auto w-64 space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-text-secondary">Subtotal</span>
+            <span className="text-ink-muted">Subtotal</span>
             <span>{formatCurrency(invoice.subtotal, invoice.currency)}</span>
           </div>
           {Number(invoice.tax_rate) > 0 && (
             <div className="flex justify-between text-sm">
-              <span className="text-text-secondary">
+              <span className="text-ink-muted">
                 Tax ({invoice.tax_rate}%)
               </span>
               <span>
@@ -312,15 +312,15 @@ export default function InvoiceDetailPage() {
           )}
           {Number(invoice.discount_amount) > 0 && (
             <div className="flex justify-between text-sm">
-              <span className="text-text-secondary">Discount</span>
-              <span className="text-coral">
+              <span className="text-ink-muted">Discount</span>
+              <span className="text-negative">
                 -{formatCurrency(invoice.discount_amount, invoice.currency)}
               </span>
             </div>
           )}
           <div className="flex justify-between border-t border-gray-200 pt-2">
             <span className="font-semibold">Total</span>
-            <span className="text-xl font-bold text-petrol-dark">
+            <span className="text-xl font-bold text-ink">
               {formatCurrency(invoice.total, invoice.currency)}
             </span>
           </div>
@@ -333,8 +333,8 @@ export default function InvoiceDetailPage() {
                 </span>
               </div>
               <div className="flex justify-between border-t border-gray-200 pt-2">
-                <span className="font-semibold text-coral">Balance Due</span>
-                <span className="text-lg font-bold text-coral">
+                <span className="font-semibold text-negative">Balance Due</span>
+                <span className="text-lg font-bold text-negative">
                   {formatCurrency(invoice.balance_due, invoice.currency)}
                 </span>
               </div>
@@ -345,10 +345,10 @@ export default function InvoiceDetailPage() {
         {/* Notes */}
         {invoice.notes && (
           <div className="mt-8 border-t border-gray-100 pt-6">
-            <p className="text-xs font-medium text-text-secondary mb-1">
+            <p className="text-xs font-medium text-ink-muted mb-1">
               Notes
             </p>
-            <p className="text-sm text-text-secondary whitespace-pre-line">
+            <p className="text-sm text-ink-muted whitespace-pre-line">
               {invoice.notes}
             </p>
           </div>
@@ -374,10 +374,10 @@ export default function InvoiceDetailPage() {
       {showSendModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-dropdown)]">
-            <h3 className="text-lg font-semibold text-text-primary mb-4">
+            <h3 className="text-lg font-semibold text-ink mb-4">
               Send Invoice
             </h3>
-            <p className="text-sm text-text-secondary mb-4">
+            <p className="text-sm text-ink-muted mb-4">
               Send {invoice.invoice_number} as PDF to:
             </p>
             <input
@@ -385,10 +385,10 @@ export default function InvoiceDetailPage() {
               value={sendEmail}
               onChange={(e) => setSendEmail(e.target.value)}
               placeholder="recipient@email.com"
-              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2.5 text-sm focus:border-petrol-mid focus:outline-none mb-4"
+              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2.5 text-sm focus:border-brass-soft focus:outline-none mb-4"
             />
             {invoice.sent_to_email && (
-              <p className="text-xs text-text-secondary mb-4">
+              <p className="text-xs text-ink-muted mb-4">
                 Previously sent to {invoice.sent_to_email}
                 {invoice.sent_at && ` on ${formatDate(invoice.sent_at)}`}
               </p>
@@ -396,14 +396,14 @@ export default function InvoiceDetailPage() {
             <div className="flex gap-2">
               <button
                 onClick={() => setShowSendModal(false)}
-                className="flex-1 rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-text-secondary hover:bg-gray-50 transition-colors"
+                className="flex-1 rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-ink-muted hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSendEmail}
                 disabled={!sendEmail || sending}
-                className="flex-1 rounded-[var(--radius-button)] bg-petrol-dark px-4 py-2 text-sm font-semibold text-white hover:bg-petrol-mid disabled:opacity-50 transition-colors"
+                className="flex-1 rounded-[var(--radius-button)] bg-brass px-4 py-2 text-sm font-semibold text-white hover:bg-brass-strong disabled:opacity-50 transition-colors"
               >
                 {sending ? "Sending..." : "Send"}
               </button>
@@ -416,10 +416,10 @@ export default function InvoiceDetailPage() {
       {showStatusModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-dropdown)]">
-            <h3 className="text-lg font-semibold text-text-primary mb-4">
+            <h3 className="text-lg font-semibold text-ink mb-4">
               Mark as Paid
             </h3>
-            <p className="text-sm text-text-secondary mb-5">
+            <p className="text-sm text-ink-muted mb-5">
               Select payment method:
             </p>
             <div className="space-y-2">
@@ -434,7 +434,7 @@ export default function InvoiceDetailPage() {
                 <button
                   key={value}
                   onClick={() => handleStatusChange("paid", value)}
-                  className="w-full rounded-[var(--radius-button)] border border-gray-200 px-4 py-2.5 text-left text-sm font-medium hover:border-petrol-mid hover:bg-surface-light transition-colors"
+                  className="w-full rounded-[var(--radius-button)] border border-gray-200 px-4 py-2.5 text-left text-sm font-medium hover:border-brass-soft hover:bg-surface transition-colors"
                 >
                   {label}
                 </button>
@@ -442,7 +442,7 @@ export default function InvoiceDetailPage() {
             </div>
             <button
               onClick={() => setShowStatusModal(false)}
-              className="mt-4 w-full rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-text-secondary hover:bg-gray-50 transition-colors"
+              className="mt-4 w-full rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-ink-muted hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>

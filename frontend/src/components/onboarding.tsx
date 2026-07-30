@@ -141,25 +141,25 @@ export function OnboardingChecklist() {
 
       {/* Header */}
       <div className="flex items-center gap-3 mb-1">
-        <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-[#0F4C5C]/10 dark:bg-[#0F4C5C]/30">
-          <Rocket className="h-5 w-5 text-[#0F4C5C] dark:text-teal-400" />
+        <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-brass/10 dark:bg-brass/20">
+          <Rocket className="h-5 w-5 text-brass-ink" />
         </div>
-        <h2 className="text-lg font-semibold text-[#1B263B] dark:text-white">Getting Started</h2>
+        <h2 className="text-lg font-semibold text-ink">Getting Started</h2>
       </div>
-      <p className="text-sm text-[#5C677D] dark:text-gray-400 mb-4 ml-12">
+      <p className="text-sm text-ink-muted mb-4 ml-12">
         Complete these steps to set up your account
       </p>
 
       {/* Progress bar */}
       <div className="mb-5">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-xs font-medium text-[#5C677D] dark:text-gray-400">
+          <span className="text-xs font-medium text-ink-muted">
             {completedCount} of {items.length} complete
           </span>
         </div>
-        <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+        <div className="h-2 w-full rounded-full bg-elevated overflow-hidden">
           <div
-            className="h-full rounded-full bg-[#0F4C5C] transition-all duration-500 ease-out"
+            className="h-full rounded-full bg-brass transition-all duration-500 ease-out"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
@@ -187,7 +187,7 @@ export function OnboardingChecklist() {
                 className={
                   item.complete
                     ? "text-sm font-medium text-gray-400 dark:text-gray-600 line-through"
-                    : "text-sm font-medium text-[#1B263B] dark:text-white"
+                    : "text-sm font-medium text-ink"
                 }
               >
                 {item.title}
@@ -196,7 +196,7 @@ export function OnboardingChecklist() {
                 className={
                   item.complete
                     ? "text-xs text-gray-300 dark:text-gray-700 line-through"
-                    : "text-xs text-[#5C677D] dark:text-gray-400"
+                    : "text-xs text-ink-muted"
                 }
               >
                 {item.description}
@@ -207,7 +207,7 @@ export function OnboardingChecklist() {
             {!item.complete && (
               <Link
                 href={item.href}
-                className="flex-shrink-0 inline-flex items-center gap-1 text-xs font-medium text-[#2C7A7B] hover:text-[#0F4C5C] dark:text-teal-400 dark:hover:text-teal-300 transition-colors mt-0.5"
+                className="flex-shrink-0 inline-flex items-center gap-1 text-xs font-medium text-brass-ink hover:text-brass transition-colors mt-0.5"
               >
                 Start
                 <ArrowRight className="h-3.5 w-3.5" />

@@ -39,22 +39,54 @@ No code has been implemented yet. Commands will be added here as the project is 
 
 ## Design System
 
-**Color Palette (Petrol & Coral):**
-- Petrol Dark: `#0F4C5C` — primary structural color, nav, primary buttons
-- Petrol Mid: `#2C7A7B` — hover states, secondary elements
-- Coral: `#FF6B6B` — CTAs, important actions, highlights (use sparingly)
-- Light Background: `#F0F3F5`
-- Dark Surface: `#1B263B` — text, dark sections, dark mode background
-- Secondary text: `#5C677D`
+**Color Palette (Graphite & Brass):**
+
+A warm-graphite neutral axis plus **one** chromatic (brass). Elegance comes from
+restraint, not from more colour. Never introduce a second accent hue.
+
+All tokens live in `frontend/src/app/globals.css` and are defined twice — once in
+`:root` (light) and once in `.dark` — then exposed to Tailwind via `@theme inline`.
+**Always use the token classes; never hardcode hex in components.**
+
+| Token | Light | Dark | Role |
+|---|---|---|---|
+| `surface` | `#FAF9F7` | `#121110` | Page background |
+| `card` | `#FFFFFF` | `#1B1A18` | Elevated surface |
+| `elevated` | `#F1EFEC` | `#242220` | Muted fill, hover |
+| `line` | `#E4E0D9` | `white/9%` | Hairline border |
+| `ink` | `#1C1917` | `#FAF9F7` | Primary text |
+| `ink-muted` | `#6E6862` | `#A5A09A` | Secondary text |
+| `graphite` | `#1C1917` | `#1B1A18` | Large dark surfaces (sidebar, auth panel) |
+| `brass` | `#8A6A3D` | `#8F6B34` | Solid fills — **always with white text** |
+| `brass-strong` | `#6E5230` | `#A57C3C` | Hover on solid brass |
+| `brass-ink` | `#7A5C33` | `#C79A5B` | Brass **as text/icon** on the page background |
+| `brass-soft` | `#A98A5C` | `#8A6A3D` | Focus rings, subtle hairlines |
+| `brass-on-dark` | `#C79A5B` (both) | | Brass on graphite, which is dark in both themes |
+| `positive` | `#3F6B4A` | `#7BAE88` | Money in, success |
+| `negative` | `#B4332E` | `#F08A84` | Money owed, errors — **never** for links or decoration |
+
+**The containment rule (most important):**
+Brass never fills large surfaces. It lives in solid buttons, links, focus rings,
+hairlines and diffuse glows (`.brass-glow`, radial at 10–16% opacity). Large dark
+surfaces use `graphite`. This is what keeps the UI calm.
+
+**Fill vs text are different needs.** `brass` is dark enough for white text (4.9:1);
+`brass-ink` is tuned for brass text on the page background. Do not swap them.
 
 **Component rules:**
-- Cards: white background, soft shadow, 12–16px border radius
-- Primary buttons: Petrol background + white text
-- CTA buttons (e.g. "Create Invoice"): Coral background
-- Charts: Petrol tones for base data, Coral for highlights; no rainbow charts
+- Cards: `bg-card`, soft shadow, 12–16px border radius
+- Primary action: `bg-brass` + `text-white`, hover `bg-brass-strong`
+- Secondary action: outline (`border-line`) — hierarchy comes from fill vs outline, not a second hue
+- Charts: brass for the highlighted series, `ink-muted` for the neutral one, `positive`/`negative` only where they carry meaning; no rainbow charts
+- Never rely on colour alone to convey meaning — pair it with a glyph or label
 - Avoid heavy gradients, visual noise
 
-**Dark mode:** prepare structure (background `#1B263B`, maintain Coral for contrast).
+**Dark mode:** works via the `.dark` class; every token already has a dark value,
+so no per-component overrides should be needed.
+
+**Known debt:** the PNG brand assets (`logo-mynvoice.png`, `logo-mynvoice-white.png`,
+`mark-512.png`, `og-image.png`) still carry the retired Petrol & Coral palette and
+need regenerating in Graphite & Brass.
 
 ## Core Features
 

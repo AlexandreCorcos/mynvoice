@@ -245,10 +245,10 @@ export default function EditInvoicePage() {
     return (
       <div className="mx-auto max-w-4xl">
         <div className="rounded-[var(--radius-card)] bg-white p-8 shadow-[var(--shadow-card)] text-center">
-          <p className="text-text-secondary">Invoice not found.</p>
+          <p className="text-ink-muted">Invoice not found.</p>
           <Link
             href="/invoices"
-            className="mt-4 inline-flex items-center gap-1.5 text-sm text-petrol-mid hover:text-petrol-dark transition-colors"
+            className="mt-4 inline-flex items-center gap-1.5 text-sm text-brass-ink hover:text-brass-ink transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to invoices
@@ -262,13 +262,13 @@ export default function EditInvoicePage() {
     <div className="mx-auto max-w-4xl">
       <Link
         href={`/invoices/${invoiceId}`}
-        className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors mb-6"
+        className="inline-flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink transition-colors mb-6"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to invoice
       </Link>
 
-      <h1 className="text-xl font-bold text-text-primary mb-6">
+      <h1 className="text-xl font-bold text-ink mb-6">
         Edit Invoice — {invoice.invoice_number}
       </h1>
 
@@ -281,12 +281,12 @@ export default function EditInvoicePage() {
 
         {/* Header section */}
         <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)]">
-          <h2 className="text-base font-semibold text-text-primary mb-5">
+          <h2 className="text-base font-semibold text-ink mb-5">
             Invoice Details
           </h2>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-ink mb-1">
                 Client
               </label>
               <select
@@ -294,7 +294,7 @@ export default function EditInvoicePage() {
                 onChange={(e) =>
                   setForm((f) => ({ ...f, client_id: e.target.value }))
                 }
-                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2.5 text-sm focus:border-petrol-mid focus:outline-none bg-white"
+                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2.5 text-sm focus:border-brass-soft focus:outline-none bg-white"
               >
                 <option value="">Select client (optional)</option>
                 {clients.map((c) => (
@@ -305,7 +305,7 @@ export default function EditInvoicePage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-ink mb-1">
                 Currency
               </label>
               <select
@@ -313,7 +313,7 @@ export default function EditInvoicePage() {
                 onChange={(e) =>
                   setForm((f) => ({ ...f, currency: e.target.value }))
                 }
-                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2.5 text-sm focus:border-petrol-mid focus:outline-none bg-white"
+                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2.5 text-sm focus:border-brass-soft focus:outline-none bg-white"
               >
                 <option value="GBP">GBP (£)</option>
                 <option value="EUR">EUR (€)</option>
@@ -321,7 +321,7 @@ export default function EditInvoicePage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-ink mb-1">
                 Issue date *
               </label>
               <input
@@ -331,11 +331,11 @@ export default function EditInvoicePage() {
                   setForm((f) => ({ ...f, issue_date: e.target.value }))
                 }
                 required
-                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2.5 text-sm focus:border-petrol-mid focus:outline-none"
+                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2.5 text-sm focus:border-brass-soft focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-ink mb-1">
                 Due date *
               </label>
               <input
@@ -345,7 +345,7 @@ export default function EditInvoicePage() {
                   setForm((f) => ({ ...f, due_date: e.target.value }))
                 }
                 required
-                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2.5 text-sm focus:border-petrol-mid focus:outline-none"
+                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2.5 text-sm focus:border-brass-soft focus:outline-none"
               />
             </div>
           </div>
@@ -353,21 +353,21 @@ export default function EditInvoicePage() {
 
         {/* Line items */}
         <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)]">
-          <h2 className="text-base font-semibold text-text-primary mb-5">
+          <h2 className="text-base font-semibold text-ink mb-5">
             Line Items
           </h2>
 
           {/* Header */}
           <div className="hidden sm:grid sm:grid-cols-[28px_1fr_80px_100px_100px_32px] gap-3 mb-2 px-1">
             <div />
-            <span className="text-xs font-medium text-text-secondary">
+            <span className="text-xs font-medium text-ink-muted">
               Description
             </span>
-            <span className="text-xs font-medium text-text-secondary">Qty</span>
-            <span className="text-xs font-medium text-text-secondary">
+            <span className="text-xs font-medium text-ink-muted">Qty</span>
+            <span className="text-xs font-medium text-ink-muted">
               Unit Price
             </span>
-            <span className="text-xs font-medium text-text-secondary text-right">
+            <span className="text-xs font-medium text-ink-muted text-right">
               Amount
             </span>
             <div />
@@ -392,7 +392,7 @@ export default function EditInvoicePage() {
                   }`}
                 >
                   <div className="hidden sm:flex items-center justify-center cursor-grab">
-                    <GripVertical className="h-4 w-4 text-text-secondary/40" />
+                    <GripVertical className="h-4 w-4 text-ink-muted/40" />
                   </div>
                   <input
                     type="text"
@@ -401,7 +401,7 @@ export default function EditInvoicePage() {
                     onChange={(e) =>
                       updateItem(index, "description", e.target.value)
                     }
-                    className="rounded-[var(--radius-input)] border border-gray-200 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none"
+                    className="rounded-[var(--radius-input)] border border-gray-200 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
                   />
                   <input
                     type="number"
@@ -412,7 +412,7 @@ export default function EditInvoicePage() {
                     onChange={(e) =>
                       updateItem(index, "quantity", e.target.value)
                     }
-                    className="rounded-[var(--radius-input)] border border-gray-200 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none"
+                    className="rounded-[var(--radius-input)] border border-gray-200 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
                   />
                   <input
                     type="number"
@@ -423,16 +423,16 @@ export default function EditInvoicePage() {
                     onChange={(e) =>
                       updateItem(index, "unit_price", e.target.value)
                     }
-                    className="rounded-[var(--radius-input)] border border-gray-200 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none"
+                    className="rounded-[var(--radius-input)] border border-gray-200 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
                   />
-                  <div className="flex items-center justify-end text-sm font-medium text-text-primary">
+                  <div className="flex items-center justify-end text-sm font-medium text-ink">
                     {formatCurrency(amount, form.currency)}
                   </div>
                   <button
                     type="button"
                     onClick={() => removeItem(index)}
                     disabled={items.length === 1}
-                    className="flex items-center justify-center rounded-lg p-1 text-text-secondary hover:text-red-500 hover:bg-red-50 disabled:opacity-30 disabled:hover:text-text-secondary disabled:hover:bg-transparent transition-colors"
+                    className="flex items-center justify-center rounded-lg p-1 text-ink-muted hover:text-red-500 hover:bg-red-50 disabled:opacity-30 disabled:hover:text-ink-muted disabled:hover:bg-transparent transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -445,7 +445,7 @@ export default function EditInvoicePage() {
             <button
               type="button"
               onClick={() => setItems((prev) => [...prev, newItem()])}
-              className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-text-secondary hover:border-petrol-mid hover:text-petrol-mid transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-ink-muted hover:border-brass-soft hover:text-brass-ink transition-colors"
             >
               <Plus className="h-4 w-4" />
               Add item
@@ -454,7 +454,7 @@ export default function EditInvoicePage() {
               <button
                 type="button"
                 onClick={() => setShowCatalog(!showCatalog)}
-                className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-gray-300 px-3 py-2 text-sm font-medium text-petrol-mid hover:bg-petrol-dark hover:text-white transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-gray-300 px-3 py-2 text-sm font-medium text-brass-ink hover:bg-brass-strong hover:text-white transition-colors"
               >
                 <Package className="h-4 w-4" />
                 Pick from catalog
@@ -470,20 +470,20 @@ export default function EditInvoicePage() {
                   key={ci.id}
                   type="button"
                   onClick={() => addFromCatalog(ci)}
-                  className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-surface-light transition-colors border-b border-gray-50 last:border-b-0"
+                  className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-surface transition-colors border-b border-gray-50 last:border-b-0"
                 >
                   <div>
-                    <p className="text-sm font-medium text-text-primary">{ci.name}</p>
+                    <p className="text-sm font-medium text-ink">{ci.name}</p>
                     {ci.description && (
-                      <p className="text-xs text-text-secondary truncate max-w-xs">{ci.description}</p>
+                      <p className="text-xs text-ink-muted truncate max-w-xs">{ci.description}</p>
                     )}
                   </div>
                   <div className="text-right ml-4">
-                    <p className="text-sm font-semibold text-text-primary">
+                    <p className="text-sm font-semibold text-ink">
                       {formatCurrency(ci.unit_price, form.currency)}
                     </p>
                     {ci.unit && (
-                      <p className="text-xs text-text-secondary">per {ci.unit}</p>
+                      <p className="text-xs text-ink-muted">per {ci.unit}</p>
                     )}
                   </div>
                 </button>
@@ -496,12 +496,12 @@ export default function EditInvoicePage() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Notes */}
           <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)]">
-            <h2 className="text-base font-semibold text-text-primary mb-4">
+            <h2 className="text-base font-semibold text-ink mb-4">
               Notes & Terms
             </h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
+                <label className="block text-sm font-medium text-ink mb-1">
                   Notes
                 </label>
                 <textarea
@@ -511,11 +511,11 @@ export default function EditInvoicePage() {
                   }
                   rows={3}
                   placeholder="Any notes for the client..."
-                  className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none resize-none"
+                  className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none resize-none"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
+                <label className="block text-sm font-medium text-ink mb-1">
                   Payment terms
                 </label>
                 <textarea
@@ -525,7 +525,7 @@ export default function EditInvoicePage() {
                   }
                   rows={2}
                   placeholder="e.g. Payment due within 30 days..."
-                  className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none resize-none"
+                  className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none resize-none"
                 />
               </div>
             </div>
@@ -533,13 +533,13 @@ export default function EditInvoicePage() {
 
           {/* Totals */}
           <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)]">
-            <h2 className="text-base font-semibold text-text-primary mb-4">
+            <h2 className="text-base font-semibold text-ink mb-4">
               Summary
             </h2>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1">
+                  <label className="block text-sm font-medium text-ink mb-1">
                     Tax rate (%)
                   </label>
                   <input
@@ -551,11 +551,11 @@ export default function EditInvoicePage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, tax_rate: e.target.value }))
                     }
-                    className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none"
+                    className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1">
+                  <label className="block text-sm font-medium text-ink mb-1">
                     Discount
                   </label>
                   <input
@@ -569,21 +569,21 @@ export default function EditInvoicePage() {
                         discount_amount: e.target.value,
                       }))
                     }
-                    className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none"
+                    className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="space-y-2 border-t border-gray-100 pt-4">
                 <div className="flex justify-between text-sm">
-                  <span className="text-text-secondary">Subtotal</span>
+                  <span className="text-ink-muted">Subtotal</span>
                   <span className="font-medium">
                     {formatCurrency(subtotal, form.currency)}
                   </span>
                 </div>
                 {taxRate > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-text-secondary">
+                    <span className="text-ink-muted">
                       Tax ({taxRate}%)
                     </span>
                     <span className="font-medium">
@@ -593,15 +593,15 @@ export default function EditInvoicePage() {
                 )}
                 {discount > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-text-secondary">Discount</span>
-                    <span className="font-medium text-coral">
+                    <span className="text-ink-muted">Discount</span>
+                    <span className="font-medium text-negative">
                       -{formatCurrency(discount, form.currency)}
                     </span>
                   </div>
                 )}
                 <div className="flex justify-between border-t border-gray-100 pt-2">
                   <span className="text-base font-semibold">Total</span>
-                  <span className="text-xl font-bold text-petrol-dark">
+                  <span className="text-xl font-bold text-ink">
                     {formatCurrency(total, form.currency)}
                   </span>
                 </div>
@@ -614,14 +614,14 @@ export default function EditInvoicePage() {
         <div className="flex justify-end gap-3">
           <Link
             href={`/invoices/${invoiceId}`}
-            className="rounded-[var(--radius-button)] border border-gray-300 px-5 py-2.5 text-sm font-medium text-text-primary hover:bg-gray-50 transition-colors"
+            className="rounded-[var(--radius-button)] border border-gray-300 px-5 py-2.5 text-sm font-medium text-ink hover:bg-gray-50 transition-colors"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={saving}
-            className="rounded-[var(--radius-button)] bg-petrol-dark px-5 py-2.5 text-sm font-semibold text-white hover:bg-petrol-mid disabled:opacity-50 transition-colors"
+            className="rounded-[var(--radius-button)] bg-brass px-5 py-2.5 text-sm font-semibold text-white hover:bg-brass-strong disabled:opacity-50 transition-colors"
           >
             {saving ? "Saving..." : "Save Changes"}
           </button>

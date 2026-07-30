@@ -30,13 +30,13 @@ export default function Topbar() {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-gray-200 dark:border-white/10 bg-white dark:bg-surface-dark px-6 lg:px-8">
-      <h1 className="text-xl font-semibold text-text-primary lg:ml-0 ml-12">
+    <header className="flex h-16 items-center justify-between border-b border-gray-200 dark:border-white/10 bg-white dark:bg-graphite px-6 lg:px-8">
+      <h1 className="text-xl font-semibold text-ink lg:ml-0 ml-12">
         {title}
       </h1>
       <button
         onClick={toggleTheme}
-        className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-button)] text-text-secondary transition-colors hover:bg-surface-light hover:text-text-primary"
+        className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-button)] text-ink-muted transition-colors hover:bg-surface hover:text-ink"
         title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
       >
         {theme === "light" ? (

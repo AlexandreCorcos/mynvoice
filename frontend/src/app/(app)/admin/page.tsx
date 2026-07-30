@@ -81,7 +81,7 @@ export default function AdminPage() {
     <div className="space-y-8">
       {/* Metrics */}
       <div>
-        <h2 className="text-lg font-semibold text-text-primary mb-4">
+        <h2 className="text-lg font-semibold text-ink mb-4">
           System Metrics
         </h2>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
@@ -122,7 +122,7 @@ export default function AdminPage() {
 
       {/* Donation Config */}
       <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)]">
-        <h2 className="text-lg font-semibold text-text-primary mb-4">
+        <h2 className="text-lg font-semibold text-ink mb-4">
           Donation Target
         </h2>
         {donations && (
@@ -130,21 +130,21 @@ export default function AdminPage() {
             {/* Progress bar */}
             <div>
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-text-secondary">Monthly progress</span>
+                <span className="text-ink-muted">Monthly progress</span>
                 <span className="font-medium">
                   {formatCurrency(donations.current_month_total)} /{" "}
                   {formatCurrency(donations.monthly_target)}
                 </span>
               </div>
-              <div className="h-3 rounded-full bg-surface-light overflow-hidden">
+              <div className="h-3 rounded-full bg-surface overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-coral transition-all"
+                  className="h-full rounded-full bg-brass transition-all"
                   style={{
                     width: `${Math.min(donations.percentage, 100)}%`,
                   }}
                 />
               </div>
-              <p className="text-xs text-text-secondary mt-1">
+              <p className="text-xs text-ink-muted mt-1">
                 {donations.percentage.toFixed(1)}% of monthly target covered
               </p>
             </div>
@@ -152,7 +152,7 @@ export default function AdminPage() {
             {/* Edit target */}
             <div className="flex items-end gap-3 border-t border-gray-100 pt-4">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-text-primary mb-1">
+                <label className="block text-sm font-medium text-ink mb-1">
                   Monthly target (£)
                 </label>
                 <input
@@ -161,13 +161,13 @@ export default function AdminPage() {
                   step="1"
                   value={targetEdit}
                   onChange={(e) => setTargetEdit(e.target.value)}
-                  className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none"
+                  className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
                 />
               </div>
               <button
                 onClick={updateTarget}
                 disabled={saving}
-                className="rounded-[var(--radius-button)] bg-petrol-dark px-4 py-2 text-sm font-semibold text-white hover:bg-petrol-mid disabled:opacity-50 transition-colors"
+                className="rounded-[var(--radius-button)] bg-brass px-4 py-2 text-sm font-semibold text-white hover:bg-brass-strong disabled:opacity-50 transition-colors"
               >
                 {saving ? "Saving..." : "Update"}
               </button>

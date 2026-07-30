@@ -37,14 +37,14 @@ export default function ForgotPasswordPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h2 className="text-2xl font-bold text-text-primary">Check your email</h2>
-        <p className="mt-2 text-sm text-text-secondary">
+        <h2 className="text-2xl font-bold text-ink">Check your email</h2>
+        <p className="mt-2 text-sm text-ink-muted">
           If an account exists for <strong>{email}</strong>, you&apos;ll receive
           a password reset link shortly.
         </p>
         <Link
           href="/login"
-          className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-petrol-mid hover:text-petrol-dark transition-colors"
+          className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-brass-ink hover:text-brass-ink transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to sign in
@@ -57,24 +57,24 @@ export default function ForgotPasswordPage() {
     <div>
       <Link
         href="/login"
-        className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors mb-8"
+        className="inline-flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink transition-colors mb-8"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to sign in
       </Link>
 
-      <h2 className="text-2xl font-bold text-text-primary">Reset password</h2>
-      <p className="mt-1.5 text-sm text-text-secondary">
+      <h2 className="text-2xl font-bold text-ink">Reset password</h2>
+      <p className="mt-1.5 text-sm text-ink-muted">
         Enter your email and we&apos;ll send you a reset link
       </p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-5">
         {error && (
-          <div className="rounded-[var(--radius-input)] bg-red-50 px-4 py-3 text-sm text-coral-dark">{error}</div>
+          <div className="rounded-[var(--radius-input)] bg-red-50 px-4 py-3 text-sm text-negative">{error}</div>
         )}
 
         <div>
-          <label className="block text-sm font-medium text-text-primary mb-1.5">
+          <label className="block text-sm font-medium text-ink mb-1.5">
             Email
           </label>
           <input
@@ -82,7 +82,7 @@ export default function ForgotPasswordPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-petrol-mid focus:ring-0 focus:outline-none"
+            className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-brass-soft focus:ring-0 focus:outline-none"
             placeholder="you@example.com"
           />
         </div>
@@ -90,7 +90,7 @@ export default function ForgotPasswordPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-[var(--radius-button)] bg-petrol-dark py-2.5 text-sm font-semibold text-white transition-colors hover:bg-petrol-mid disabled:opacity-50"
+          className="w-full rounded-[var(--radius-button)] bg-brass py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brass-strong disabled:opacity-50"
         >
           {loading ? "Sending..." : "Send reset link"}
         </button>

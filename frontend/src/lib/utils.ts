@@ -28,7 +28,7 @@ export function getStatusColour(status: string): string {
     case "paid":
       return "bg-emerald-50 text-emerald-600";
     case "overdue":
-      return "bg-red-50 text-coral";
+      return "bg-red-50 text-negative";
     default:
       return "bg-gray-100 text-gray-600";
   }

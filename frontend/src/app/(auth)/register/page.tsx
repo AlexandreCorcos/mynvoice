@@ -39,15 +39,15 @@ export default function RegisterPage() {
         </div>
         <div className="rounded-[var(--radius-card)] bg-green-50 px-6 py-8 text-center">
           <div className="text-4xl mb-4">✉️</div>
-          <h2 className="text-xl font-bold text-text-primary mb-2">Check your email</h2>
-          <p className="text-sm text-text-secondary">
+          <h2 className="text-xl font-bold text-ink mb-2">Check your email</h2>
+          <p className="text-sm text-ink-muted">
             We sent a link to <strong>{email}</strong>.<br />
             Click it to set your password and activate your account.
           </p>
         </div>
-        <p className="mt-6 text-center text-sm text-text-secondary">
+        <p className="mt-6 text-center text-sm text-ink-muted">
           Wrong email?{" "}
-          <button onClick={() => setDone(false)} className="font-medium text-petrol-mid hover:text-petrol-dark transition-colors">
+          <button onClick={() => setDone(false)} className="font-medium text-brass-ink hover:text-brass-ink transition-colors">
             Go back
           </button>
         </p>
@@ -61,45 +61,45 @@ export default function RegisterPage() {
         <Logo height={34} href={null} />
       </div>
 
-      <h2 className="text-2xl font-bold text-text-primary">Create account</h2>
-      <p className="mt-1.5 text-sm text-text-secondary">Start managing your invoices for free</p>
+      <h2 className="text-2xl font-bold text-ink">Create account</h2>
+      <p className="mt-1.5 text-sm text-ink-muted">Start managing your invoices for free</p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-5">
         {error && (
-          <div className="rounded-[var(--radius-input)] bg-red-50 px-4 py-3 text-sm text-coral-dark">{error}</div>
+          <div className="rounded-[var(--radius-input)] bg-red-50 px-4 py-3 text-sm text-negative">{error}</div>
         )}
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1.5">First name</label>
+            <label className="block text-sm font-medium text-ink mb-1.5">First name</label>
             <input
               type="text"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               required
-              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-petrol-mid focus:ring-0 focus:outline-none"
+              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-brass-soft focus:ring-0 focus:outline-none"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1.5">Last name</label>
+            <label className="block text-sm font-medium text-ink mb-1.5">Last name</label>
             <input
               type="text"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
               required
-              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-petrol-mid focus:ring-0 focus:outline-none"
+              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-brass-soft focus:ring-0 focus:outline-none"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-text-primary mb-1.5">Email</label>
+          <label className="block text-sm font-medium text-ink mb-1.5">Email</label>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-petrol-mid focus:ring-0 focus:outline-none"
+            className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-brass-soft focus:ring-0 focus:outline-none"
             placeholder="you@example.com"
           />
         </div>
@@ -107,15 +107,15 @@ export default function RegisterPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-[var(--radius-button)] bg-coral py-2.5 text-sm font-semibold text-white transition-colors hover:bg-coral-dark disabled:opacity-50"
+          className="w-full rounded-[var(--radius-button)] bg-brass py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brass-strong disabled:opacity-50"
         >
           {loading ? "Sending..." : "Continue"}
         </button>
       </form>
 
-      <p className="mt-8 text-center text-sm text-text-secondary">
+      <p className="mt-8 text-center text-sm text-ink-muted">
         Already have an account?{" "}
-        <Link href="/login" className="font-medium text-petrol-mid hover:text-petrol-dark transition-colors">
+        <Link href="/login" className="font-medium text-brass-ink hover:text-brass-ink transition-colors">
           Sign in
         </Link>
       </p>

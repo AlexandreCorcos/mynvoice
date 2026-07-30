@@ -79,10 +79,10 @@ export default function PaymentsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-text-primary">Payments Received</h1>
+        <h1 className="text-2xl font-bold text-ink">Payments Received</h1>
         <button
           onClick={() => setShowModal(true)}
-          className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-petrol-dark px-4 py-2.5 text-sm font-semibold text-white hover:bg-petrol-mid transition-colors"
+          className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-brass px-4 py-2.5 text-sm font-semibold text-white hover:bg-brass-strong transition-colors"
         >
           <Plus className="h-4 w-4" />
           Record Payment
@@ -107,7 +107,7 @@ export default function PaymentsPage() {
           action={
             <button
               onClick={() => setShowModal(true)}
-              className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-coral px-4 py-2.5 text-sm font-semibold text-white hover:bg-coral-dark transition-colors"
+              className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-brass px-4 py-2.5 text-sm font-semibold text-white hover:bg-brass-strong transition-colors"
             >
               <Plus className="h-4 w-4" />
               Record Payment
@@ -118,7 +118,7 @@ export default function PaymentsPage() {
         <div className="overflow-x-auto rounded-[var(--radius-card)] bg-white shadow-[var(--shadow-card)]">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100 text-left text-text-secondary">
+              <tr className="border-b border-gray-100 text-left text-ink-muted">
                 <th className="px-5 py-3 font-medium">Date</th>
                 <th className="px-5 py-3 font-medium">Payment #</th>
                 <th className="px-5 py-3 font-medium">Reference</th>
@@ -137,42 +137,42 @@ export default function PaymentsPage() {
                 return (
                   <tr
                     key={payment.id}
-                    className="border-b border-gray-50 last:border-0 hover:bg-surface-light transition-colors"
+                    className="border-b border-gray-50 last:border-0 hover:bg-surface transition-colors"
                   >
-                    <td className="px-5 py-3.5 text-text-primary">
+                    <td className="px-5 py-3.5 text-ink">
                       {formatDate(payment.payment_date)}
                     </td>
-                    <td className="px-5 py-3.5 font-medium text-text-primary">
+                    <td className="px-5 py-3.5 font-medium text-ink">
                       {payment.payment_number}
                     </td>
-                    <td className="px-5 py-3.5 text-text-secondary">
+                    <td className="px-5 py-3.5 text-ink-muted">
                       {payment.reference || "-"}
                     </td>
-                    <td className="px-5 py-3.5 text-text-primary">
+                    <td className="px-5 py-3.5 text-ink">
                       {client ? client.company_name : "\u2014"}
                     </td>
                     <td className="px-5 py-3.5">
                       {invoice ? (
                         <Link
                           href={`/invoices/${invoice.id}`}
-                          className="font-medium text-petrol-mid hover:text-petrol-dark transition-colors"
+                          className="font-medium text-brass-ink hover:text-brass-ink transition-colors"
                         >
                           {invoice.invoice_number}
                         </Link>
                       ) : (
-                        <span className="text-text-secondary">&mdash;</span>
+                        <span className="text-ink-muted">&mdash;</span>
                       )}
                     </td>
-                    <td className="px-5 py-3.5 text-text-primary">
+                    <td className="px-5 py-3.5 text-ink">
                       {PAYMENT_MODE_LABELS[payment.payment_mode] || payment.payment_mode}
                     </td>
-                    <td className="px-5 py-3.5 text-right font-semibold text-text-primary">
+                    <td className="px-5 py-3.5 text-right font-semibold text-ink">
                       {formatCurrency(payment.amount, payment.currency)}
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <button
                         onClick={() => handleDelete(payment.id)}
-                        className="rounded-lg p-1.5 text-text-secondary hover:bg-red-50 hover:text-red-500 transition-colors"
+                        className="rounded-lg p-1.5 text-ink-muted hover:bg-red-50 hover:text-red-500 transition-colors"
                         title="Delete payment"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -284,10 +284,10 @@ function RecordPaymentModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-lg rounded-[var(--radius-card)] bg-white shadow-[var(--shadow-dropdown)]">
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="text-lg font-semibold text-text-primary">Record Payment</h2>
+          <h2 className="text-lg font-semibold text-ink">Record Payment</h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-text-secondary hover:bg-surface-light"
+            className="rounded-lg p-1.5 text-ink-muted hover:bg-surface"
           >
             <X className="h-5 w-5" />
           </button>
@@ -295,13 +295,13 @@ function RecordPaymentModal({
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Invoice select */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">
+            <label className="block text-sm font-medium text-ink mb-1">
               Invoice
             </label>
             <select
               value={form.invoice_id}
               onChange={(e) => handleInvoiceChange(e.target.value)}
-              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none bg-white"
+              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none bg-white"
             >
               <option value="">No invoice (manual payment)</option>
               {unpaidInvoices.map((inv) => {
@@ -320,7 +320,7 @@ function RecordPaymentModal({
           {/* Amount & Date */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-ink mb-1">
                 Amount *
               </label>
               <input
@@ -330,11 +330,11 @@ function RecordPaymentModal({
                 value={form.amount}
                 onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
                 required
-                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none"
+                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-ink mb-1">
                 Date *
               </label>
               <input
@@ -342,21 +342,21 @@ function RecordPaymentModal({
                 value={form.payment_date}
                 onChange={(e) => setForm((f) => ({ ...f, payment_date: e.target.value }))}
                 required
-                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none"
+                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
               />
             </div>
           </div>
 
           {/* Payment mode */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">
+            <label className="block text-sm font-medium text-ink mb-1">
               Payment Mode *
             </label>
             <select
               value={form.payment_mode}
               onChange={(e) => setForm((f) => ({ ...f, payment_mode: e.target.value }))}
               required
-              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none bg-white"
+              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none bg-white"
             >
               <option value="bank_transfer">Bank Transfer</option>
               <option value="card">Card</option>
@@ -367,7 +367,7 @@ function RecordPaymentModal({
 
           {/* Reference */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">
+            <label className="block text-sm font-medium text-ink mb-1">
               Reference
             </label>
             <input
@@ -375,20 +375,20 @@ function RecordPaymentModal({
               value={form.reference}
               onChange={(e) => setForm((f) => ({ ...f, reference: e.target.value }))}
               placeholder="e.g. bank reference"
-              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none"
+              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
             />
           </div>
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">
+            <label className="block text-sm font-medium text-ink mb-1">
               Notes
             </label>
             <textarea
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               rows={3}
-              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none resize-none"
+              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none resize-none"
             />
           </div>
 
@@ -397,14 +397,14 @@ function RecordPaymentModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-text-primary hover:bg-gray-50 transition-colors"
+              className="rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-ink hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="rounded-[var(--radius-button)] bg-petrol-dark px-4 py-2 text-sm font-semibold text-white hover:bg-petrol-mid disabled:opacity-50 transition-colors"
+              className="rounded-[var(--radius-button)] bg-brass px-4 py-2 text-sm font-semibold text-white hover:bg-brass-strong disabled:opacity-50 transition-colors"
             >
               {saving ? "Saving..." : "Record Payment"}
             </button>

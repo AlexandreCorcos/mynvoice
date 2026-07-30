@@ -2,24 +2,45 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@theme {
-  /* Petrol & Coral palette */
-  --color-petrol-dark: #0F4C5C;
-  --color-petrol-mid: #2C7A7B;
-  --color-petrol-light: #3A9CA0;
-  --color-coral: #FF6B6B;
-  --color-coral-dark: #E85555;
-  --color-coral-light: #FF8A8A;
-  --color-surface-light: #F0F3F5;
-  --color-surface-dark: #1B263B;
-  --color-text-primary: #1B263B;
-  --color-text-secondary: #5C677D;
-  --color-text-inverse: #FFFFFF;
+/* ============================================================
+   Graphite & Brass
+   Warm-graphite neutral axis + a single chromatic (brass).
+   Rule: brass never fills large surfaces. It lives in solid
+   buttons, links, focus rings, hairlines and diffuse glows.
+   Large dark surfaces (sidebar, auth panel) use graphite.
+   ============================================================ */
+
+@theme inline {
+  /* Neutrals */
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-elevated: var(--elevated);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-graphite: var(--graphite);
+  --color-graphite-soft: var(--graphite-soft);
+
+  /* Brass — the single chromatic.
+     `brass` fills (always paired with white text),
+     `brass-ink` is brass AS text/icon on the page background. */
+  --color-brass: var(--brass);
+  --color-brass-strong: var(--brass-strong);
+  --color-brass-ink: var(--brass-ink);
+  --color-brass-soft: var(--brass-soft);
+
+  /* Mode-independent: the sidebar and auth panel are graphite in BOTH
+     themes, so brass sitting on them needs one fixed light value. */
+  --color-brass-on-dark: #c79a5b;
+
+  /* Semantic states */
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
 
   /* Shadows */
-  --shadow-card: 0 1px 3px rgba(15, 76, 92, 0.08), 0 1px 2px rgba(15, 76, 92, 0.06);
-  --shadow-card-hover: 0 4px 12px rgba(15, 76, 92, 0.12), 0 2px 4px rgba(15, 76, 92, 0.08);
-  --shadow-dropdown: 0 8px 24px rgba(15, 76, 92, 0.14);
+  --shadow-card: var(--shadow-card-v);
+  --shadow-card-hover: var(--shadow-card-hover-v);
+  --shadow-dropdown: var(--shadow-dropdown-v);
 
   /* Border radius */
   --radius-card: 14px;
@@ -31,106 +52,142 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
+/* ── Light ─────────────────────────────────────────────── */
+:root {
+  --surface: #faf9f7;
+  --card: #ffffff;
+  --elevated: #f1efec;
+  --line: #e4e0d9;
+  --ink: #1c1917;
+  --ink-muted: #6e6862;
+  --graphite: #1c1917;
+  --graphite-soft: #242220;
+
+  --brass: #8a6a3d;        /* white text → 4.9:1 */
+  --brass-strong: #6e5230; /* hover on solid brass */
+  --brass-ink: #7a5c33;    /* brass text on --surface → 5.1:1 */
+  --brass-soft: #a98a5c;   /* focus rings, subtle hairlines */
+
+  --positive: #3f6b4a;
+  --negative: #b4332e;
+
+  --shadow-card-v: 0 1px 3px rgba(28, 25, 23, 0.07), 0 1px 2px rgba(28, 25, 23, 0.05);
+  --shadow-card-hover-v: 0 4px 12px rgba(28, 25, 23, 0.1), 0 2px 4px rgba(28, 25, 23, 0.07);
+  --shadow-dropdown-v: 0 8px 24px rgba(28, 25, 23, 0.13);
+}
+
+/* ── Dark ──────────────────────────────────────────────── */
+.dark {
+  --surface: #121110;
+  --card: #1b1a18;
+  --elevated: #242220;
+  --line: rgba(255, 255, 255, 0.09);
+  --ink: #faf9f7;
+  --ink-muted: #a5a09a;
+  --graphite: #1b1a18;
+  --graphite-soft: #242220;
+
+  --brass: #8f6b34;        /* kept dark enough for white text → 4.7:1 */
+  --brass-strong: #a57c3c;
+  --brass-ink: #c79a5b;    /* brass text on --surface → 8:1 */
+  --brass-soft: #8a6a3d;
+
+  --positive: #7bae88;
+  --negative: #f08a84;
+
+  --shadow-card-v: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-card-hover-v: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.25);
+  --shadow-dropdown-v: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
 /* Base styles */
 body {
   font-family: var(--font-sans);
-  color: var(--color-text-primary);
-  background-color: var(--color-surface-light);
+  color: var(--ink);
+  background-color: var(--surface);
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Dark mode */
-.dark body {
-  color: #E2E8F0;
-  background-color: #0F1729;
-}
+/* ============================================================
+   Legacy utility bridge.
+   125 `bg-white`, 25+ `border-gray-*` and friends still exist in
+   components. Rather than rewrite them all here, they are
+   retargeted onto the new tokens so dark mode stays correct.
+   ============================================================ */
 
 .dark .bg-white {
-  background-color: #1B263B;
-}
-
-.dark .bg-surface-light {
-  background-color: #0F1729;
+  background-color: var(--card);
 }
 
 .dark .border-gray-100,
 .dark .border-gray-200,
 .dark .border-gray-300 {
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: var(--line);
 }
 
-.dark .text-text-primary {
-  color: #E2E8F0;
-}
-
-.dark .text-text-secondary {
-  color: #94A3B8;
-}
-
-.dark .text-gray-600 {
-  color: #94A3B8;
-}
-
-.dark input,
-.dark select,
-.dark textarea {
-  background-color: #1B263B;
-  border-color: rgba(255, 255, 255, 0.15);
-  color: #E2E8F0;
-}
-
-.dark input::placeholder,
-.dark textarea::placeholder {
-  color: #64748B;
-}
-
-.dark .shadow-\[var\(--shadow-card\)\] {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.15);
-}
-
-.dark .shadow-\[var\(--shadow-card-hover\)\] {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.dark .shadow-\[var\(--shadow-dropdown\)\] {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-}
-
-.dark .hover\:bg-gray-50:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-.dark .hover\:bg-surface-light:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+.dark .text-gray-600,
+.dark .text-gray-500 {
+  color: var(--ink-muted);
 }
 
 .dark .bg-gray-50,
 .dark .bg-gray-100 {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--elevated);
 }
 
+.dark .hover\:bg-gray-50:hover {
+  background-color: var(--elevated);
+}
+
+.dark .hover\:bg-surface:hover {
+  background-color: var(--elevated);
+}
+
+/* Solid brass fills always carry white text — keep it that way
+   even where a component sets a darker colour. */
+.bg-brass,
+.bg-brass:hover {
+  color: #ffffff;
+}
+
+/* Inputs */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: var(--card);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--ink);
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: var(--ink-muted);
+}
+
+/* Tinted status backgrounds */
 .dark .bg-emerald-50 {
-  background-color: rgba(16, 185, 129, 0.1);
+  background-color: rgba(123, 174, 136, 0.12);
 }
 
 .dark .bg-red-50 {
-  background-color: rgba(239, 68, 68, 0.1);
+  background-color: rgba(240, 138, 132, 0.12);
 }
 
 .dark .bg-blue-50 {
-  background-color: rgba(59, 130, 246, 0.1);
+  background-color: rgba(255, 255, 255, 0.06);
 }
 
 .dark .bg-amber-50 {
-  background-color: rgba(245, 158, 11, 0.1);
+  background-color: rgba(199, 154, 91, 0.12);
 }
 
+/* Tables */
 .dark table th {
-  color: #94A3B8;
+  color: var(--ink-muted);
 }
 
 .dark table td {
-  border-color: rgba(255, 255, 255, 0.05);
+  border-color: var(--line);
 }
 
 /* Scrollbar */
@@ -143,7 +200,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-text-secondary);
+  background: var(--ink-muted);
   border-radius: var(--radius-full);
 }
 
@@ -153,6 +210,39 @@ body {
 
 /* Focus ring */
 *:focus-visible {
-  outline: 2px solid var(--color-petrol-mid);
+  outline: 2px solid var(--brass-soft);
   outline-offset: 2px;
+}
+
+/* ============================================================
+   Brass glow — the Cosmic recipe, reinterpreted.
+   Diffuse radial at low opacity. Never a hard gradient fill.
+   Usage: <div class="brass-glow"> on a positioned ancestor.
+   ============================================================ */
+.brass-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.brass-glow::before {
+  content: "";
+  position: absolute;
+  inset: -40% 25% 55% 25%;
+  background: radial-gradient(ellipse at center, var(--brass-ink), transparent 70%);
+  opacity: 0.1;
+  filter: blur(48px);
+  pointer-events: none;
+}
+
+.dark .brass-glow::before {
+  opacity: 0.16;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

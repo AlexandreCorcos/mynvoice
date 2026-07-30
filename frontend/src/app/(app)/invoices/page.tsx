@@ -180,7 +180,7 @@ export default function InvoicesPage() {
               setMenuOpen(inv.id);
             }
           }}
-          className="rounded-lg p-1.5 text-text-secondary opacity-0 transition-opacity hover:bg-surface-light group-hover:opacity-100"
+          className="rounded-lg p-1.5 text-ink-muted opacity-0 transition-opacity hover:bg-surface group-hover:opacity-100"
         >
           <MoreHorizontal className="h-4 w-4" />
         </button>
@@ -192,7 +192,7 @@ export default function InvoicesPage() {
           >
             <Link
               href={`/invoices/${inv.id}`}
-              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-surface-light"
+              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-surface"
             >
               <Eye className="h-3.5 w-3.5" />
               View
@@ -200,7 +200,7 @@ export default function InvoicesPage() {
             {inv.status !== "paid" && (
               <Link
                 href={`/invoices/${inv.id}/edit`}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-surface-light"
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-surface"
                 onClick={closeMenu}
               >
                 <Pencil className="h-3.5 w-3.5" />
@@ -210,7 +210,7 @@ export default function InvoicesPage() {
             {inv.status === "draft" && (
               <button
                 onClick={() => handleMarkSent(inv.id)}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-surface-light"
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-surface"
               >
                 <Send className="h-3.5 w-3.5" />
                 Mark as Sent
@@ -222,7 +222,7 @@ export default function InvoicesPage() {
                   setPaymentModal(inv.id);
                   closeMenu();
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-surface-light"
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-surface"
               >
                 <CheckCircle className="h-3.5 w-3.5" />
                 Mark as Paid
@@ -230,7 +230,7 @@ export default function InvoicesPage() {
             )}
             <button
               onClick={() => handleDuplicate(inv.id)}
-              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-surface-light"
+              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-surface"
             >
               <Copy className="h-3.5 w-3.5" />
               Duplicate
@@ -266,18 +266,18 @@ export default function InvoicesPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
           <input
             type="text"
             placeholder="Search invoices..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-[var(--radius-input)] border border-gray-300 py-2.5 pl-10 pr-4 text-sm focus:border-petrol-mid focus:outline-none"
+            className="w-full rounded-[var(--radius-input)] border border-gray-300 py-2.5 pl-10 pr-4 text-sm focus:border-brass-soft focus:outline-none"
           />
         </div>
         <Link
           href="/invoices/new"
-          className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-coral px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-coral-dark"
+          className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-brass px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brass-strong"
         >
           <Plus className="h-4 w-4" />
           Create Invoice
@@ -294,8 +294,8 @@ export default function InvoicesPage() {
               className={cn(
                 "rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors",
                 statusFilter === f.value
-                  ? "bg-petrol-dark text-white"
-                  : "text-text-secondary hover:text-text-primary hover:bg-surface-light"
+                  ? "bg-brass text-white"
+                  : "text-ink-muted hover:text-ink hover:bg-surface"
               )}
             >
               {f.label}
@@ -309,8 +309,8 @@ export default function InvoicesPage() {
             className={cn(
               "rounded-lg p-2 transition-colors",
               viewMode === "card"
-                ? "bg-petrol-dark text-white"
-                : "text-text-secondary hover:text-text-primary hover:bg-surface-light"
+                ? "bg-brass text-white"
+                : "text-ink-muted hover:text-ink hover:bg-surface"
             )}
             title="Card view"
           >
@@ -321,8 +321,8 @@ export default function InvoicesPage() {
             className={cn(
               "rounded-lg p-2 transition-colors",
               viewMode === "table"
-                ? "bg-petrol-dark text-white"
-                : "text-text-secondary hover:text-text-primary hover:bg-surface-light"
+                ? "bg-brass text-white"
+                : "text-ink-muted hover:text-ink hover:bg-surface"
             )}
             title="Table view"
           >
@@ -354,7 +354,7 @@ export default function InvoicesPage() {
             statusFilter === "all" ? (
               <Link
                 href="/invoices/new"
-                className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-coral px-4 py-2.5 text-sm font-semibold text-white hover:bg-coral-dark transition-colors"
+                className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-brass px-4 py-2.5 text-sm font-semibold text-white hover:bg-brass-strong transition-colors"
               >
                 <Plus className="h-4 w-4" />
                 Create your first invoice
@@ -391,13 +391,13 @@ export default function InvoicesPage() {
                   <div className="flex items-center gap-2">
                     <Link
                       href={`/invoices/${inv.id}`}
-                      className="font-semibold text-text-primary hover:text-petrol-mid transition-colors"
+                      className="font-semibold text-ink hover:text-brass-ink transition-colors"
                     >
                       {inv.invoice_number}
                     </Link>
                     <StatusBadge status={inv.status} />
                   </div>
-                  <p className="mt-0.5 text-sm text-text-secondary truncate">
+                  <p className="mt-0.5 text-sm text-ink-muted truncate">
                     {client?.company_name || "No client"} &middot;{" "}
                     {renderDueInfo(inv)}
                   </p>
@@ -405,10 +405,10 @@ export default function InvoicesPage() {
 
                 {/* Amount */}
                 <div className="text-right">
-                  <p className="text-base font-semibold text-text-primary">
+                  <p className="text-base font-semibold text-ink">
                     {formatCurrency(inv.total, inv.currency)}
                   </p>
-                  <p className="text-xs text-text-secondary">
+                  <p className="text-xs text-ink-muted">
                     {formatDate(inv.issue_date)}
                   </p>
                 </div>
@@ -425,25 +425,25 @@ export default function InvoicesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100">
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-ink-muted">
                   Date
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-ink-muted">
                   Invoice #
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-ink-muted">
                   Client
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-ink-muted">
                   Status
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-ink-muted">
                   Due Date
                 </th>
-                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-ink-muted">
                   Amount
                 </th>
-                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-ink-muted">
                   Actions
                 </th>
               </tr>
@@ -458,20 +458,20 @@ export default function InvoicesPage() {
                 return (
                   <tr
                     key={inv.id}
-                    className="group transition-colors hover:bg-surface-light/50"
+                    className="group transition-colors hover:bg-surface/50"
                   >
-                    <td className="whitespace-nowrap px-5 py-3.5 text-text-secondary">
+                    <td className="whitespace-nowrap px-5 py-3.5 text-ink-muted">
                       {formatDate(inv.issue_date)}
                     </td>
                     <td className="whitespace-nowrap px-5 py-3.5">
                       <Link
                         href={`/invoices/${inv.id}`}
-                        className="font-semibold text-text-primary hover:text-petrol-mid transition-colors"
+                        className="font-semibold text-ink hover:text-brass-ink transition-colors"
                       >
                         {inv.invoice_number}
                       </Link>
                     </td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-text-primary">
+                    <td className="whitespace-nowrap px-5 py-3.5 text-ink">
                       {client?.company_name || "No client"}
                     </td>
                     <td className="whitespace-nowrap px-5 py-3.5">
@@ -491,10 +491,10 @@ export default function InvoicesPage() {
                         )}
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-text-secondary">
+                    <td className="whitespace-nowrap px-5 py-3.5 text-ink-muted">
                       {formatDate(inv.due_date)}
                     </td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-right font-semibold text-text-primary">
+                    <td className="whitespace-nowrap px-5 py-3.5 text-right font-semibold text-ink">
                       {formatCurrency(inv.total, inv.currency)}
                     </td>
                     <td className="whitespace-nowrap px-5 py-3.5 text-right">
@@ -512,10 +512,10 @@ export default function InvoicesPage() {
       {paymentModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-dropdown)]">
-            <h3 className="text-lg font-semibold text-text-primary mb-1">
+            <h3 className="text-lg font-semibold text-ink mb-1">
               Mark as Paid
             </h3>
-            <p className="text-sm text-text-secondary mb-5">
+            <p className="text-sm text-ink-muted mb-5">
               Select the payment method used.
             </p>
             <div className="grid grid-cols-2 gap-3">
@@ -523,7 +523,7 @@ export default function InvoicesPage() {
                 <button
                   key={pm.value}
                   onClick={() => handleMarkPaid(paymentModal, pm.value)}
-                  className="rounded-[var(--radius-button)] border border-gray-200 px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:border-petrol-mid hover:bg-petrol-dark hover:text-white"
+                  className="rounded-[var(--radius-button)] border border-gray-200 px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:border-brass-soft hover:bg-brass-strong hover:text-white"
                 >
                   {pm.label}
                 </button>
@@ -531,7 +531,7 @@ export default function InvoicesPage() {
             </div>
             <button
               onClick={() => setPaymentModal(null)}
-              className="mt-4 w-full rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-text-secondary hover:bg-gray-50 transition-colors"
+              className="mt-4 w-full rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-ink-muted hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>

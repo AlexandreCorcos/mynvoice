@@ -56,16 +56,16 @@ function SetPasswordForm() {
         <Logo height={34} href={null} />
       </div>
 
-      <h2 className="text-2xl font-bold text-text-primary">Set your password</h2>
-      <p className="mt-1.5 text-sm text-text-secondary">Choose a password to activate your account</p>
+      <h2 className="text-2xl font-bold text-ink">Set your password</h2>
+      <p className="mt-1.5 text-sm text-ink-muted">Choose a password to activate your account</p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-5">
         {error && (
-          <div className="rounded-[var(--radius-input)] bg-red-50 px-4 py-3 text-sm text-coral-dark">{error}</div>
+          <div className="rounded-[var(--radius-input)] bg-red-50 px-4 py-3 text-sm text-negative">{error}</div>
         )}
 
         <div>
-          <label className="block text-sm font-medium text-text-primary mb-1.5">Password</label>
+          <label className="block text-sm font-medium text-ink mb-1.5">Password</label>
           <input
             type="password"
             value={password}
@@ -73,26 +73,26 @@ function SetPasswordForm() {
             required
             minLength={8}
             placeholder="Min. 8 characters"
-            className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-petrol-mid focus:ring-0 focus:outline-none"
+            className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-brass-soft focus:ring-0 focus:outline-none"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-text-primary mb-1.5">Confirm password</label>
+          <label className="block text-sm font-medium text-ink mb-1.5">Confirm password</label>
           <input
             type="password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             required
             placeholder="Repeat your password"
-            className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-petrol-mid focus:ring-0 focus:outline-none"
+            className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-brass-soft focus:ring-0 focus:outline-none"
           />
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-[var(--radius-button)] bg-coral py-2.5 text-sm font-semibold text-white transition-colors hover:bg-coral-dark disabled:opacity-50"
+          className="w-full rounded-[var(--radius-button)] bg-brass py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brass-strong disabled:opacity-50"
         >
           {loading ? "Activating..." : "Activate account"}
         </button>

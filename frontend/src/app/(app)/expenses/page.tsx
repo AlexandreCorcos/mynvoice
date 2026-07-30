@@ -75,20 +75,20 @@ export default function ExpensesPage() {
       {/* Summary cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-[var(--radius-card)] bg-white p-5 shadow-[var(--shadow-card)]">
-          <p className="text-sm font-medium text-text-secondary">Total</p>
-          <p className="mt-1 text-2xl font-bold text-text-primary">
+          <p className="text-sm font-medium text-ink-muted">Total</p>
+          <p className="mt-1 text-2xl font-bold text-ink">
             {formatCurrency(totalExpenses)}
           </p>
         </div>
         <div className="rounded-[var(--radius-card)] bg-white p-5 shadow-[var(--shadow-card)]">
-          <p className="text-sm font-medium text-text-secondary">Fixed</p>
-          <p className="mt-1 text-2xl font-bold text-petrol-dark">
+          <p className="text-sm font-medium text-ink-muted">Fixed</p>
+          <p className="mt-1 text-2xl font-bold text-ink">
             {formatCurrency(fixedTotal)}
           </p>
         </div>
         <div className="rounded-[var(--radius-card)] bg-white p-5 shadow-[var(--shadow-card)]">
-          <p className="text-sm font-medium text-text-secondary">Variable</p>
-          <p className="mt-1 text-2xl font-bold text-coral">
+          <p className="text-sm font-medium text-ink-muted">Variable</p>
+          <p className="mt-1 text-2xl font-bold text-negative">
             {formatCurrency(variableTotal)}
           </p>
         </div>
@@ -100,7 +100,7 @@ export default function ExpensesPage() {
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none bg-white"
+            className="rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none bg-white"
           >
             <option value="">All Categories</option>
             {categories.map((c) => (
@@ -112,7 +112,7 @@ export default function ExpensesPage() {
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value as ExpenseType | "")}
-            className="rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none bg-white"
+            className="rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none bg-white"
           >
             <option value="">All Types</option>
             <option value="fixed">Fixed</option>
@@ -122,7 +122,7 @@ export default function ExpensesPage() {
         <div className="flex gap-2">
           <button
             onClick={() => setShowCategoryModal(true)}
-            className="inline-flex items-center gap-2 rounded-[var(--radius-button)] border border-gray-300 px-4 py-2.5 text-sm font-medium text-text-primary hover:bg-gray-50 transition-colors"
+            className="inline-flex items-center gap-2 rounded-[var(--radius-button)] border border-gray-300 px-4 py-2.5 text-sm font-medium text-ink hover:bg-gray-50 transition-colors"
           >
             <Tag className="h-4 w-4" />
             Categories
@@ -132,7 +132,7 @@ export default function ExpensesPage() {
               setEditingExpense(null);
               setShowExpenseModal(true);
             }}
-            className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-petrol-dark px-4 py-2.5 text-sm font-semibold text-white hover:bg-petrol-mid transition-colors"
+            className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-brass px-4 py-2.5 text-sm font-semibold text-white hover:bg-brass-strong transition-colors"
           >
             <Plus className="h-4 w-4" />
             Add Expense
@@ -158,7 +158,7 @@ export default function ExpensesPage() {
           action={
             <button
               onClick={() => setShowExpenseModal(true)}
-              className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-coral px-4 py-2.5 text-sm font-semibold text-white hover:bg-coral-dark transition-colors"
+              className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-brass px-4 py-2.5 text-sm font-semibold text-white hover:bg-brass-strong transition-colors"
             >
               <Plus className="h-4 w-4" />
               Add your first expense
@@ -179,21 +179,21 @@ export default function ExpensesPage() {
                   style={{
                     backgroundColor: cat?.colour
                       ? `${cat.colour}20`
-                      : "#F0F3F5",
+                      : "var(--elevated)",
                   }}
                 >
                   <Wallet
                     className="h-4 w-4"
-                    style={{ color: cat?.colour || "#5C677D" }}
+                    style={{ color: cat?.colour || "var(--ink-muted)" }}
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-text-primary truncate">
+                  <p className="text-sm font-medium text-ink truncate">
                     {exp.description}
                   </p>
                   <div className="flex items-center gap-2 mt-0.5">
                     {cat && (
-                      <span className="text-xs text-text-secondary">
+                      <span className="text-xs text-ink-muted">
                         {cat.name}
                       </span>
                     )}
@@ -208,17 +208,17 @@ export default function ExpensesPage() {
                       {exp.expense_type}
                     </span>
                     {exp.vendor && (
-                      <span className="text-xs text-text-secondary">
+                      <span className="text-xs text-ink-muted">
                         &middot; {exp.vendor}
                       </span>
                     )}
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-semibold text-text-primary">
+                  <p className="text-sm font-semibold text-ink">
                     {formatCurrency(exp.amount, exp.currency)}
                   </p>
-                  <p className="text-xs text-text-secondary">
+                  <p className="text-xs text-ink-muted">
                     {formatDate(exp.expense_date)}
                   </p>
                 </div>
@@ -227,7 +227,7 @@ export default function ExpensesPage() {
                     onClick={() =>
                       setMenuOpen(menuOpen === exp.id ? null : exp.id)
                     }
-                    className="rounded-lg p-1.5 text-text-secondary opacity-0 hover:bg-surface-light group-hover:opacity-100 transition-opacity"
+                    className="rounded-lg p-1.5 text-ink-muted opacity-0 hover:bg-surface group-hover:opacity-100 transition-opacity"
                   >
                     <MoreHorizontal className="h-4 w-4" />
                   </button>
@@ -239,7 +239,7 @@ export default function ExpensesPage() {
                           setShowExpenseModal(true);
                           setMenuOpen(null);
                         }}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-surface-light"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-surface"
                       >
                         <Pencil className="h-3.5 w-3.5" />
                         Edit
@@ -338,27 +338,27 @@ function ExpenseModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-md rounded-[var(--radius-card)] bg-white shadow-[var(--shadow-dropdown)]">
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="text-lg font-semibold text-text-primary">
+          <h2 className="text-lg font-semibold text-ink">
             {expense ? "Edit Expense" : "New Expense"}
           </h2>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-text-secondary hover:bg-surface-light">
+          <button onClick={onClose} className="rounded-lg p-1.5 text-ink-muted hover:bg-surface">
             <X className="h-5 w-5" />
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">Description *</label>
+            <label className="block text-sm font-medium text-ink mb-1">Description *</label>
             <input
               type="text"
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               required
-              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none"
+              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Amount *</label>
+              <label className="block text-sm font-medium text-ink mb-1">Amount *</label>
               <input
                 type="number"
                 min="0"
@@ -366,27 +366,27 @@ function ExpenseModal({
                 value={form.amount}
                 onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
                 required
-                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none"
+                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Date *</label>
+              <label className="block text-sm font-medium text-ink mb-1">Date *</label>
               <input
                 type="date"
                 value={form.expense_date}
                 onChange={(e) => setForm((f) => ({ ...f, expense_date: e.target.value }))}
                 required
-                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none"
+                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
               />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Category</label>
+              <label className="block text-sm font-medium text-ink mb-1">Category</label>
               <select
                 value={form.category_id}
                 onChange={(e) => setForm((f) => ({ ...f, category_id: e.target.value }))}
-                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none bg-white"
+                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none bg-white"
               >
                 <option value="">None</option>
                 {categories.map((c) => (
@@ -395,11 +395,11 @@ function ExpenseModal({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Type</label>
+              <label className="block text-sm font-medium text-ink mb-1">Type</label>
               <select
                 value={form.expense_type}
                 onChange={(e) => setForm((f) => ({ ...f, expense_type: e.target.value as ExpenseType }))}
-                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none bg-white"
+                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none bg-white"
               >
                 <option value="variable">Variable</option>
                 <option value="fixed">Fixed</option>
@@ -407,19 +407,19 @@ function ExpenseModal({
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">Vendor</label>
+            <label className="block text-sm font-medium text-ink mb-1">Vendor</label>
             <input
               type="text"
               value={form.vendor}
               onChange={(e) => setForm((f) => ({ ...f, vendor: e.target.value }))}
-              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none"
+              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
             />
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-text-primary hover:bg-gray-50 transition-colors">
+            <button type="button" onClick={onClose} className="rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-ink hover:bg-gray-50 transition-colors">
               Cancel
             </button>
-            <button type="submit" disabled={saving} className="rounded-[var(--radius-button)] bg-petrol-dark px-4 py-2 text-sm font-semibold text-white hover:bg-petrol-mid disabled:opacity-50 transition-colors">
+            <button type="submit" disabled={saving} className="rounded-[var(--radius-button)] bg-brass px-4 py-2 text-sm font-semibold text-white hover:bg-brass-strong disabled:opacity-50 transition-colors">
               {saving ? "Saving..." : expense ? "Update" : "Create"}
             </button>
           </div>
@@ -439,7 +439,9 @@ function CategoryModal({
   onChanged: () => void;
 }) {
   const [name, setName] = useState("");
-  const [colour, setColour] = useState("#0F4C5C");
+  // Literal hex: user-chosen category colours are persisted, so this
+  // default cannot be a CSS variable.
+  const [colour, setColour] = useState("#8A6A3D");
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -458,10 +460,10 @@ function CategoryModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-sm rounded-[var(--radius-card)] bg-white shadow-[var(--shadow-dropdown)]">
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="text-lg font-semibold text-text-primary">
+          <h2 className="text-lg font-semibold text-ink">
             Expense Categories
           </h2>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-text-secondary hover:bg-surface-light">
+          <button onClick={onClose} className="rounded-lg p-1.5 text-ink-muted hover:bg-surface">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -478,11 +480,11 @@ function CategoryModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Category name"
-              className="flex-1 rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none"
+              className="flex-1 rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
             />
             <button
               type="submit"
-              className="rounded-[var(--radius-button)] bg-petrol-dark px-3 py-2 text-sm font-semibold text-white hover:bg-petrol-mid transition-colors"
+              className="rounded-[var(--radius-button)] bg-brass px-3 py-2 text-sm font-semibold text-white hover:bg-brass-strong transition-colors"
             >
               Add
             </button>
@@ -496,20 +498,20 @@ function CategoryModal({
                 <div className="flex items-center gap-2">
                   <div
                     className="h-4 w-4 rounded-full"
-                    style={{ backgroundColor: cat.colour || "#0F4C5C" }}
+                    style={{ backgroundColor: cat.colour || "#8A6A3D" }}
                   />
-                  <span className="text-sm text-text-primary">{cat.name}</span>
+                  <span className="text-sm text-ink">{cat.name}</span>
                 </div>
                 <button
                   onClick={() => handleDelete(cat.id)}
-                  className="text-text-secondary hover:text-red-500 transition-colors"
+                  className="text-ink-muted hover:text-red-500 transition-colors"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
             ))}
             {categories.length === 0 && (
-              <p className="text-sm text-text-secondary text-center py-4">
+              <p className="text-sm text-ink-muted text-center py-4">
                 No categories yet
               </p>
             )}

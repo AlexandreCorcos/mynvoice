@@ -55,13 +55,13 @@ export default function ClientsPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
           <input
             type="text"
             placeholder="Search clients..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-[var(--radius-input)] border border-gray-300 py-2.5 pl-10 pr-4 text-sm focus:border-petrol-mid focus:outline-none"
+            className="w-full rounded-[var(--radius-input)] border border-gray-300 py-2.5 pl-10 pr-4 text-sm focus:border-brass-soft focus:outline-none"
           />
         </div>
         <button
@@ -69,7 +69,7 @@ export default function ClientsPage() {
             setEditingClient(null);
             setShowModal(true);
           }}
-          className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-petrol-dark px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-petrol-mid"
+          className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-brass px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brass-strong"
         >
           <Plus className="h-4 w-4" />
           Add Client
@@ -94,7 +94,7 @@ export default function ClientsPage() {
           action={
             <button
               onClick={() => setShowModal(true)}
-              className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-coral px-4 py-2.5 text-sm font-semibold text-white hover:bg-coral-dark transition-colors"
+              className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-brass px-4 py-2.5 text-sm font-semibold text-white hover:bg-brass-strong transition-colors"
             >
               <Plus className="h-4 w-4" />
               Add your first client
@@ -114,7 +114,7 @@ export default function ClientsPage() {
                   onClick={() =>
                     setMenuOpen(menuOpen === client.id ? null : client.id)
                   }
-                  className="rounded-lg p-1.5 text-text-secondary opacity-0 transition-opacity hover:bg-surface-light group-hover:opacity-100"
+                  className="rounded-lg p-1.5 text-ink-muted opacity-0 transition-opacity hover:bg-surface group-hover:opacity-100"
                 >
                   <MoreHorizontal className="h-4 w-4" />
                 </button>
@@ -126,7 +126,7 @@ export default function ClientsPage() {
                         setShowModal(true);
                         setMenuOpen(null);
                       }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-surface-light"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-surface"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                       Edit
@@ -144,22 +144,22 @@ export default function ClientsPage() {
 
               {/* Content */}
               <div className="flex items-center gap-3 mb-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-petrol-dark text-sm font-semibold text-white">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brass text-sm font-semibold text-white">
                   {client.company_name.slice(0, 2).toUpperCase()}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-text-primary">
+                  <h3 className="font-semibold text-ink">
                     {client.company_name}
                   </h3>
                   {client.contact_person && (
-                    <p className="text-xs text-text-secondary">
+                    <p className="text-xs text-ink-muted">
                       {client.contact_person}
                     </p>
                   )}
                 </div>
               </div>
 
-              <div className="space-y-2 text-sm text-text-secondary">
+              <div className="space-y-2 text-sm text-ink-muted">
                 <div className="flex items-center gap-2">
                   <Mail className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{client.email}</span>
@@ -185,11 +185,11 @@ export default function ClientsPage() {
 
               {/* Receivables + date footer */}
               <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
-                <p className="text-xs text-text-secondary">
+                <p className="text-xs text-ink-muted">
                   Added {formatDate(client.created_at)}
                 </p>
                 {client.total_receivables > 0 && (
-                  <span className="text-sm font-semibold text-coral">
+                  <span className="text-sm font-semibold text-negative">
                     {formatCurrency(client.total_receivables)} outstanding
                   </span>
                 )}
@@ -238,11 +238,11 @@ function Section({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold text-text-primary bg-surface-light hover:bg-gray-100 transition-colors"
+        className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold text-ink bg-surface hover:bg-gray-100 transition-colors"
       >
         {title}
         <ChevronDown
-          className={`h-4 w-4 text-text-secondary transition-transform ${
+          className={`h-4 w-4 text-ink-muted transition-transform ${
             open ? "rotate-180" : ""
           }`}
         />
@@ -374,21 +374,21 @@ function ClientModal({
   };
 
   const inputClass =
-    "w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none";
+    "w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none";
 
-  const labelClass = "block text-sm font-medium text-text-primary mb-1";
+  const labelClass = "block text-sm font-medium text-ink mb-1";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-lg rounded-[var(--radius-card)] bg-white shadow-[var(--shadow-dropdown)] flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 shrink-0">
-          <h2 className="text-lg font-semibold text-text-primary">
+          <h2 className="text-lg font-semibold text-ink">
             {client ? "Edit Client" : "New Client"}
           </h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-text-secondary hover:bg-surface-light transition-colors"
+            className="rounded-lg p-1.5 text-ink-muted hover:bg-surface transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -407,7 +407,7 @@ function ClientModal({
 
           {/* ---- Section 1: Client Details ---- */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-text-primary uppercase tracking-wide">
+            <h3 className="text-sm font-semibold text-ink uppercase tracking-wide">
               Client Details
             </h3>
 
@@ -539,9 +539,9 @@ function ClientModal({
                 onChange={(e) =>
                   updateField("use_year_in_number", e.target.checked)
                 }
-                className="h-4 w-4 rounded border-gray-300 text-petrol-dark focus:ring-petrol-mid"
+                className="h-4 w-4 rounded border-gray-300 text-ink focus:ring-brass-soft"
               />
-              <span className="text-sm text-text-primary">
+              <span className="text-sm text-ink">
                 Include year in invoice numbers
               </span>
             </label>
@@ -578,7 +578,7 @@ function ClientModal({
               type="button"
               onClick={handleImportBank}
               disabled={importingBank}
-              className="inline-flex items-center gap-2 rounded-[var(--radius-button)] border border-petrol-dark px-3 py-2 text-sm font-medium text-petrol-dark hover:bg-petrol-dark hover:text-white disabled:opacity-50 transition-colors"
+              className="inline-flex items-center gap-2 rounded-[var(--radius-button)] border border-brass px-3 py-2 text-sm font-medium text-ink hover:bg-brass-strong hover:text-white disabled:opacity-50 transition-colors"
             >
               <Download className="h-4 w-4" />
               {importingBank ? "Importing..." : "Import from your business"}
@@ -632,7 +632,7 @@ function ClientModal({
               </div>
             </div>
 
-            <p className="text-xs text-text-secondary">
+            <p className="text-xs text-ink-muted">
               Bank details shown on invoices for this client
             </p>
           </Section>
@@ -642,14 +642,14 @@ function ClientModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-text-primary hover:bg-gray-50 transition-colors"
+              className="rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-ink hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="rounded-[var(--radius-button)] bg-petrol-dark px-4 py-2 text-sm font-semibold text-white hover:bg-petrol-mid disabled:opacity-50 transition-colors"
+              className="rounded-[var(--radius-button)] bg-brass px-4 py-2 text-sm font-semibold text-white hover:bg-brass-strong disabled:opacity-50 transition-colors"
             >
               {saving ? "Saving..." : client ? "Update" : "Create"}
             </button>

@@ -28,8 +28,8 @@ export default function AuthLayout({
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-surface-light">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-petrol-dark border-t-transparent" />
+      <div className="flex h-screen items-center justify-center bg-surface">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-brass border-t-transparent" />
       </div>
     );
   }
@@ -39,7 +39,7 @@ export default function AuthLayout({
   return (
     <div className="flex min-h-screen">
       {/* Left panel - branding */}
-      <div className="relative hidden overflow-hidden bg-petrol-dark lg:flex lg:w-1/2">
+      <div className="brass-glow relative hidden overflow-hidden bg-graphite lg:flex lg:w-1/2">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-60"
@@ -83,8 +83,8 @@ export default function AuthLayout({
                 "Dashboard, expenses & multi-currency",
               ].map((t) => (
                 <li key={t} className="flex items-center gap-3 text-sm text-white/80">
-                  <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-coral/20">
-                    <Check className="h-3.5 w-3.5 text-coral-light" />
+                  <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-brass/20">
+                    <Check className="h-3.5 w-3.5 text-brass-on-dark" />
                   </span>
                   {t}
                 </li>

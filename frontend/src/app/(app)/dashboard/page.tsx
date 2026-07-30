@@ -120,14 +120,14 @@ export default function DashboardPage() {
       <div className="flex flex-wrap items-center gap-3">
         <Link
           href="/invoices/new"
-          className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-coral px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-coral-dark"
+          className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-brass px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brass-strong"
         >
           <Plus className="h-4 w-4" />
           Create Invoice
         </Link>
         <Link
           href="/clients"
-          className="inline-flex items-center gap-2 rounded-[var(--radius-button)] border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-gray-50 dark:border-white/10 dark:bg-surface-dark dark:text-white dark:hover:bg-white/5"
+          className="inline-flex items-center gap-2 rounded-[var(--radius-button)] border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-gray-50 dark:border-white/10 dark:bg-graphite dark:text-white dark:hover:bg-white/5"
         >
           <Users className="h-4 w-4" />
           Add Client
@@ -176,19 +176,19 @@ export default function DashboardPage() {
 
       {/* Receivables Aging Bar */}
       <FadeIn delay={0.15}>
-        <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] dark:bg-surface-dark dark:border dark:border-white/10">
+        <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] dark:bg-graphite dark:border dark:border-white/10">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h3 className="text-base font-semibold text-text-primary dark:text-white">
+              <h3 className="text-base font-semibold text-ink dark:text-white">
                 Total Receivables
               </h3>
-              <p className="mt-0.5 text-2xl font-bold text-text-primary dark:text-white">
+              <p className="mt-0.5 text-2xl font-bold text-ink dark:text-white">
                 {formatCurrency(totalReceivables, currency)}
               </p>
             </div>
             <Link
               href="/invoices/new"
-              className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] bg-petrol-dark px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-petrol-mid"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] bg-brass px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-brass-strong"
             >
               <Plus className="h-4 w-4" />
               New
@@ -225,13 +225,13 @@ export default function DashboardPage() {
                   style={{ backgroundColor: segment.color }}
                 />
                 <div className="min-w-0">
-                  <p className="text-xs font-medium text-text-secondary dark:text-white/50 truncate">
+                  <p className="text-xs font-medium text-ink-muted dark:text-white/50 truncate">
                     {segment.label}
                   </p>
-                  <p className="text-sm font-semibold text-text-primary dark:text-white">
+                  <p className="text-sm font-semibold text-ink dark:text-white">
                     {formatCurrency(segment.amount, currency)}
                   </p>
-                  <p className="text-xs text-text-secondary dark:text-white/40">
+                  <p className="text-xs text-ink-muted dark:text-white/40">
                     {segment.count} {segment.count === 1 ? "invoice" : "invoices"}
                   </p>
                 </div>
@@ -243,19 +243,19 @@ export default function DashboardPage() {
 
       {/* Revenue vs Expenses Chart */}
       <FadeIn delay={0.2}>
-        <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] dark:bg-surface-dark dark:border dark:border-white/10">
+        <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] dark:bg-graphite dark:border dark:border-white/10">
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <h3 className="text-base font-semibold text-text-primary dark:text-white">
+              <h3 className="text-base font-semibold text-ink dark:text-white">
                 Revenue vs Expenses
               </h3>
-              <p className="text-sm text-text-secondary dark:text-white/50">
+              <p className="text-sm text-ink-muted dark:text-white/50">
                 Monthly overview
               </p>
             </div>
             <Link
               href="/invoices"
-              className="inline-flex items-center gap-1 text-sm font-medium text-petrol-mid hover:text-petrol-dark transition-colors dark:text-petrol-light dark:hover:text-white"
+              className="inline-flex items-center gap-1 text-sm font-medium text-brass-ink hover:text-brass-ink transition-colors dark:text-brass-soft dark:hover:text-white"
             >
               View invoices
               <ArrowRight className="h-4 w-4" />
@@ -265,15 +265,15 @@ export default function DashboardPage() {
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={chartData} barGap={4}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
                 <XAxis
                   dataKey="month"
-                  tick={{ fontSize: 12, fill: "#5C677D" }}
+                  tick={{ fontSize: 12, fill: "var(--ink-muted)" }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fontSize: 12, fill: "#5C677D" }}
+                  tick={{ fontSize: 12, fill: "var(--ink-muted)" }}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={(v) => `${currencySymbol}${v}`}
@@ -282,27 +282,30 @@ export default function DashboardPage() {
                   formatter={(value: number) => formatCurrency(value, currency)}
                   contentStyle={{
                     borderRadius: "10px",
-                    border: "none",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                    border: "1px solid var(--line)",
+                    background: "var(--card)",
+                    color: "var(--ink)",
+                    boxShadow: "var(--shadow-dropdown-v)",
                   }}
                 />
                 <Legend />
+                {/* Money in = brass (the highlight). Money out = neutral. */}
                 <Bar
                   dataKey="Revenue"
-                  fill="#0F4C5C"
+                  fill="var(--brass)"
                   radius={[4, 4, 0, 0]}
                   maxBarSize={40}
                 />
                 <Bar
                   dataKey="Expenses"
-                  fill="#FF6B6B"
+                  fill="var(--ink-muted)"
                   radius={[4, 4, 0, 0]}
                   maxBarSize={40}
                 />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex h-64 items-center justify-center text-sm text-text-secondary dark:text-white/50">
+            <div className="flex h-64 items-center justify-center text-sm text-ink-muted dark:text-white/50">
               No data yet. Create your first invoice to see trends.
             </div>
           )}
@@ -311,24 +314,24 @@ export default function DashboardPage() {
 
       {/* Sales, Receipts & Dues Table */}
       <FadeIn delay={0.25}>
-        <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] dark:bg-surface-dark dark:border dark:border-white/10">
-          <h3 className="mb-4 text-base font-semibold text-text-primary dark:text-white">
+        <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] dark:bg-graphite dark:border dark:border-white/10">
+          <h3 className="mb-4 text-base font-semibold text-ink dark:text-white">
             Sales, Receipts &amp; Dues
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-gray-100 dark:border-white/10">
-                  <th className="pb-3 pr-4 text-xs font-semibold uppercase tracking-wider text-text-secondary dark:text-white/50">
+                  <th className="pb-3 pr-4 text-xs font-semibold uppercase tracking-wider text-ink-muted dark:text-white/50">
                     Period
                   </th>
-                  <th className="pb-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-text-secondary dark:text-white/50">
+                  <th className="pb-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-ink-muted dark:text-white/50">
                     Sales
                   </th>
-                  <th className="pb-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-text-secondary dark:text-white/50">
+                  <th className="pb-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-ink-muted dark:text-white/50">
                     Receipts
                   </th>
-                  <th className="pb-3 pl-4 text-right text-xs font-semibold uppercase tracking-wider text-text-secondary dark:text-white/50">
+                  <th className="pb-3 pl-4 text-right text-xs font-semibold uppercase tracking-wider text-ink-muted dark:text-white/50">
                     Due
                   </th>
                 </tr>
@@ -339,16 +342,16 @@ export default function DashboardPage() {
                     key={index}
                     className="border-b border-gray-50 last:border-0 dark:border-white/5"
                   >
-                    <td className="py-3 pr-4 text-sm font-medium text-text-primary dark:text-white">
+                    <td className="py-3 pr-4 text-sm font-medium text-ink dark:text-white">
                       {row.label}
                     </td>
-                    <td className="py-3 px-4 text-right text-sm text-text-primary dark:text-white">
+                    <td className="py-3 px-4 text-right text-sm text-ink dark:text-white">
                       {formatCurrency(row.sales, currency)}
                     </td>
                     <td className="py-3 px-4 text-right text-sm text-emerald-600 dark:text-emerald-400 font-medium">
                       {formatCurrency(row.receipts, currency)}
                     </td>
-                    <td className="py-3 pl-4 text-right text-sm text-coral font-medium">
+                    <td className="py-3 pl-4 text-right text-sm text-negative font-medium">
                       {formatCurrency(row.due, currency)}
                     </td>
                   </tr>
@@ -357,7 +360,7 @@ export default function DashboardPage() {
                   <tr>
                     <td
                       colSpan={4}
-                      className="py-8 text-center text-sm text-text-secondary dark:text-white/50"
+                      className="py-8 text-center text-sm text-ink-muted dark:text-white/50"
                     >
                       No period data available yet.
                     </td>
@@ -375,34 +378,34 @@ export default function DashboardPage() {
         delay={0.3}
       >
         <StaggerItem>
-          <div className="rounded-[var(--radius-card)] bg-white p-5 shadow-[var(--shadow-card)] dark:bg-surface-dark dark:border dark:border-white/10">
-            <p className="text-sm font-medium text-text-secondary dark:text-white/50">
+          <div className="rounded-[var(--radius-card)] bg-white p-5 shadow-[var(--shadow-card)] dark:bg-graphite dark:border dark:border-white/10">
+            <p className="text-sm font-medium text-ink-muted dark:text-white/50">
               Unpaid
             </p>
-            <p className="mt-1 text-xl font-bold text-text-primary dark:text-white">
+            <p className="mt-1 text-xl font-bold text-ink dark:text-white">
               {formatCurrency(stats?.total_unpaid || 0, currency)}
             </p>
-            <p className="mt-0.5 text-xs text-text-secondary dark:text-white/40">
+            <p className="mt-0.5 text-xs text-ink-muted dark:text-white/40">
               {stats?.invoices_unpaid_count || 0} invoices pending
             </p>
           </div>
         </StaggerItem>
         <StaggerItem>
-          <div className="rounded-[var(--radius-card)] bg-white p-5 shadow-[var(--shadow-card)] dark:bg-surface-dark dark:border dark:border-white/10">
-            <p className="text-sm font-medium text-text-secondary dark:text-white/50">
+          <div className="rounded-[var(--radius-card)] bg-white p-5 shadow-[var(--shadow-card)] dark:bg-graphite dark:border dark:border-white/10">
+            <p className="text-sm font-medium text-ink-muted dark:text-white/50">
               Total Expenses
             </p>
-            <p className="mt-1 text-xl font-bold text-text-primary dark:text-white">
+            <p className="mt-1 text-xl font-bold text-ink dark:text-white">
               {formatCurrency(stats?.total_expenses || 0, currency)}
             </p>
           </div>
         </StaggerItem>
         <StaggerItem>
-          <div className="rounded-[var(--radius-card)] bg-white p-5 shadow-[var(--shadow-card)] dark:bg-surface-dark dark:border dark:border-white/10">
-            <p className="text-sm font-medium text-text-secondary dark:text-white/50">
+          <div className="rounded-[var(--radius-card)] bg-white p-5 shadow-[var(--shadow-card)] dark:bg-graphite dark:border dark:border-white/10">
+            <p className="text-sm font-medium text-ink-muted dark:text-white/50">
               Total Invoices
             </p>
-            <p className="mt-1 text-xl font-bold text-text-primary dark:text-white">
+            <p className="mt-1 text-xl font-bold text-ink dark:text-white">
               {stats?.invoices_count || 0}
             </p>
           </div>

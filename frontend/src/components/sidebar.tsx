@@ -95,7 +95,7 @@ export default function Sidebar() {
             className={cn(
               "flex items-center gap-3 rounded-[var(--radius-button)] px-3 py-2.5 text-sm font-medium transition-colors",
               pathname.startsWith(item.href)
-                ? "bg-coral/20 text-coral-light"
+                ? "bg-brass-on-dark/15 text-brass-on-dark"
                 : "text-white/65 hover:bg-white/10 hover:text-white"
             )}
           >
@@ -108,7 +108,7 @@ export default function Sidebar() {
       {/* User */}
       <div className="border-t border-white/10 px-3 py-3">
         <div className="flex items-center gap-3 rounded-[var(--radius-button)] px-3 py-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-petrol-mid text-xs font-semibold text-white">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brass text-xs font-semibold text-white">
             {user?.first_name?.[0]}
             {user?.last_name?.[0]}
           </div>
@@ -135,7 +135,7 @@ export default function Sidebar() {
       {/* Mobile toggle */}
       <button
         onClick={() => setMobileOpen(!mobileOpen)}
-        className="fixed left-4 top-4 z-50 rounded-[var(--radius-button)] bg-petrol-dark p-2 text-white lg:hidden shadow-lg"
+        className="fixed left-4 top-4 z-50 rounded-[var(--radius-button)] bg-brass p-2 text-white lg:hidden shadow-lg"
       >
         {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </button>
@@ -151,7 +151,7 @@ export default function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-40 h-screen w-64 bg-petrol-dark transition-transform lg:translate-x-0",
+          "fixed left-0 top-0 z-40 h-screen w-64 bg-graphite transition-transform lg:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >

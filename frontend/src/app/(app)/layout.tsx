@@ -22,10 +22,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-surface-light">
+      <div className="flex h-screen items-center justify-center bg-surface">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-petrol-dark border-t-transparent" />
-          <p className="text-sm text-text-secondary">Loading...</p>
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-brass border-t-transparent" />
+          <p className="text-sm text-ink-muted">Loading...</p>
         </div>
       </div>
     );
@@ -34,7 +34,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-surface-light">
+    <div className="min-h-screen bg-surface">
       {hasUpdate && <UpdateBanner />}
       <Sidebar />
       <div className="lg:ml-64">

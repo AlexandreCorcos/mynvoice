@@ -172,7 +172,7 @@ export default function ReportsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-text-primary dark:text-white">
+        <h1 className="text-2xl font-bold text-ink dark:text-white">
           Reports
         </h1>
 
@@ -185,8 +185,8 @@ export default function ReportsPage() {
                 onClick={() => setPeriod(opt.value)}
                 className={`px-4 py-2 text-sm font-medium transition-colors ${
                   period === opt.value
-                    ? "bg-petrol-dark text-white dark:bg-petrol-mid"
-                    : "bg-white text-text-secondary hover:bg-gray-50 dark:bg-surface-dark dark:text-white/60 dark:hover:bg-white/5"
+                    ? "bg-brass text-white dark:bg-brass"
+                    : "bg-white text-ink-muted hover:bg-gray-50 dark:bg-graphite dark:text-white/60 dark:hover:bg-white/5"
                 }`}
               >
                 {opt.label}
@@ -195,21 +195,21 @@ export default function ReportsPage() {
           </div>
 
           {/* Year selector */}
-          <div className="inline-flex items-center gap-1 rounded-[var(--radius-button)] border border-gray-200 bg-white dark:border-white/10 dark:bg-surface-dark">
+          <div className="inline-flex items-center gap-1 rounded-[var(--radius-button)] border border-gray-200 bg-white dark:border-white/10 dark:bg-graphite">
             <button
               onClick={() => setYear((y) => y - 1)}
-              className="p-2 text-text-secondary transition-colors hover:text-text-primary dark:text-white/50 dark:hover:text-white"
+              className="p-2 text-ink-muted transition-colors hover:text-ink dark:text-white/50 dark:hover:text-white"
               aria-label="Previous year"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="min-w-[3.5rem] text-center text-sm font-semibold text-text-primary dark:text-white">
+            <span className="min-w-[3.5rem] text-center text-sm font-semibold text-ink dark:text-white">
               {year}
             </span>
             <button
               onClick={() => setYear((y) => y + 1)}
               disabled={year >= CURRENT_YEAR}
-              className="p-2 text-text-secondary transition-colors hover:text-text-primary disabled:opacity-30 dark:text-white/50 dark:hover:text-white"
+              className="p-2 text-ink-muted transition-colors hover:text-ink disabled:opacity-30 dark:text-white/50 dark:hover:text-white"
               aria-label="Next year"
             >
               <ChevronRight className="h-4 w-4" />
@@ -264,12 +264,12 @@ export default function ReportsPage() {
 
       {/* Revenue by Period chart */}
       <FadeIn delay={0.15}>
-        <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] dark:border dark:border-white/10 dark:bg-surface-dark">
+        <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] dark:border dark:border-white/10 dark:bg-graphite">
           <div className="mb-6">
-            <h3 className="text-base font-semibold text-text-primary dark:text-white">
+            <h3 className="text-base font-semibold text-ink dark:text-white">
               Revenue by Period
             </h3>
-            <p className="text-sm text-text-secondary dark:text-white/50">
+            <p className="text-sm text-ink-muted dark:text-white/50">
               Invoiced vs received vs outstanding
             </p>
           </div>
@@ -277,15 +277,15 @@ export default function ReportsPage() {
           {revenueByPeriod.length > 0 ? (
             <ResponsiveContainer width="100%" height={360}>
               <BarChart data={revenueByPeriod} barGap={4}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
                 <XAxis
                   dataKey="period"
-                  tick={{ fontSize: 12, fill: "#5C677D" }}
+                  tick={{ fontSize: 12, fill: "var(--ink-muted)" }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fontSize: 12, fill: "#5C677D" }}
+                  tick={{ fontSize: 12, fill: "var(--ink-muted)" }}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={(v) => `${currencySymbol}${v}`}
@@ -297,36 +297,39 @@ export default function ReportsPage() {
                   ]}
                   contentStyle={{
                     borderRadius: "10px",
-                    border: "none",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                    border: "1px solid var(--line)",
+                    background: "var(--card)",
+                    color: "var(--ink)",
+                    boxShadow: "var(--shadow-dropdown-v)",
                   }}
                 />
                 <Legend />
+                {/* Invoiced = brass · Received = positive · Outstanding = at risk */}
                 <Bar
                   name="Invoiced"
                   dataKey="invoiced"
-                  fill="#0F4C5C"
+                  fill="var(--brass)"
                   radius={[4, 4, 0, 0]}
                   maxBarSize={40}
                 />
                 <Bar
                   name="Received"
                   dataKey="received"
-                  fill="#10B981"
+                  fill="var(--positive)"
                   radius={[4, 4, 0, 0]}
                   maxBarSize={40}
                 />
                 <Bar
                   name="Outstanding"
                   dataKey="outstanding"
-                  fill="#FF6B6B"
+                  fill="var(--negative)"
                   radius={[4, 4, 0, 0]}
                   maxBarSize={40}
                 />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex h-64 items-center justify-center text-sm text-text-secondary dark:text-white/50">
+            <div className="flex h-64 items-center justify-center text-sm text-ink-muted dark:text-white/50">
               No revenue data for this period.
             </div>
           )}
@@ -335,24 +338,24 @@ export default function ReportsPage() {
 
       {/* Revenue by Client table */}
       <FadeIn delay={0.2}>
-        <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] dark:border dark:border-white/10 dark:bg-surface-dark">
-          <h3 className="mb-4 text-base font-semibold text-text-primary dark:text-white">
+        <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] dark:border dark:border-white/10 dark:bg-graphite">
+          <h3 className="mb-4 text-base font-semibold text-ink dark:text-white">
             Revenue by Client
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-gray-100 dark:border-white/10">
-                  <th className="pb-3 pr-4 text-xs font-semibold uppercase tracking-wider text-text-secondary dark:text-white/50">
+                  <th className="pb-3 pr-4 text-xs font-semibold uppercase tracking-wider text-ink-muted dark:text-white/50">
                     Client Name
                   </th>
-                  <th className="pb-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-text-secondary dark:text-white/50">
+                  <th className="pb-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-ink-muted dark:text-white/50">
                     Invoiced
                   </th>
-                  <th className="pb-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-text-secondary dark:text-white/50">
+                  <th className="pb-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-ink-muted dark:text-white/50">
                     Received
                   </th>
-                  <th className="pb-3 pl-4 text-right text-xs font-semibold uppercase tracking-wider text-text-secondary dark:text-white/50">
+                  <th className="pb-3 pl-4 text-right text-xs font-semibold uppercase tracking-wider text-ink-muted dark:text-white/50">
                     Outstanding
                   </th>
                 </tr>
@@ -363,16 +366,16 @@ export default function ReportsPage() {
                     key={row.client_id || `no-client-${index}`}
                     className="border-b border-gray-50 last:border-0 dark:border-white/5"
                   >
-                    <td className="py-3 pr-4 text-sm font-medium text-text-primary dark:text-white">
+                    <td className="py-3 pr-4 text-sm font-medium text-ink dark:text-white">
                       {row.client_name || "No client"}
                     </td>
-                    <td className="py-3 px-4 text-right text-sm text-text-primary dark:text-white">
+                    <td className="py-3 px-4 text-right text-sm text-ink dark:text-white">
                       {formatCurrency(row.invoiced, currency)}
                     </td>
                     <td className="py-3 px-4 text-right text-sm font-medium text-emerald-600 dark:text-emerald-400">
                       {formatCurrency(row.received, currency)}
                     </td>
-                    <td className="py-3 pl-4 text-right text-sm font-medium text-coral">
+                    <td className="py-3 pl-4 text-right text-sm font-medium text-negative">
                       {formatCurrency(row.outstanding, currency)}
                     </td>
                   </tr>
@@ -381,7 +384,7 @@ export default function ReportsPage() {
                   <tr>
                     <td
                       colSpan={4}
-                      className="py-8 text-center text-sm text-text-secondary dark:text-white/50"
+                      className="py-8 text-center text-sm text-ink-muted dark:text-white/50"
                     >
                       No client revenue data available.
                     </td>
@@ -395,8 +398,8 @@ export default function ReportsPage() {
 
       {/* Expenses by Category */}
       <FadeIn delay={0.25}>
-        <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] dark:border dark:border-white/10 dark:bg-surface-dark">
-          <h3 className="mb-4 text-base font-semibold text-text-primary dark:text-white">
+        <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] dark:border dark:border-white/10 dark:bg-graphite">
+          <h3 className="mb-4 text-base font-semibold text-ink dark:text-white">
             Expenses by Category
           </h3>
 
@@ -407,21 +410,21 @@ export default function ReportsPage() {
                 return (
                   <div key={cat.category || `uncat-${index}`} className="group">
                     <div className="mb-1 flex items-center justify-between">
-                      <span className="text-sm font-medium text-text-primary dark:text-white">
+                      <span className="text-sm font-medium text-ink dark:text-white">
                         {cat.category || "Uncategorised"}
                       </span>
                       <div className="flex items-center gap-3">
-                        <span className="text-xs text-text-secondary dark:text-white/40">
+                        <span className="text-xs text-ink-muted dark:text-white/40">
                           {cat.count} {cat.count === 1 ? "expense" : "expenses"}
                         </span>
-                        <span className="text-sm font-semibold text-text-primary dark:text-white">
+                        <span className="text-sm font-semibold text-ink dark:text-white">
                           {formatCurrency(cat.total, currency)}
                         </span>
                       </div>
                     </div>
                     <div className="h-2.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
                       <div
-                        className="h-full rounded-full bg-petrol-dark transition-all duration-500 dark:bg-petrol-mid"
+                        className="h-full rounded-full bg-brass transition-all duration-500 dark:bg-brass"
                         style={{ width: `${pct}%`, minWidth: pct > 0 ? "4px" : "0" }}
                       />
                     </div>
@@ -430,7 +433,7 @@ export default function ReportsPage() {
               })}
             </div>
           ) : (
-            <div className="flex h-32 items-center justify-center text-sm text-text-secondary dark:text-white/50">
+            <div className="flex h-32 items-center justify-center text-sm text-ink-muted dark:text-white/50">
               No expense data available for this period.
             </div>
           )}

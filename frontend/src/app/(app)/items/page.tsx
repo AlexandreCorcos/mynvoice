@@ -74,13 +74,13 @@ export default function ItemsPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
           <input
             type="text"
             placeholder="Search items..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-[var(--radius-input)] border border-gray-300 py-2.5 pl-10 pr-4 text-sm focus:border-petrol-mid focus:outline-none"
+            className="w-full rounded-[var(--radius-input)] border border-gray-300 py-2.5 pl-10 pr-4 text-sm focus:border-brass-soft focus:outline-none"
           />
         </div>
         <button
@@ -88,7 +88,7 @@ export default function ItemsPage() {
             setEditingItem(null);
             setShowModal(true);
           }}
-          className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-petrol-dark px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-petrol-mid"
+          className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-brass px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brass-strong"
         >
           <Plus className="h-4 w-4" />
           New Item
@@ -113,7 +113,7 @@ export default function ItemsPage() {
           action={
             <button
               onClick={() => setShowModal(true)}
-              className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-coral px-4 py-2.5 text-sm font-semibold text-white hover:bg-coral-dark transition-colors"
+              className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-brass px-4 py-2.5 text-sm font-semibold text-white hover:bg-brass-strong transition-colors"
             >
               <Plus className="h-4 w-4" />
               Add your first item
@@ -122,11 +122,11 @@ export default function ItemsPage() {
         />
       ) : filtered.length === 0 && search ? (
         <div className="flex flex-col items-center justify-center rounded-[var(--radius-card)] bg-white px-8 py-16 text-center shadow-[var(--shadow-card)]">
-          <Search className="h-7 w-7 text-text-secondary" />
-          <h3 className="mt-4 text-base font-semibold text-text-primary">
+          <Search className="h-7 w-7 text-ink-muted" />
+          <h3 className="mt-4 text-base font-semibold text-ink">
             No results found
           </h3>
-          <p className="mt-1.5 text-sm text-text-secondary">
+          <p className="mt-1.5 text-sm text-ink-muted">
             No items match &ldquo;{search}&rdquo;
           </p>
         </div>
@@ -134,7 +134,7 @@ export default function ItemsPage() {
         /* Table */
         <div className="rounded-[var(--radius-card)] bg-white shadow-[var(--shadow-card)] overflow-visible">
           {/* Table header */}
-          <div className="hidden sm:grid sm:grid-cols-[1fr_1.5fr_0.75fr_0.6fr_0.6fr_0.4fr] gap-4 border-b border-gray-100 px-5 py-3 text-xs font-semibold uppercase tracking-wider text-text-secondary">
+          <div className="hidden sm:grid sm:grid-cols-[1fr_1.5fr_0.75fr_0.6fr_0.6fr_0.4fr] gap-4 border-b border-gray-100 px-5 py-3 text-xs font-semibold uppercase tracking-wider text-ink-muted">
             <span>Name</span>
             <span>Description</span>
             <span>Rate</span>
@@ -147,30 +147,30 @@ export default function ItemsPage() {
           {filtered.map((item) => (
             <div
               key={item.id}
-              className="group relative grid grid-cols-1 sm:grid-cols-[1fr_1.5fr_0.75fr_0.6fr_0.6fr_0.4fr] gap-2 sm:gap-4 items-center border-b border-gray-50 px-5 py-3.5 last:border-0 transition-colors hover:bg-surface-light/50"
+              className="group relative grid grid-cols-1 sm:grid-cols-[1fr_1.5fr_0.75fr_0.6fr_0.6fr_0.4fr] gap-2 sm:gap-4 items-center border-b border-gray-50 px-5 py-3.5 last:border-0 transition-colors hover:bg-surface/50"
             >
               {/* Name */}
               <div className="flex items-center gap-3">
-                <div className="hidden sm:flex h-8 w-8 items-center justify-center rounded-lg bg-petrol-dark/5">
-                  <Package className="h-4 w-4 text-petrol-dark" />
+                <div className="hidden sm:flex h-8 w-8 items-center justify-center rounded-lg bg-brass/5">
+                  <Package className="h-4 w-4 text-ink" />
                 </div>
-                <span className="text-sm font-semibold text-text-primary truncate">
+                <span className="text-sm font-semibold text-ink truncate">
                   {item.name}
                 </span>
               </div>
 
               {/* Description */}
-              <span className="text-sm text-text-secondary truncate">
+              <span className="text-sm text-ink-muted truncate">
                 {item.description || "\u2014"}
               </span>
 
               {/* Rate */}
-              <span className="text-sm font-medium text-text-primary">
+              <span className="text-sm font-medium text-ink">
                 {formatCurrency(item.unit_price, currency)}
               </span>
 
               {/* Unit */}
-              <span className="text-sm text-text-secondary capitalize">
+              <span className="text-sm text-ink-muted capitalize">
                 {item.unit || "\u2014"}
               </span>
 
@@ -195,7 +195,7 @@ export default function ItemsPage() {
                       e.stopPropagation();
                       setMenuOpen(menuOpen === item.id ? null : item.id);
                     }}
-                    className="rounded-lg p-1.5 text-text-secondary opacity-0 transition-opacity hover:bg-gray-100 group-hover:opacity-100"
+                    className="rounded-lg p-1.5 text-ink-muted opacity-0 transition-opacity hover:bg-gray-100 group-hover:opacity-100"
                   >
                     <MoreHorizontal className="h-4 w-4" />
                   </button>
@@ -210,7 +210,7 @@ export default function ItemsPage() {
                           setShowModal(true);
                           setMenuOpen(null);
                         }}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-surface-light"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-surface"
                       >
                         <Pencil className="h-3.5 w-3.5" />
                         Edit
@@ -315,12 +315,12 @@ function ItemModal({
       <div className="w-full max-w-md rounded-[var(--radius-card)] bg-white shadow-[var(--shadow-dropdown)]">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="text-lg font-semibold text-text-primary">
+          <h2 className="text-lg font-semibold text-ink">
             {item ? "Edit Item" : "New Item"}
           </h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-text-secondary hover:bg-surface-light transition-colors"
+            className="rounded-lg p-1.5 text-ink-muted hover:bg-surface transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -336,7 +336,7 @@ function ItemModal({
 
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">
+            <label className="block text-sm font-medium text-ink mb-1">
               Name *
             </label>
             <input
@@ -345,13 +345,13 @@ function ItemModal({
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               required
               placeholder="e.g. Web Development, Logo Design"
-              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none"
+              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">
+            <label className="block text-sm font-medium text-ink mb-1">
               Description
             </label>
             <textarea
@@ -361,14 +361,14 @@ function ItemModal({
               }
               rows={2}
               placeholder="Optional description for this item"
-              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none resize-none"
+              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none resize-none"
             />
           </div>
 
           {/* Rate & Unit */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-ink mb-1">
                 Rate ({currency}) *
               </label>
               <input
@@ -381,11 +381,11 @@ function ItemModal({
                 }
                 required
                 placeholder="0.00"
-                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none"
+                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-ink mb-1">
                 Unit
               </label>
               {useCustomUnit ? (
@@ -395,7 +395,7 @@ function ItemModal({
                     value={customUnit}
                     onChange={(e) => setCustomUnit(e.target.value)}
                     placeholder="Custom unit"
-                    className="flex-1 rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none"
+                    className="flex-1 rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
                   />
                   <button
                     type="button"
@@ -404,7 +404,7 @@ function ItemModal({
                       setCustomUnit("");
                       setForm((f) => ({ ...f, unit: "hour" }));
                     }}
-                    className="rounded-[var(--radius-input)] border border-gray-300 px-2 text-text-secondary hover:bg-gray-50 transition-colors"
+                    className="rounded-[var(--radius-input)] border border-gray-300 px-2 text-ink-muted hover:bg-gray-50 transition-colors"
                     title="Use preset units"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -420,7 +420,7 @@ function ItemModal({
                       setForm((f) => ({ ...f, unit: e.target.value }));
                     }
                   }}
-                  className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-petrol-mid focus:outline-none bg-white"
+                  className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none bg-white"
                 >
                   {UNIT_OPTIONS.map((u) => (
                     <option key={u} value={u}>
@@ -445,9 +445,9 @@ function ItemModal({
                   }
                   className="peer sr-only"
                 />
-                <div className="h-5 w-9 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all peer-checked:bg-petrol-dark peer-checked:after:translate-x-full" />
+                <div className="h-5 w-9 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all peer-checked:bg-brass peer-checked:after:translate-x-full" />
               </label>
-              <span className="text-sm text-text-primary">Active</span>
+              <span className="text-sm text-ink">Active</span>
             </div>
           )}
 
@@ -456,14 +456,14 @@ function ItemModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-text-primary hover:bg-gray-50 transition-colors"
+              className="rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-ink hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="rounded-[var(--radius-button)] bg-petrol-dark px-4 py-2 text-sm font-semibold text-white hover:bg-petrol-mid disabled:opacity-50 transition-colors"
+              className="rounded-[var(--radius-button)] bg-brass px-4 py-2 text-sm font-semibold text-white hover:bg-brass-strong disabled:opacity-50 transition-colors"
             >
               {saving ? "Saving..." : item ? "Update" : "Create"}
             </button>

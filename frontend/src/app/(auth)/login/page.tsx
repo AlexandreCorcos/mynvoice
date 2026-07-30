@@ -40,20 +40,20 @@ export default function LoginPage() {
         <Logo height={34} href={null} />
       </div>
 
-      <h2 className="text-2xl font-bold text-text-primary">Welcome back</h2>
-      <p className="mt-1.5 text-sm text-text-secondary">
+      <h2 className="text-2xl font-bold text-ink">Welcome back</h2>
+      <p className="mt-1.5 text-sm text-ink-muted">
         Sign in to your account to continue
       </p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-5">
         {error && (
-          <div className="rounded-[var(--radius-input)] bg-red-50 px-4 py-3 text-sm text-coral-dark">
+          <div className="rounded-[var(--radius-input)] bg-red-50 px-4 py-3 text-sm text-negative">
             {error}
           </div>
         )}
 
         <div>
-          <label className="block text-sm font-medium text-text-primary mb-1.5">
+          <label className="block text-sm font-medium text-ink mb-1.5">
             Email
           </label>
           <input
@@ -61,13 +61,13 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-petrol-mid focus:ring-0 focus:outline-none"
+            className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-brass-soft focus:ring-0 focus:outline-none"
             placeholder="you@example.com"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-text-primary mb-1.5">
+          <label className="block text-sm font-medium text-ink mb-1.5">
             Password
           </label>
           <input
@@ -75,7 +75,7 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-petrol-mid focus:ring-0 focus:outline-none"
+            className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-brass-soft focus:ring-0 focus:outline-none"
             placeholder="Enter your password"
           />
         </div>
@@ -83,7 +83,7 @@ export default function LoginPage() {
         <div className="flex items-center justify-end">
           <Link
             href="/forgot-password"
-            className="text-sm text-petrol-mid hover:text-petrol-dark transition-colors"
+            className="text-sm text-brass-ink hover:text-brass-ink transition-colors"
           >
             Forgot password?
           </Link>
@@ -92,7 +92,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-[var(--radius-button)] bg-petrol-dark py-2.5 text-sm font-semibold text-white transition-colors hover:bg-petrol-mid disabled:opacity-50"
+          className="w-full rounded-[var(--radius-button)] bg-brass py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brass-strong disabled:opacity-50"
         >
           {loading ? "Signing in..." : "Sign in"}
         </button>
@@ -102,7 +102,7 @@ export default function LoginPage() {
             <div className="w-full border-t border-gray-200" />
           </div>
           <div className="relative flex justify-center">
-            <span className="bg-white px-3 text-xs text-text-secondary">
+            <span className="bg-white px-3 text-xs text-ink-muted">
               or
             </span>
           </div>
@@ -110,17 +110,17 @@ export default function LoginPage() {
 
         <button
           type="button"
-          className="w-full rounded-[var(--radius-button)] border border-gray-300 bg-white py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-gray-50"
+          className="w-full rounded-[var(--radius-button)] border border-gray-300 bg-white py-2.5 text-sm font-medium text-ink transition-colors hover:bg-gray-50"
         >
           Continue with Google
         </button>
       </form>
 
-      <p className="mt-8 text-center text-sm text-text-secondary">
+      <p className="mt-8 text-center text-sm text-ink-muted">
         Don&apos;t have an account?{" "}
         <Link
           href="/register"
-          className="font-medium text-coral hover:text-coral-dark transition-colors"
+          className="font-medium text-brass-ink hover:text-brass transition-colors"
         >
           Sign up free
         </Link>

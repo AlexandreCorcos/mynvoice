@@ -208,7 +208,7 @@ export default function SettingsPage() {
   ];
 
   const inputClass =
-    "w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2.5 text-sm focus:border-petrol-mid focus:outline-none";
+    "w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2.5 text-sm focus:border-brass-soft focus:outline-none";
 
   const currentLogo = logoPreview || company?.logo_url;
 
@@ -230,8 +230,8 @@ export default function SettingsPage() {
             onClick={() => setActiveTab(tab.key)}
             className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === tab.key
-                ? "bg-petrol-dark text-white"
-                : "text-text-secondary hover:text-text-primary hover:bg-surface-light"
+                ? "bg-brass text-white"
+                : "text-ink-muted hover:text-ink hover:bg-surface"
             }`}
           >
             {tab.label}
@@ -245,12 +245,12 @@ export default function SettingsPage() {
           onSubmit={saveProfile}
           className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] space-y-5"
         >
-          <h2 className="text-base font-semibold text-text-primary">
+          <h2 className="text-base font-semibold text-ink">
             Personal Details
           </h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-ink mb-1">
                 First name
               </label>
               <input
@@ -263,7 +263,7 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-ink mb-1">
                 Last name
               </label>
               <input
@@ -277,7 +277,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">
+            <label className="block text-sm font-medium text-ink mb-1">
               Phone
             </label>
             <input
@@ -291,7 +291,7 @@ export default function SettingsPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-ink mb-1">
                 Language
               </label>
               <select
@@ -305,7 +305,7 @@ export default function SettingsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-ink mb-1">
                 Currency
               </label>
               <select
@@ -325,7 +325,7 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={saving}
-              className="rounded-[var(--radius-button)] bg-petrol-dark px-5 py-2.5 text-sm font-semibold text-white hover:bg-petrol-mid disabled:opacity-50 transition-colors"
+              className="rounded-[var(--radius-button)] bg-brass px-5 py-2.5 text-sm font-semibold text-white hover:bg-brass-strong disabled:opacity-50 transition-colors"
             >
               {saving ? "Saving..." : "Save Changes"}
             </button>
@@ -338,13 +338,13 @@ export default function SettingsPage() {
         <form onSubmit={saveCompany} className="space-y-6">
           {/* Business Information */}
           <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] space-y-5">
-            <h2 className="text-base font-semibold text-text-primary">
+            <h2 className="text-base font-semibold text-ink">
               Business Information
             </h2>
 
             {/* Logo Upload */}
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
+              <label className="block text-sm font-medium text-ink mb-2">
                 Business Logo
               </label>
               <div className="flex items-center gap-4">
@@ -380,12 +380,12 @@ export default function SettingsPage() {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploadingLogo}
-                    className="inline-flex items-center gap-2 rounded-[var(--radius-button)] border border-gray-300 px-3 py-2 text-sm font-medium text-text-primary hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                    className="inline-flex items-center gap-2 rounded-[var(--radius-button)] border border-gray-300 px-3 py-2 text-sm font-medium text-ink hover:bg-gray-50 disabled:opacity-50 transition-colors"
                   >
                     <Upload className="h-4 w-4" />
                     {uploadingLogo ? "Uploading..." : currentLogo ? "Change Logo" : "Upload Logo"}
                   </button>
-                  <p className="mt-1 text-xs text-text-secondary">
+                  <p className="mt-1 text-xs text-ink-muted">
                     PNG, JPG up to 5MB. Will appear on invoices.
                   </p>
                 </div>
@@ -394,7 +394,7 @@ export default function SettingsPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
+                <label className="block text-sm font-medium text-ink mb-1">
                   Business name *
                 </label>
                 <input
@@ -408,7 +408,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
+                <label className="block text-sm font-medium text-ink mb-1">
                   Legal name
                 </label>
                 <input
@@ -426,7 +426,7 @@ export default function SettingsPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
+                <label className="block text-sm font-medium text-ink mb-1">
                   VAT number
                 </label>
                 <input
@@ -442,7 +442,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
+                <label className="block text-sm font-medium text-ink mb-1">
                   Tax ID
                 </label>
                 <input
@@ -457,7 +457,7 @@ export default function SettingsPage() {
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
+                <label className="block text-sm font-medium text-ink mb-1">
                   Email
                 </label>
                 <input
@@ -470,7 +470,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
+                <label className="block text-sm font-medium text-ink mb-1">
                   Phone
                 </label>
                 <input
@@ -483,7 +483,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
+                <label className="block text-sm font-medium text-ink mb-1">
                   Website
                 </label>
                 <input
@@ -498,7 +498,7 @@ export default function SettingsPage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-ink mb-1">
                 Address
               </label>
               <input
@@ -515,7 +515,7 @@ export default function SettingsPage() {
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
+                <label className="block text-sm font-medium text-ink mb-1">
                   City
                 </label>
                 <input
@@ -528,7 +528,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
+                <label className="block text-sm font-medium text-ink mb-1">
                   Postcode
                 </label>
                 <input
@@ -541,7 +541,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
+                <label className="block text-sm font-medium text-ink mb-1">
                   Country
                 </label>
                 <input
@@ -559,16 +559,16 @@ export default function SettingsPage() {
           {/* Default Invoice Settings */}
           <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] space-y-5">
             <div>
-              <h2 className="text-base font-semibold text-text-primary">
+              <h2 className="text-base font-semibold text-ink">
                 Default Invoice Settings
               </h2>
-              <p className="mt-1 text-xs text-text-secondary">
+              <p className="mt-1 text-xs text-ink-muted">
                 These are defaults. You can override per client.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
+                <label className="block text-sm font-medium text-ink mb-1">
                   Invoice prefix
                 </label>
                 <input
@@ -584,7 +584,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
+                <label className="block text-sm font-medium text-ink mb-1">
                   Payment terms (days)
                 </label>
                 <input
@@ -615,7 +615,7 @@ export default function SettingsPage() {
                 }
                 className={`relative mt-0.5 inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                   companyForm.use_year_in_number
-                    ? "bg-petrol-dark"
+                    ? "bg-brass"
                     : "bg-gray-300"
                 }`}
               >
@@ -628,17 +628,17 @@ export default function SettingsPage() {
                 />
               </button>
               <div>
-                <p className="text-sm font-medium text-text-primary">
+                <p className="text-sm font-medium text-ink">
                   Include year in invoice numbers
                 </p>
-                <p className="text-xs text-text-secondary mt-0.5">
+                <p className="text-xs text-ink-muted mt-0.5">
                   e.g. INV-26-00001 instead of INV-00001
                 </p>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-ink mb-1">
                 Default invoice notes
               </label>
               <textarea
@@ -657,12 +657,12 @@ export default function SettingsPage() {
 
           {/* Bank Details */}
           <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)] space-y-5">
-            <h2 className="text-base font-semibold text-text-primary">
+            <h2 className="text-base font-semibold text-ink">
               Bank Details
             </h2>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
+                <label className="block text-sm font-medium text-ink mb-1">
                   Bank name
                 </label>
                 <input
@@ -678,7 +678,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
+                <label className="block text-sm font-medium text-ink mb-1">
                   Account name
                 </label>
                 <input
@@ -696,7 +696,7 @@ export default function SettingsPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
+                <label className="block text-sm font-medium text-ink mb-1">
                   Account number
                 </label>
                 <input
@@ -712,7 +712,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
+                <label className="block text-sm font-medium text-ink mb-1">
                   Sort code
                 </label>
                 <input
@@ -734,7 +734,7 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={saving}
-              className="rounded-[var(--radius-button)] bg-petrol-dark px-5 py-2.5 text-sm font-semibold text-white hover:bg-petrol-mid disabled:opacity-50 transition-colors"
+              className="rounded-[var(--radius-button)] bg-brass px-5 py-2.5 text-sm font-semibold text-white hover:bg-brass-strong disabled:opacity-50 transition-colors"
             >
               {saving ? "Saving..." : "Save Business Profile"}
             </button>
