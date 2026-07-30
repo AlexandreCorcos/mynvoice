@@ -22,10 +22,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-surface">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-brass border-t-transparent" />
-          <p className="text-sm text-ink-muted">Loading...</p>
+      <div className="flex h-dvh items-center justify-center bg-surface">
+        <div className="flex flex-col items-center gap-3.5">
+          <span className="relative flex h-9 w-9 items-center justify-center">
+            <span className="absolute inset-0 animate-spin rounded-full border-2 border-line border-t-brass" />
+            <span className="h-1.5 w-1.5 rounded-full bg-brass-ink" />
+          </span>
+          <p className="text-[13px] text-ink-muted">Loading your workspace…</p>
         </div>
       </div>
     );
@@ -34,12 +37,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-dvh bg-surface">
       {hasUpdate && <UpdateBanner />}
       <Sidebar />
       <div className="lg:ml-64">
         <Topbar />
-        <main className="p-6 lg:p-8">
+        <main className="mx-auto w-full max-w-[1360px] px-5 py-6 sm:px-6 lg:px-8 lg:py-8">
           <PageTransition>{children}</PageTransition>
         </main>
       </div>

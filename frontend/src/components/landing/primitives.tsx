@@ -16,45 +16,24 @@
 import {
   motion,
   useAnimationFrame,
-  useInView,
   useMotionTemplate,
   useMotionValue,
-  useReducedMotion,
   useScroll,
   useSpring,
   useTransform,
   useVelocity,
-  animate,
   type MotionValue,
 } from "framer-motion";
-import {
-  useEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-  type ElementType,
-  type ReactNode,
-} from "react";
+import { useRef, type CSSProperties, type ElementType, type ReactNode } from "react";
+import { EASE_OUT, useCalmMotion } from "@/components/motion";
 import { cn } from "@/lib/utils";
 
-/* Our house easing — a long, confident settle. */
-export const EASE_OUT = [0.16, 1, 0.3, 1] as const;
-export const EASE_IN_OUT = [0.76, 0, 0.24, 1] as const;
+/* `EASE_OUT`, `useCalmMotion` and `CountUp` are shared with the app — they
+   live in components/motion.tsx and are re-exported here so landing code can
+   keep importing everything it needs from one place. */
+export { EASE_OUT, useCalmMotion, CountUp } from "@/components/motion";
 
-/**
- * `prefers-reduced-motion`, but hydration-safe.
- *
- * The raw hook reports `false` during SSR and the real value on the client,
- * so any component that changes its markup based on it mismatches on
- * hydration for the very people it's meant to help. Deferring to after mount
- * keeps the first client render identical to the server's.
- */
-export function useCalmMotion() {
-  const prefers = useReducedMotion();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  return mounted && Boolean(prefers);
-}
+export const EASE_IN_OUT = [0.76, 0, 0.24, 1] as const;
 
 /* ------------------------------------------------------------------ */
 /* Reveal — the workhorse scroll-in                                    */
@@ -419,60 +398,6 @@ export function Marquee({
         ))}
       </motion.div>
     </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* CountUp — a number that settles when it scrolls into view           */
-/* ------------------------------------------------------------------ */
-
-export function CountUp({
-  to,
-  from = 0,
-  duration = 1.6,
-  decimals = 0,
-  prefix = "",
-  suffix = "",
-  className,
-}: {
-  to: number;
-  from?: number;
-  duration?: number;
-  decimals?: number;
-  prefix?: string;
-  suffix?: string;
-  className?: string;
-}) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-60px" });
-  const reduce = useCalmMotion();
-  const [value, setValue] = useState(reduce ? to : from);
-
-  useEffect(() => {
-    // `reduce` only becomes true after mount, so jump to the final figure
-    // rather than leaving the counter stranded at its starting value.
-    if (reduce) {
-      setValue(to);
-      return;
-    }
-    if (!inView) return;
-    const controls = animate(from, to, {
-      duration,
-      ease: EASE_OUT,
-      onUpdate: (v) => setValue(v),
-    });
-    return () => controls.stop();
-  }, [inView, from, to, duration, reduce]);
-
-  return (
-    <span ref={ref} className={className}>
-      {prefix}
-      {value.toLocaleString("en-GB", {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals,
-      })}
-      {suffix}
-    </span>
   );
 }
 

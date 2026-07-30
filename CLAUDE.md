@@ -147,6 +147,52 @@ Rules that keep it coherent:
   must clip their decorative layers in a nested absolute container instead.
 - The page force-removes the `.dark` class: dark mode is an app-only setting.
 
+## In-App UI
+
+The app screens are being rebuilt to the same standard as the landing page,
+one area at a time. Shared pieces live in `src/components/app/`:
+
+| File | Role |
+|---|---|
+| `panel.tsx` | `Panel`, `PanelHeader`, `Overline`, `PanelRule` — the card every screen is built from |
+| `page-header.tsx` | `PageHeader` — eyebrow + title + subtitle + actions. Every screen starts with one |
+| `button.tsx` | `Button` / `ButtonLink` — `primary` (solid brass), `secondary`, `ghost`, `danger` |
+| `metric.tsx` | `MetricCard` — count-up figure, delta chip, optional sparkline |
+| `sparkline.tsx` | Tiny self-drawing SVG trend, no axes |
+| `segmented-bar.tsx` | `SegmentedBar` + `AGEING_RAMP` — one bar, several buckets |
+| `charts.tsx` | `RevenueTrendChart`, `ChartLegend` — the single themed recharts entry point |
+
+Motion shared with the landing page (`EASE_OUT`, `useCalmMotion`, `CountUp`)
+lives in `src/components/motion.tsx`; `components/landing/primitives.tsx`
+re-exports it so landing code still imports from one place.
+
+Rules:
+
+- **No `dark:` overrides in screens.** Every token already has a dark value.
+  A screen needing `dark:` means the token is wrong — fix the token.
+  (`globals.css` still carries a legacy bridge for the not-yet-rebuilt
+  screens; that bridge shrinks as pages are redone, and nothing new should
+  rely on it.)
+- **One primary action per view**, and one `tone="brass"` metric per row.
+  Hierarchy is fill vs outline, never a second hue.
+- **Charts go through `charts.tsx`.** Brass carries the meaning, `ink-muted`
+  carries the context, `positive`/`negative` only where the sign is the
+  point. Ageing and similar ramps run positive → brass → negative, never
+  through a rainbow.
+- **Figures use `tabular-nums`** so columns of money line up.
+- The sidebar and auth panel are graphite in *both* themes, so style them
+  against fixed `white/*` and `brass-on-dark` values, not theme tokens.
+
+### Rebuild status
+
+| Screen | State |
+|---|---|
+| Shell (sidebar, topbar, layout) | rebuilt |
+| Dashboard | rebuilt |
+| Invoices (list, new, detail, edit) | pending |
+| Clients · Items · Payments · Expenses | pending |
+| Reports · Settings · Admin · Support | pending |
+
 ## Core Features
 
 1. **Auth:** Email/password + Google OAuth. Design auth structure to accommodate Apple Sign-In later without implementation.
