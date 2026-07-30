@@ -82,7 +82,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
         <div className="relative flex w-full items-center justify-between gap-4 px-6 py-5 lg:flex-col lg:items-start lg:justify-between lg:px-12 lg:py-12 xl:px-14">
           <Link href="/" className="inline-flex w-fit items-center gap-2.5">
-            <LogoMark size={34} />
+            <LogoMark size={34} variant="bare" />
             <Logo variant="white" height={22} href={null} />
           </Link>
 

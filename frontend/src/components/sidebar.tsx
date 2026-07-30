@@ -148,7 +148,7 @@ export default function Sidebar() {
     <div className="flex h-full flex-col">
       {/* brand */}
       <div className="flex items-center gap-2.5 px-5 pb-4 pt-5">
-        <LogoMark size={32} />
+        <LogoMark size={32} variant="bare" />
         <span className="flex flex-col">
           <Logo variant="white" height={20} href={null} />
           <span className="mt-1 text-[10px] leading-none text-white/30">

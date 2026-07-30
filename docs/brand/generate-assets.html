@@ -1,0 +1,72 @@
+<!doctype html>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;padding:0;background:transparent;-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision}
+  .node{position:relative;overflow:hidden;transform:translateZ(0);will-change:transform}
+  .wm{font-family:Inter;letter-spacing:-.035em;line-height:1;white-space:nowrap;display:inline-block}
+  .wm .my{font-weight:800}
+  .wm .rest{font-weight:600}
+</style>
+<body>
+<script>
+const G='#1C1917', BOD='#C79A5B', B='#8A6A3D', W='#FFFFFF';
+const V='M141 150 L203 150 L256 245 L309 150 L371 150 L256 355 Z';
+
+/* Exactly the geometry in src/components/brand/logo.tsx. */
+function mark({stem, v, tile, rx=116}){
+  const vb = tile ? "0 0 512 512" : "116 138 280 236";
+  return `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:100%">
+    ${tile?`<rect width="512" height="512" rx="${rx}" fill="${tile}"/>`:''}
+    <path d="${V}" fill="${v}"/>
+    <rect x="128" y="150" width="54" height="212" rx="6" fill="${stem}"/>
+    <rect x="330" y="150" width="54" height="212" rx="6" fill="${stem}"/>
+  </svg>`;
+}
+const word = (size, my, rest) =>
+  `<span class="wm" style="font-size:${size}px"><span class="my" style="color:${my}">MY</span><span class="rest" style="color:${rest}">nvoice</span></span>`;
+
+const tile = {stem:W, v:BOD, tile:G};
+
+document.body.innerHTML = `
+  <div class="node" id="mark512" style="width:512px;height:512px">${mark(tile)}</div>
+
+  <!-- iOS masks the icon itself, so this one ships square: baking our own
+       radius in as well leaves dark slivers at the corners. -->
+  <div class="node" id="apple" style="width:180px;height:180px">${mark({...tile, rx:0})}</div>
+
+  <div class="node" id="fav32" style="width:32px;height:32px">${mark({...tile, rx:100})}</div>
+  <div class="node" id="fav16" style="width:16px;height:16px">${mark({...tile, rx:88})}</div>
+
+  <!-- wordmarks on transparent, for e-mail and anywhere React can't run -->
+  <div class="node" id="word-dark" style="display:inline-block;padding:8px 10px">${word(120, B, G)}</div>
+  <div class="node" id="word-white" style="display:inline-block;padding:8px 10px">${word(120, BOD, W)}</div>
+
+  <div class="node" id="og" style="width:1200px;height:630px;background:${G}">
+    <div style="position:absolute;left:-160px;top:-200px;width:760px;height:760px;border-radius:9999px;
+                background:radial-gradient(circle, rgba(199,154,91,.30) 0%, rgba(199,154,91,0) 68%)"></div>
+    <div style="position:absolute;right:-220px;bottom:-260px;width:820px;height:820px;border-radius:9999px;
+                background:radial-gradient(circle, rgba(199,154,91,.16) 0%, rgba(199,154,91,0) 70%)"></div>
+    <div style="position:absolute;inset:0;padding:84px 92px;display:flex;flex-direction:column;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:20px">
+        <div style="width:83px;height:70px">${mark({stem:W, v:BOD})}</div>
+        ${word(52, BOD, W)}
+      </div>
+      <div>
+        <p style="margin:0;font-family:Inter;font-weight:800;font-size:70px;line-height:1.06;
+                  letter-spacing:-.035em;color:#fff;max-width:900px">
+          Your business.<br>
+          <span style="font-family:'Instrument Serif';font-style:italic;font-weight:400;color:${BOD};
+                       font-size:80px;letter-spacing:-.01em">Your invoices.</span>
+        </p>
+        <p style="margin:26px 0 0;font-family:Inter;font-weight:500;font-size:23px;color:rgba(255,255,255,.62)">
+          Free, open-source invoicing and expenses for people who work for themselves.
+        </p>
+      </div>
+    </div>
+  </div>
+`;
+document.fonts.ready.then(()=>{ document.title = 'READY'; });
+</script>
+</body>

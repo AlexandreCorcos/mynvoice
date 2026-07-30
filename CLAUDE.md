@@ -96,21 +96,45 @@ Never set a paragraph, a label or any in-app text in it.
 **Dark mode:** works via the `.dark` class; every token already has a dark value,
 so no per-component overrides should be needed.
 
-**Brand assets** are retinted to Graphite & Brass. The letterforms were never
-redrawn — only the ink was remapped — so the wordmark shapes are unchanged:
+**Brand.** The mark is an M whose central V is brass — the M of MYNVOICE, and
+a V for inVoice that doubles as a downward arrow. Two colours, three strokes,
+which is what it takes to still read at 16px in a browser tab.
 
-| Asset | Treatment |
+Both pieces are **drawn in `src/components/brand/logo.tsx`**, not loaded as
+images:
+
+- `LogoMark` is inline SVG. Variants: `tile` (graphite squircle — icons),
+  `bare` (no tile, for graphite surfaces like the sidebar), `ink` (no tile,
+  for light surfaces). The untiled variants crop to the letter, so `size`
+  means the height of the M rather than of an icon's safe area.
+- `Logo` is the wordmark as **real text** in Inter — "MY" at 800 in brass,
+  "nvoice" at 600 in ink. A rasterised wordmark is soft on every display it
+  wasn't exported for; this one is exact everywhere and follows the theme.
+- `LogoLockup` is the two together at their fixed spacing.
+
+The V is written as a polygon rather than a stroked line so the mark needs no
+`clipPath` and therefore no generated ids. Its arms deliberately run *under*
+the stems: an earlier version started the V at the stems' inner edges, which
+left a sliver of background between them and made the mark read "I V I"
+instead of M. The letter has to be one connected shape.
+
+**The PNGs are generated from those same shapes** for the places React can't
+reach. Regenerate them if the geometry changes — the generator is an HTML
+page rendered with Playwright element screenshots, one node per asset:
+
+| Asset | Notes |
 |---|---|
-| `public/logo-mynvoice.png` | "MY" → `brass`, "nvoice" → `ink` |
-| `public/logo-mynvoice-white.png` | unchanged — pure white ink, nothing to retint |
-| `public/mark-512.png` | graphite tile, white M, `brass-on-dark` tittle |
-| `public/og-image.png` | graphite background (radial blob preserved), brass pill |
-| `src/app/icon.png` | kept byte-identical to `mark-512.png` |
-| `src/app/apple-icon.png` | same treatment as the mark |
-| `src/app/favicon.ico` | rebuilt at 16 + 32 from the new mark |
+| `public/mark-512.png`, `src/app/icon.png` | graphite tile, transparent corners |
+| `src/app/apple-icon.png` | full-bleed square — iOS masks it itself, so baking our own radius in leaves dark slivers |
+| `src/app/favicon.ico` | 16 + 32, each with its own corner radius; `rx` is in viewBox units, so it scales with the tile, not with the output size |
+| `public/og-image.png` | 1200×630 graphite card, brass glow, serif accent line |
+| `public/logo-mynvoice*.png` | wordmark on transparent, for e-mail and anything that can't use webfonts |
 
-The working files `logo/mynvoiceB.png` and `logo_prompt/logo_dark_light.png` are
-source material, are not shipped, and still show the old palette.
+Two things that will bite when regenerating: element screenshots need
+`omitBackground: true` or rounded corners come out opaque, and Chrome on
+Windows ignores `-webkit-font-smoothing`, so light text on graphite exports
+with subpixel colour fringes unless the node is promoted to its own layer
+(`transform: translateZ(0)`).
 
 ## Landing Page
 

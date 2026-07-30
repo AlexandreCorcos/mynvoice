@@ -60,7 +60,7 @@ export function LandingNav() {
           )}
         >
           <Link href="/" aria-label="MYNVOICE home" className="flex items-center">
-            <Logo variant="white" height={26} href={null} priority />
+            <Logo variant="white" height={26} href={null} />
           </Link>
 
           <div className="hidden items-center gap-1 md:flex">
