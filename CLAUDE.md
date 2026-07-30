@@ -161,6 +161,11 @@ one area at a time. Shared pieces live in `src/components/app/`:
 | `sparkline.tsx` | Tiny self-drawing SVG trend, no axes |
 | `segmented-bar.tsx` | `SegmentedBar` + `AGEING_RAMP` — one bar, several buckets |
 | `charts.tsx` | `RevenueTrendChart`, `ChartLegend` — the single themed recharts entry point |
+| `form.tsx` | `Field`, `Input`, `Select`, `Textarea`, `SearchInput` — labels always visible |
+| `modal.tsx` | `Modal` — blurred backdrop, Escape to close, body scroll locked |
+| `menu.tsx` | `RowMenu` — fixed-positioned "…" dropdown that flips near the viewport edge |
+| `segmented-control.tsx` | Filter tabs whose selection slides via `layoutId` |
+| `invoice-editor.tsx` | `InvoiceEditor` shared by /invoices/new and /invoices/[id]/edit |
 
 Motion shared with the landing page (`EASE_OUT`, `useCalmMotion`, `CountUp`)
 lives in `src/components/motion.tsx`; `components/landing/primitives.tsx`
@@ -189,9 +194,13 @@ Rules:
 |---|---|
 | Shell (sidebar, topbar, layout) | rebuilt |
 | Dashboard | rebuilt |
-| Invoices (list, new, detail, edit) | pending |
+| Invoices (list, new, detail, edit) | rebuilt |
+| Shared: status badge, empty state, toast | rebuilt |
 | Clients · Items · Payments · Expenses | pending |
 | Reports · Settings · Admin · Support | pending |
+
+`/invoices/new` and `/invoices/[id]/edit` are thin wrappers — behaviour
+changes belong in `InvoiceEditor`, not in either route.
 
 ## Core Features
 

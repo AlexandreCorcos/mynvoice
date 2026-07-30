@@ -1,588 +1,69 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+/* =========================================================================
+   New invoice — a thin wrapper around the shared editor.
+   ========================================================================= */
+
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, GripVertical, Trash2, ArrowLeft, Package } from "lucide-react";
-import Link from "next/link";
 import { api } from "@/lib/api";
-import { formatCurrency } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
+import {
+  EditorSkeleton,
+  InvoiceEditor,
+  blankLine,
+  type InvoicePayload,
+} from "@/components/app/invoice-editor";
 import type { Client, Invoice, Item } from "@/types";
 
-interface ItemForm {
-  id: string;
-  description: string;
-  quantity: string;
-  unit_price: string;
-  unit: string;
-}
-
-let nextId = 1;
-function newItem(): ItemForm {
-  return {
-    id: `new-${nextId++}`,
-    description: "",
-    quantity: "1",
-    unit_price: "",
-    unit: "",
-  };
+/** Default terms of 30 days, so the due date is never an empty required field. */
+function inDays(days: number) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split("T")[0];
 }
 
 export default function NewInvoicePage() {
   const router = useRouter();
   const { user } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
-  const [catalogItems, setCatalogItems] = useState<Item[]>([]);
-  const [showCatalog, setShowCatalog] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-
-  const [form, setForm] = useState({
-    client_id: "",
-    issue_date: new Date().toISOString().split("T")[0],
-    due_date: "",
-    tax_rate: "0",
-    discount_amount: "0",
-    currency: user?.currency || "GBP",
-    notes: "",
-    terms: "",
-    pdf_template: "classic",
-  });
-
-  const [items, setItems] = useState<ItemForm[]>([newItem()]);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [catalog, setCatalog] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get<Client[]>("/clients/").then(setClients).catch(() => {});
-    api.get<Item[]>("/items/").then(setCatalogItems).catch(() => {});
+    Promise.allSettled([api.get<Client[]>("/clients/"), api.get<Item[]>("/items/")])
+      .then(([c, i]) => {
+        if (c.status === "fulfilled") setClients(c.value);
+        if (i.status === "fulfilled") setCatalog(i.value);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  const addFromCatalog = (catalogItem: Item) => {
-    setItems((prev) => [
-      ...prev,
-      {
-        id: `new-${nextId++}`,
-        description: catalogItem.name + (catalogItem.description ? ` - ${catalogItem.description}` : ""),
-        quantity: "1",
-        unit_price: String(catalogItem.unit_price),
-        unit: catalogItem.unit || "",
-      },
-    ]);
-    setShowCatalog(false);
-  };
+  if (loading) return <EditorSkeleton />;
 
-  // Calculate totals
-  const subtotal = items.reduce((sum, item) => {
-    const qty = parseFloat(item.quantity) || 0;
-    const price = parseFloat(item.unit_price) || 0;
-    return sum + qty * price;
-  }, 0);
-
-  const taxRate = parseFloat(form.tax_rate) || 0;
-  const taxAmount = subtotal * (taxRate / 100);
-  const discount = parseFloat(form.discount_amount) || 0;
-  const total = subtotal + taxAmount - discount;
-
-  const updateItem = (index: number, field: keyof ItemForm, value: string) => {
-    setItems((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
-    );
-  };
-
-  const removeItem = (index: number) => {
-    if (items.length === 1) return;
-    setItems((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  // Drag and drop
-  const handleDragStart = (index: number) => {
-    setDragIndex(index);
-  };
-
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    if (dragIndex === null || dragIndex === index) return;
-
-    setItems((prev) => {
-      const newItems = [...prev];
-      const [dragged] = newItems.splice(dragIndex, 1);
-      newItems.splice(index, 0, dragged);
-      return newItems;
-    });
-    setDragIndex(index);
-  };
-
-  const handleDragEnd = () => {
-    setDragIndex(null);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setError("");
-
-    try {
-      const invoiceData = {
-        client_id: form.client_id || null,
-        issue_date: form.issue_date,
-        due_date: form.due_date,
-        tax_rate: parseFloat(form.tax_rate) || 0,
-        discount_amount: parseFloat(form.discount_amount) || 0,
-        currency: form.currency,
-        notes: form.notes || null,
-        terms: form.terms || null,
-        pdf_template: form.pdf_template,
-        items: items
-          .filter((item) => item.description && item.unit_price)
-          .map((item, index) => ({
-            description: item.description,
-            quantity: parseFloat(item.quantity) || 1,
-            unit_price: parseFloat(item.unit_price) || 0,
-            unit: item.unit || null,
-            sort_order: index,
-          })),
-      };
-
-      const result = await api.post<Invoice>("/invoices/", invoiceData);
-      router.push(`/invoices/${result.id}`);
-    } catch {
-      setError("Failed to create invoice. Please check your inputs.");
-    } finally {
-      setSaving(false);
-    }
+  const create = async (payload: InvoicePayload) => {
+    const result = await api.post<Invoice>("/invoices/", payload);
+    router.push(`/invoices/${result.id}`);
   };
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <Link
-        href="/invoices"
-        className="inline-flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink transition-colors mb-6"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to invoices
-      </Link>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {error && (
-          <div className="rounded-[var(--radius-input)] bg-red-50 px-4 py-3 text-sm text-red-600">
-            {error}
-          </div>
-        )}
-
-        {/* Header section */}
-        <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)]">
-          <h2 className="text-base font-semibold text-ink mb-5">
-            Invoice Details
-          </h2>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-ink mb-1">
-                Client
-              </label>
-              <select
-                value={form.client_id}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, client_id: e.target.value }))
-                }
-                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2.5 text-sm focus:border-brass-soft focus:outline-none bg-white"
-              >
-                <option value="">Select client (optional)</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.company_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-ink mb-1">
-                Currency
-              </label>
-              <select
-                value={form.currency}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, currency: e.target.value }))
-                }
-                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2.5 text-sm focus:border-brass-soft focus:outline-none bg-white"
-              >
-                <option value="GBP">GBP (£)</option>
-                <option value="EUR">EUR (€)</option>
-                <option value="USD">USD ($)</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-ink mb-1">
-                Issue date *
-              </label>
-              <input
-                type="date"
-                value={form.issue_date}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, issue_date: e.target.value }))
-                }
-                required
-                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2.5 text-sm focus:border-brass-soft focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-ink mb-1">
-                Due date *
-              </label>
-              <input
-                type="date"
-                value={form.due_date}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, due_date: e.target.value }))
-                }
-                required
-                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2.5 text-sm focus:border-brass-soft focus:outline-none"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Template selector */}
-        <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)]">
-          <h2 className="text-base font-semibold text-ink mb-1">
-            Invoice Template
-          </h2>
-          <p className="text-xs text-ink-muted mb-4">Choose how your PDF will look</p>
-          <div className="grid grid-cols-3 gap-3">
-            {(["classic", "minimal", "bold"] as const).map((tpl) => {
-              const labels: Record<string, { title: string; desc: string }> = {
-                classic: { title: "Classic", desc: "Petrol header, zebra rows" },
-                minimal: { title: "Minimal", desc: "Clean lines, white space" },
-                bold: { title: "Bold", desc: "Full header, accent boxes" },
-              };
-              const selected = form.pdf_template === tpl;
-              return (
-                <button
-                  key={tpl}
-                  type="button"
-                  onClick={() => setForm((f) => ({ ...f, pdf_template: tpl }))}
-                  className={`rounded-xl border-2 p-4 text-left transition-all ${
-                    selected
-                      ? "border-brass bg-brass/5"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
-                >
-                  {/* Mini preview */}
-                  <div className="mb-3 rounded-lg overflow-hidden border border-gray-100 bg-gray-50 h-16 flex flex-col gap-1 p-2">
-                    {tpl === "classic" && (
-                      <>
-                        <div className="h-2 w-full rounded bg-brass/80" />
-                        <div className="h-1.5 w-3/4 rounded bg-gray-300" />
-                        <div className="h-1.5 w-1/2 rounded bg-gray-200" />
-                        <div className="h-1.5 w-2/3 rounded bg-gray-200" />
-                      </>
-                    )}
-                    {tpl === "minimal" && (
-                      <>
-                        <div className="flex justify-between items-center">
-                          <div className="h-1.5 w-1/3 rounded bg-gray-800" />
-                          <div className="h-1.5 w-1/4 rounded bg-gray-300" />
-                        </div>
-                        <div className="h-px w-full bg-gray-800 mt-0.5" />
-                        <div className="h-1.5 w-2/3 rounded bg-gray-200 mt-0.5" />
-                        <div className="h-1.5 w-1/2 rounded bg-gray-200" />
-                      </>
-                    )}
-                    {tpl === "bold" && (
-                      <>
-                        <div className="h-4 w-full rounded bg-brass/80 flex items-center px-1.5">
-                          <div className="h-1 w-1/3 rounded bg-white/60" />
-                        </div>
-                        <div className="h-1.5 w-3/4 rounded bg-gray-300" />
-                        <div className="h-1.5 w-1/2 rounded bg-gray-200" />
-                      </>
-                    )}
-                  </div>
-                  <p className={`text-sm font-semibold ${selected ? "text-ink" : "text-ink"}`}>
-                    {labels[tpl].title}
-                  </p>
-                  <p className="text-xs text-ink-muted mt-0.5">{labels[tpl].desc}</p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Line items */}
-        <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)]">
-          <h2 className="text-base font-semibold text-ink mb-5">
-            Line Items
-          </h2>
-
-          {/* Header */}
-          <div className="hidden sm:grid sm:grid-cols-[28px_1fr_80px_100px_100px_32px] gap-3 mb-2 px-1">
-            <div />
-            <span className="text-xs font-medium text-ink-muted">
-              Description
-            </span>
-            <span className="text-xs font-medium text-ink-muted">Qty</span>
-            <span className="text-xs font-medium text-ink-muted">
-              Unit Price
-            </span>
-            <span className="text-xs font-medium text-ink-muted text-right">
-              Amount
-            </span>
-            <div />
-          </div>
-
-          {/* Items */}
-          <div className="space-y-2">
-            {items.map((item, index) => {
-              const qty = parseFloat(item.quantity) || 0;
-              const price = parseFloat(item.unit_price) || 0;
-              const amount = qty * price;
-
-              return (
-                <div
-                  key={item.id}
-                  draggable
-                  onDragStart={() => handleDragStart(index)}
-                  onDragOver={(e) => handleDragOver(e, index)}
-                  onDragEnd={handleDragEnd}
-                  className={`grid grid-cols-1 sm:grid-cols-[28px_1fr_80px_100px_100px_32px] gap-3 rounded-xl border border-gray-200 p-3 sm:p-2 sm:border-transparent sm:hover:border-gray-200 transition-colors ${
-                    dragIndex === index ? "opacity-50" : ""
-                  }`}
-                >
-                  <div className="hidden sm:flex items-center justify-center cursor-grab">
-                    <GripVertical className="h-4 w-4 text-ink-muted/40" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Item description"
-                    value={item.description}
-                    onChange={(e) =>
-                      updateItem(index, "description", e.target.value)
-                    }
-                    className="rounded-[var(--radius-input)] border border-gray-200 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
-                  />
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="1"
-                    value={item.quantity}
-                    onChange={(e) =>
-                      updateItem(index, "quantity", e.target.value)
-                    }
-                    className="rounded-[var(--radius-input)] border border-gray-200 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
-                  />
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={item.unit_price}
-                    onChange={(e) =>
-                      updateItem(index, "unit_price", e.target.value)
-                    }
-                    className="rounded-[var(--radius-input)] border border-gray-200 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
-                  />
-                  <div className="flex items-center justify-end text-sm font-medium text-ink">
-                    {formatCurrency(amount, form.currency)}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeItem(index)}
-                    disabled={items.length === 1}
-                    className="flex items-center justify-center rounded-lg p-1 text-ink-muted hover:text-red-500 hover:bg-red-50 disabled:opacity-30 disabled:hover:text-ink-muted disabled:hover:bg-transparent transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="mt-3 flex gap-2">
-            <button
-              type="button"
-              onClick={() => setItems((prev) => [...prev, newItem()])}
-              className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-ink-muted hover:border-brass-soft hover:text-brass-ink transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              Add item
-            </button>
-            {catalogItems.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowCatalog(!showCatalog)}
-                className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-gray-300 px-3 py-2 text-sm font-medium text-brass-ink hover:bg-brass-strong hover:text-white transition-colors"
-              >
-                <Package className="h-4 w-4" />
-                Pick from catalog
-              </button>
-            )}
-          </div>
-
-          {/* Catalog picker dropdown */}
-          {showCatalog && catalogItems.length > 0 && (
-            <div className="mt-2 rounded-xl border border-gray-200 bg-white shadow-[var(--shadow-dropdown)] max-h-60 overflow-y-auto">
-              {catalogItems.map((ci) => (
-                <button
-                  key={ci.id}
-                  type="button"
-                  onClick={() => addFromCatalog(ci)}
-                  className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-surface transition-colors border-b border-gray-50 last:border-b-0"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-ink">{ci.name}</p>
-                    {ci.description && (
-                      <p className="text-xs text-ink-muted truncate max-w-xs">{ci.description}</p>
-                    )}
-                  </div>
-                  <div className="text-right ml-4">
-                    <p className="text-sm font-semibold text-ink">
-                      {formatCurrency(ci.unit_price, form.currency)}
-                    </p>
-                    {ci.unit && (
-                      <p className="text-xs text-ink-muted">per {ci.unit}</p>
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Totals & notes */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* Notes */}
-          <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)]">
-            <h2 className="text-base font-semibold text-ink mb-4">
-              Notes & Terms
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1">
-                  Notes
-                </label>
-                <textarea
-                  value={form.notes}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, notes: e.target.value }))
-                  }
-                  rows={3}
-                  placeholder="Any notes for the client..."
-                  className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none resize-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1">
-                  Payment terms
-                </label>
-                <textarea
-                  value={form.terms}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, terms: e.target.value }))
-                  }
-                  rows={2}
-                  placeholder="e.g. Payment due within 30 days..."
-                  className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none resize-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Totals */}
-          <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-card)]">
-            <h2 className="text-base font-semibold text-ink mb-4">
-              Summary
-            </h2>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-ink mb-1">
-                    Tax rate (%)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    value={form.tax_rate}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, tax_rate: e.target.value }))
-                    }
-                    className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-ink mb-1">
-                    Discount
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={form.discount_amount}
-                    onChange={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        discount_amount: e.target.value,
-                      }))
-                    }
-                    className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2 border-t border-gray-100 pt-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-ink-muted">Subtotal</span>
-                  <span className="font-medium">
-                    {formatCurrency(subtotal, form.currency)}
-                  </span>
-                </div>
-                {taxRate > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-ink-muted">
-                      Tax ({taxRate}%)
-                    </span>
-                    <span className="font-medium">
-                      {formatCurrency(taxAmount, form.currency)}
-                    </span>
-                  </div>
-                )}
-                {discount > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-ink-muted">Discount</span>
-                    <span className="font-medium text-negative">
-                      -{formatCurrency(discount, form.currency)}
-                    </span>
-                  </div>
-                )}
-                <div className="flex justify-between border-t border-gray-100 pt-2">
-                  <span className="text-base font-semibold">Total</span>
-                  <span className="text-xl font-bold text-ink">
-                    {formatCurrency(total, form.currency)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Submit */}
-        <div className="flex justify-end gap-3">
-          <Link
-            href="/invoices"
-            className="rounded-[var(--radius-button)] border border-gray-300 px-5 py-2.5 text-sm font-medium text-ink hover:bg-gray-50 transition-colors"
-          >
-            Cancel
-          </Link>
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-[var(--radius-button)] bg-brass px-5 py-2.5 text-sm font-semibold text-white hover:bg-brass-strong disabled:opacity-50 transition-colors"
-          >
-            {saving ? "Creating..." : "Create Invoice"}
-          </button>
-        </div>
-      </form>
-    </div>
+    <InvoiceEditor
+      mode="create"
+      clients={clients}
+      catalog={catalog}
+      initialForm={{
+        client_id: "",
+        issue_date: new Date().toISOString().split("T")[0],
+        due_date: inDays(30),
+        tax_rate: "0",
+        discount_amount: "0",
+        currency: user?.currency || "GBP",
+        notes: "",
+        terms: "",
+        pdf_template: "classic",
+      }}
+      initialItems={[blankLine()]}
+      onSubmit={create}
+    />
   );
 }

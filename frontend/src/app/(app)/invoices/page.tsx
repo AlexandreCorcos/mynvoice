@@ -1,543 +1,471 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+/* =========================================================================
+   Invoices.
+
+   A hybrid, not a table: every invoice is a row you can scan in one pass —
+   status, who, how much, when — with the detail columns appearing as the
+   screen gets wider rather than being crammed in or scrolled to.
+
+   Rows animate on filter change via `layout`, so switching from All to
+   Overdue reads as a list settling rather than a page swap.
+   ========================================================================= */
+
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Plus,
-  Search,
-  FileText,
-  MoreHorizontal,
-  Copy,
-  Trash2,
-  Eye,
-  Send,
   CheckCircle,
-  LayoutGrid,
-  List,
+  Copy,
+  Eye,
+  FileText,
   Pencil,
+  Plus,
+  Send,
+  Trash2,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { EASE_OUT } from "@/components/motion";
+import { PageHeader } from "@/components/app/page-header";
+import { Button, ButtonLink } from "@/components/app/button";
+import { SearchInput } from "@/components/app/form";
+import { SegmentedControl } from "@/components/app/segmented-control";
+import { RowMenu, type MenuItem } from "@/components/app/menu";
+import { Modal } from "@/components/app/modal";
 import StatusBadge from "@/components/ui/status-badge";
 import EmptyState from "@/components/ui/empty-state";
-import type { Client, InvoiceListItem, InvoiceStatus, PaymentMethod } from "@/types";
+import type {
+  Client,
+  InvoiceListItem,
+  InvoiceStatus,
+  PaymentMethod,
+} from "@/types";
 
-const statusFilters: { label: string; value: InvoiceStatus | "all" }[] = [
-  { label: "All", value: "all" },
-  { label: "Draft", value: "draft" },
-  { label: "Sent", value: "sent" },
-  { label: "Paid", value: "paid" },
-  { label: "Overdue", value: "overdue" },
-];
+type Filter = InvoiceStatus | "all";
 
-function getStatusDescription(inv: InvoiceListItem): string | null {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const due = new Date(inv.due_date);
-  due.setHours(0, 0, 0, 0);
-  const diff = Math.floor(
-    (today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24)
-  );
-  if (inv.status === "overdue")
-    return `Overdue by ${diff} day${diff !== 1 ? "s" : ""}`;
-  if (inv.status === "sent" && diff === 0) return "Due today";
-  if (inv.status === "sent" && diff < 0 && diff >= -3)
-    return `Due in ${Math.abs(diff)} day${Math.abs(diff) !== 1 ? "s" : ""}`;
-  return null;
-}
-
-function getStatusIconColour(status: InvoiceStatus) {
-  switch (status) {
-    case "paid":
-      return { bg: "bg-emerald-50", text: "text-emerald-500" };
-    case "overdue":
-      return { bg: "bg-red-50", text: "text-red-500" };
-    case "sent":
-      return { bg: "bg-blue-50", text: "text-blue-500" };
-    default:
-      return { bg: "bg-gray-50", text: "text-gray-400" };
-  }
-}
-
-const paymentMethods: { label: string; value: PaymentMethod }[] = [
-  { label: "Bank Transfer", value: "bank_transfer" },
+const PAYMENT_METHODS: { label: string; value: PaymentMethod }[] = [
+  { label: "Bank transfer", value: "bank_transfer" },
   { label: "Card", value: "card" },
   { label: "Cash", value: "cash" },
   { label: "Other", value: "other" },
 ];
+
+/** Days between today and the due date, positive when overdue. */
+function daysPastDue(dueDate: string) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate);
+  due.setHours(0, 0, 0, 0);
+  return Math.floor((today.getTime() - due.getTime()) / 86_400_000);
+}
+
+/** The one line of urgency worth showing next to a row, if any. */
+function urgency(inv: InvoiceListItem) {
+  const diff = daysPastDue(inv.due_date);
+  if (inv.status === "overdue") {
+    return { text: `${diff} day${diff === 1 ? "" : "s"} late`, tone: "negative" as const };
+  }
+  if (inv.status === "sent" && diff === 0) {
+    return { text: "Due today", tone: "warn" as const };
+  }
+  if (inv.status === "sent" && diff < 0 && diff >= -3) {
+    const n = Math.abs(diff);
+    return { text: `Due in ${n} day${n === 1 ? "" : "s"}`, tone: "warn" as const };
+  }
+  return null;
+}
+
+/* ------------------------------------------------------------------ */
+/* Row                                                                 */
+/* ------------------------------------------------------------------ */
+
+function InvoiceRow({
+  inv,
+  clientName,
+  index,
+  menu,
+}: {
+  inv: InvoiceListItem;
+  clientName: string;
+  index: number;
+  menu: MenuItem[];
+}) {
+  const u = urgency(inv);
+  const paidOff = inv.status === "paid";
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.99, transition: { duration: 0.15 } }}
+      transition={{ duration: 0.45, delay: Math.min(index, 8) * 0.03, ease: EASE_OUT }}
+      className="group relative"
+    >
+      <Link
+        href={`/invoices/${inv.id}`}
+        className="flex items-center gap-4 rounded-[14px] bg-card px-4 py-3.5 ring-1 ring-line transition-all duration-200 hover:shadow-[var(--shadow-card-hover)] hover:ring-brass-soft/40"
+      >
+        {/* status rail — a colour and a shape, readable at a glance */}
+        <span
+          className={cn(
+            "hidden h-9 w-9 flex-none items-center justify-center rounded-[11px] sm:flex",
+            paidOff
+              ? "bg-positive/10 text-positive"
+              : inv.status === "overdue"
+                ? "bg-negative/10 text-negative"
+                : inv.status === "sent"
+                  ? "bg-brass/[0.09] text-brass-ink"
+                  : "bg-elevated text-ink-muted"
+          )}
+        >
+          <FileText className="h-4 w-4" />
+        </span>
+
+        {/* number + client */}
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="text-[14px] font-bold tracking-[-0.01em] text-ink">
+              {inv.invoice_number}
+            </span>
+            <StatusBadge status={inv.status} size="sm" />
+            {u ? (
+              <span
+                className={cn(
+                  "text-[11.5px] font-semibold",
+                  u.tone === "negative" ? "text-negative" : "text-brass-ink"
+                )}
+              >
+                {u.text}
+              </span>
+            ) : null}
+          </span>
+          <span className="mt-0.5 block truncate text-[12.5px] text-ink-muted">
+            {clientName}
+          </span>
+        </span>
+
+        {/* issue date — only when there's room */}
+        <span className="hidden w-28 flex-none text-[12.5px] text-ink-muted lg:block">
+          {formatDate(inv.issue_date)}
+        </span>
+
+        {/* due date */}
+        <span className="hidden w-28 flex-none text-[12.5px] text-ink-muted md:block">
+          {formatDate(inv.due_date)}
+        </span>
+
+        {/* amount — fixed width so it lines up with the column key */}
+        <span className="w-28 flex-none text-right">
+          <span className="block text-[14.5px] font-bold tabular-nums text-ink">
+            {formatCurrency(inv.total, inv.currency)}
+          </span>
+          {inv.balance_due > 0 && inv.balance_due !== inv.total ? (
+            <span className="block text-[11px] tabular-nums text-ink-muted">
+              {formatCurrency(inv.balance_due, inv.currency)} left
+            </span>
+          ) : null}
+        </span>
+
+        <span className="w-8 flex-none" />
+      </Link>
+
+      {/* The menu lives outside the Link so its clicks don't navigate. */}
+      <span className="absolute right-3 top-1/2 -translate-y-1/2">
+        <RowMenu items={menu} label={`Actions for ${inv.invoice_number}`} />
+      </span>
+    </motion.div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Screen                                                              */
+/* ------------------------------------------------------------------ */
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<InvoiceListItem[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<InvoiceStatus | "all">(
-    "all"
-  );
-  const [viewMode, setViewMode] = useState<"card" | "table">("table");
-  const [menuOpen, setMenuOpen] = useState<string | null>(null);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
-  const [paymentModal, setPaymentModal] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [filter, setFilter] = useState<Filter>("all");
+  const [payingId, setPayingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const params = new URLSearchParams();
-      if (statusFilter !== "all") params.set("status", statusFilter);
-      if (search) params.set("search", search);
-      const qs = params.toString() ? `?${params.toString()}` : "";
-
       const [inv, cl] = await Promise.all([
-        api.get<InvoiceListItem[]>(`/invoices/${qs}`),
+        api.get<InvoiceListItem[]>("/invoices/"),
         api.get<Client[]>("/clients/"),
       ]);
       setInvoices(inv);
       setClients(cl);
     } catch {
-      // handle
+      /* the empty state covers it */
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter]);
+  }, []);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(null);
-        setMenuPosition(null);
-      }
-    }
-    if (menuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [menuOpen]);
+  const clientName = useCallback(
+    (id: string | null) =>
+      (id ? clients.find((c) => c.id === id)?.company_name : null) ?? "No client",
+    [clients]
+  );
 
-  function closeMenu() {
-    setMenuOpen(null);
-    setMenuPosition(null);
-  }
+  /* Filtering and searching happen here rather than on the server: the list
+     is small enough that a round trip per keystroke would feel worse. */
+  const counts = useMemo(() => {
+    const base: Record<Filter, number> = {
+      all: invoices.length,
+      draft: 0,
+      sent: 0,
+      paid: 0,
+      overdue: 0,
+    };
+    for (const i of invoices) base[i.status] += 1;
+    return base;
+  }, [invoices]);
 
-  const clientMap = Object.fromEntries(clients.map((c) => [c.id, c]));
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return invoices.filter((i) => {
+      if (filter !== "all" && i.status !== filter) return false;
+      if (!q) return true;
+      return (
+        i.invoice_number.toLowerCase().includes(q) ||
+        clientName(i.client_id).toLowerCase().includes(q)
+      );
+    });
+  }, [invoices, filter, search, clientName]);
 
-  const handleMarkSent = async (id: string) => {
-    try {
-      await api.patch(`/invoices/${id}/status`, { status: "sent" });
-      fetchData();
-    } catch {
-      // handle
-    }
-    closeMenu();
+  const outstanding = useMemo(
+    () =>
+      visible
+        .filter((i) => i.status !== "paid")
+        .reduce((sum, i) => sum + i.balance_due, 0),
+    [visible]
+  );
+
+  /* ---- actions ---- */
+
+  const markSent = async (id: string) => {
+    await api.patch(`/invoices/${id}/status`, { status: "sent" });
+    fetchData();
   };
 
-  const handleMarkPaid = async (id: string, paymentMethod: PaymentMethod) => {
-    try {
-      const today = new Date().toISOString().split("T")[0];
-      await api.patch(`/invoices/${id}/status`, {
-        status: "paid",
-        payment_method: paymentMethod,
-        payment_date: today,
-      });
-      fetchData();
-    } catch {
-      // handle
-    }
-    setPaymentModal(null);
-    closeMenu();
+  const markPaid = async (method: PaymentMethod) => {
+    if (!payingId) return;
+    await api.patch(`/invoices/${payingId}/status`, {
+      status: "paid",
+      payment_method: method,
+      payment_date: new Date().toISOString().split("T")[0],
+    });
+    setPayingId(null);
+    fetchData();
   };
 
-  const handleDuplicate = async (id: string) => {
+  const duplicate = async (id: string) => {
     await api.post(`/invoices/${id}/duplicate`);
     fetchData();
-    closeMenu();
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this invoice?")) return;
-    await api.delete(`/invoices/${id}`);
-    setInvoices((prev) => prev.filter((i) => i.id !== id));
-    closeMenu();
+  const confirmDelete = async () => {
+    if (!deletingId) return;
+    await api.delete(`/invoices/${deletingId}`);
+    setInvoices((prev) => prev.filter((i) => i.id !== deletingId));
+    setDeletingId(null);
   };
 
-  // Shared action dropdown renderer
-  function renderActionsDropdown(inv: InvoiceListItem) {
-    return (
-      <div className="relative">
-        <button
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (menuOpen === inv.id) {
-              closeMenu();
-            } else {
-              const rect = e.currentTarget.getBoundingClientRect();
-              setMenuPosition({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
-              setMenuOpen(inv.id);
-            }
-          }}
-          className="rounded-lg p-1.5 text-ink-muted opacity-0 transition-opacity hover:bg-surface group-hover:opacity-100"
-        >
-          <MoreHorizontal className="h-4 w-4" />
-        </button>
-        {menuOpen === inv.id && menuPosition && (
-          <div
-            ref={menuRef}
-            style={{ top: menuPosition.top, right: menuPosition.right }}
-            className="fixed z-50 w-44 rounded-xl bg-white py-1 shadow-[var(--shadow-dropdown)]"
-          >
-            <Link
-              href={`/invoices/${inv.id}`}
-              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-surface"
-            >
-              <Eye className="h-3.5 w-3.5" />
-              View
-            </Link>
-            {inv.status !== "paid" && (
-              <Link
-                href={`/invoices/${inv.id}/edit`}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-surface"
-                onClick={closeMenu}
-              >
-                <Pencil className="h-3.5 w-3.5" />
-                Edit
-              </Link>
-            )}
-            {inv.status === "draft" && (
-              <button
-                onClick={() => handleMarkSent(inv.id)}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-surface"
-              >
-                <Send className="h-3.5 w-3.5" />
-                Mark as Sent
-              </button>
-            )}
-            {(inv.status === "sent" || inv.status === "overdue") && (
-              <button
-                onClick={() => {
-                  setPaymentModal(inv.id);
-                  closeMenu();
-                }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-surface"
-              >
-                <CheckCircle className="h-3.5 w-3.5" />
-                Mark as Paid
-              </button>
-            )}
-            <button
-              onClick={() => handleDuplicate(inv.id)}
-              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-surface"
-            >
-              <Copy className="h-3.5 w-3.5" />
-              Duplicate
-            </button>
-            {inv.status !== "paid" && (
-              <button
-                onClick={() => handleDelete(inv.id)}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-50"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                Delete
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  }
+  const menuFor = (inv: InvoiceListItem): MenuItem[] => [
+    { label: "View", icon: Eye, href: `/invoices/${inv.id}` },
+    {
+      label: "Edit",
+      icon: Pencil,
+      href: `/invoices/${inv.id}/edit`,
+      show: inv.status !== "paid",
+    },
+    {
+      label: "Mark as sent",
+      icon: Send,
+      onSelect: () => markSent(inv.id),
+      show: inv.status === "draft",
+    },
+    {
+      label: "Mark as paid",
+      icon: CheckCircle,
+      onSelect: () => setPayingId(inv.id),
+      show: inv.status === "sent" || inv.status === "overdue",
+    },
+    { label: "Duplicate", icon: Copy, onSelect: () => duplicate(inv.id) },
+    {
+      label: "Delete",
+      icon: Trash2,
+      tone: "danger",
+      onSelect: () => setDeletingId(inv.id),
+      show: inv.status !== "paid",
+    },
+  ];
 
-  function renderDueInfo(inv: InvoiceListItem) {
-    const desc = getStatusDescription(inv);
-    if (inv.status === "overdue" && desc) {
-      return <span className="text-red-500 font-medium">{desc}</span>;
-    }
-    if (desc) {
-      return <span className="text-orange-500 font-medium">{desc}</span>;
-    }
-    return <span>Due {formatDate(inv.due_date)}</span>;
-  }
+  const deleting = invoices.find((i) => i.id === deletingId);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
-          <input
-            type="text"
-            placeholder="Search invoices..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-[var(--radius-input)] border border-gray-300 py-2.5 pl-10 pr-4 text-sm focus:border-brass-soft focus:outline-none"
-          />
-        </div>
-        <Link
-          href="/invoices/new"
-          className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-brass px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brass-strong"
-        >
-          <Plus className="h-4 w-4" />
-          Create Invoice
-        </Link>
+      <PageHeader
+        eyebrow="Invoices"
+        title="Everything you've billed."
+        subtitle={
+          outstanding > 0
+            ? `${formatCurrency(outstanding, invoices[0]?.currency ?? "GBP")} still outstanding across ${
+                visible.filter((i) => i.status !== "paid").length
+              } invoices.`
+            : "Nothing outstanding — every invoice on this list is settled."
+        }
+        actions={
+          <ButtonLink href="/invoices/new" variant="primary">
+            <Plus className="h-4 w-4" />
+            New invoice
+          </ButtonLink>
+        }
+      />
+
+      {/* controls */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <SegmentedControl<Filter>
+          layoutId="invoice-filter"
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { value: "all", label: "All", count: counts.all },
+            { value: "draft", label: "Draft", count: counts.draft },
+            { value: "sent", label: "Sent", count: counts.sent },
+            { value: "overdue", label: "Overdue", count: counts.overdue },
+            { value: "paid", label: "Paid", count: counts.paid },
+          ]}
+        />
+        <SearchInput
+          placeholder="Search by number or client…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="lg:w-72"
+        />
       </div>
 
-      {/* Status filter tabs + View toggle */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex gap-1 rounded-xl bg-white p-1 shadow-[var(--shadow-card)] w-fit">
-          {statusFilters.map((f) => (
-            <button
-              key={f.value}
-              onClick={() => setStatusFilter(f.value)}
-              className={cn(
-                "rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors",
-                statusFilter === f.value
-                  ? "bg-brass text-white"
-                  : "text-ink-muted hover:text-ink hover:bg-surface"
-              )}
-            >
-              {f.label}
-            </button>
-          ))}
+      {/* column key — only where the columns actually exist */}
+      {!loading && visible.length > 0 ? (
+        <div className="hidden items-center gap-4 px-4 md:flex">
+          <span className="hidden h-9 w-9 flex-none sm:block" />
+          <span className="flex-1 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
+            Invoice
+          </span>
+          <span className="hidden w-28 flex-none text-[10.5px] font-semibold uppercase tracking-[0.16em] text-ink-muted lg:block">
+            Issued
+          </span>
+          <span className="w-28 flex-none text-[10.5px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
+            Due
+          </span>
+          <span className="w-28 flex-none text-right text-[10.5px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
+            Amount
+          </span>
+          <span className="w-8 flex-none" />
         </div>
+      ) : null}
 
-        <div className="flex gap-1 rounded-xl bg-white p-1 shadow-[var(--shadow-card)]">
-          <button
-            onClick={() => setViewMode("card")}
-            className={cn(
-              "rounded-lg p-2 transition-colors",
-              viewMode === "card"
-                ? "bg-brass text-white"
-                : "text-ink-muted hover:text-ink hover:bg-surface"
-            )}
-            title="Card view"
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setViewMode("table")}
-            className={cn(
-              "rounded-lg p-2 transition-colors",
-              viewMode === "table"
-                ? "bg-brass text-white"
-                : "text-ink-muted hover:text-ink hover:bg-surface"
-            )}
-            title="Table view"
-          >
-            <List className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Content */}
+      {/* rows */}
       {loading ? (
-        <div className="space-y-3">
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="h-20 animate-pulse rounded-[var(--radius-card)] bg-white shadow-[var(--shadow-card)]"
-            />
+        <div className="space-y-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-[68px] animate-pulse rounded-[14px] bg-elevated" />
           ))}
         </div>
-      ) : invoices.length === 0 ? (
+      ) : visible.length === 0 ? (
         <EmptyState
           icon={FileText}
-          title="No invoices found"
+          title={
+            invoices.length === 0
+              ? "No invoices yet"
+              : search
+                ? "Nothing matches that search"
+                : `No ${filter} invoices`
+          }
           description={
-            statusFilter !== "all"
-              ? `No ${statusFilter} invoices. Try a different filter.`
-              : "Create your first invoice to get started."
+            invoices.length === 0
+              ? "Your first invoice takes about a minute. Pick a client, add your lines, send."
+              : search
+                ? "Try a different invoice number or client name."
+                : "Nothing in this state right now. Try another filter."
           }
           action={
-            statusFilter === "all" ? (
-              <Link
-                href="/invoices/new"
-                className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-brass px-4 py-2.5 text-sm font-semibold text-white hover:bg-brass-strong transition-colors"
-              >
+            invoices.length === 0 ? (
+              <ButtonLink href="/invoices/new" variant="primary">
                 <Plus className="h-4 w-4" />
                 Create your first invoice
-              </Link>
+              </ButtonLink>
+            ) : search ? (
+              <Button variant="secondary" onClick={() => setSearch("")}>
+                Clear search
+              </Button>
             ) : undefined
           }
         />
-      ) : viewMode === "card" ? (
-        /* ========== CARD VIEW ========== */
-        <div className="space-y-3">
-          {invoices.map((inv) => {
-            const client = inv.client_id ? clientMap[inv.client_id] : null;
-            const colours = getStatusIconColour(inv.status);
-
-            return (
-              <div
-                key={inv.id}
-                className="group relative flex items-center gap-4 rounded-[var(--radius-card)] bg-white px-5 py-4 shadow-[var(--shadow-card)] transition-shadow hover:shadow-[var(--shadow-card-hover)]"
-              >
-                {/* Status indicator */}
-                <div className="hidden sm:block">
-                  <div
-                    className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-xl",
-                      colours.bg
-                    )}
-                  >
-                    <FileText className={cn("h-5 w-5", colours.text)} />
-                  </div>
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href={`/invoices/${inv.id}`}
-                      className="font-semibold text-ink hover:text-brass-ink transition-colors"
-                    >
-                      {inv.invoice_number}
-                    </Link>
-                    <StatusBadge status={inv.status} />
-                  </div>
-                  <p className="mt-0.5 text-sm text-ink-muted truncate">
-                    {client?.company_name || "No client"} &middot;{" "}
-                    {renderDueInfo(inv)}
-                  </p>
-                </div>
-
-                {/* Amount */}
-                <div className="text-right">
-                  <p className="text-base font-semibold text-ink">
-                    {formatCurrency(inv.total, inv.currency)}
-                  </p>
-                  <p className="text-xs text-ink-muted">
-                    {formatDate(inv.issue_date)}
-                  </p>
-                </div>
-
-                {/* Actions */}
-                {renderActionsDropdown(inv)}
-              </div>
-            );
-          })}
-        </div>
       ) : (
-        /* ========== TABLE VIEW ========== */
-        <div className="overflow-x-auto rounded-[var(--radius-card)] bg-white shadow-[var(--shadow-card)]">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                  Date
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                  Invoice #
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                  Client
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                  Status
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                  Due Date
-                </th>
-                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                  Amount
-                </th>
-                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {invoices.map((inv) => {
-                const client = inv.client_id
-                  ? clientMap[inv.client_id]
-                  : null;
-                const desc = getStatusDescription(inv);
-
-                return (
-                  <tr
-                    key={inv.id}
-                    className="group transition-colors hover:bg-surface/50"
-                  >
-                    <td className="whitespace-nowrap px-5 py-3.5 text-ink-muted">
-                      {formatDate(inv.issue_date)}
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-3.5">
-                      <Link
-                        href={`/invoices/${inv.id}`}
-                        className="font-semibold text-ink hover:text-brass-ink transition-colors"
-                      >
-                        {inv.invoice_number}
-                      </Link>
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-ink">
-                      {client?.company_name || "No client"}
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <StatusBadge status={inv.status} />
-                        {desc && (
-                          <span
-                            className={cn(
-                              "text-xs font-medium",
-                              inv.status === "overdue"
-                                ? "text-red-500"
-                                : "text-orange-500"
-                            )}
-                          >
-                            {desc}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-ink-muted">
-                      {formatDate(inv.due_date)}
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-right font-semibold text-ink">
-                      {formatCurrency(inv.total, inv.currency)}
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-right">
-                      {renderActionsDropdown(inv)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <motion.div layout className="space-y-2">
+          <AnimatePresence mode="popLayout" initial={false}>
+            {visible.map((inv, i) => (
+              <InvoiceRow
+                key={inv.id}
+                inv={inv}
+                index={i}
+                clientName={clientName(inv.client_id)}
+                menu={menuFor(inv)}
+              />
+            ))}
+          </AnimatePresence>
+        </motion.div>
       )}
 
-      {/* Payment Method Modal */}
-      {paymentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-sm rounded-[var(--radius-card)] bg-white p-6 shadow-[var(--shadow-dropdown)]">
-            <h3 className="text-lg font-semibold text-ink mb-1">
-              Mark as Paid
-            </h3>
-            <p className="text-sm text-ink-muted mb-5">
-              Select the payment method used.
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              {paymentMethods.map((pm) => (
-                <button
-                  key={pm.value}
-                  onClick={() => handleMarkPaid(paymentModal, pm.value)}
-                  className="rounded-[var(--radius-button)] border border-gray-200 px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:border-brass-soft hover:bg-brass-strong hover:text-white"
-                >
-                  {pm.label}
-                </button>
-              ))}
-            </div>
+      {/* ---- mark as paid ---- */}
+      <Modal
+        open={Boolean(payingId)}
+        onClose={() => setPayingId(null)}
+        title="Mark as paid"
+        description="How did the money arrive? This is recorded against the invoice."
+      >
+        <div className="grid grid-cols-2 gap-2">
+          {PAYMENT_METHODS.map((pm) => (
             <button
-              onClick={() => setPaymentModal(null)}
-              className="mt-4 w-full rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-ink-muted hover:bg-gray-50 transition-colors"
+              key={pm.value}
+              onClick={() => markPaid(pm.value)}
+              className="rounded-[10px] bg-card px-4 py-3 text-[13px] font-semibold text-ink ring-1 ring-line transition-colors hover:bg-brass hover:text-white hover:ring-brass"
             >
-              Cancel
+              {pm.label}
             </button>
-          </div>
+          ))}
         </div>
-      )}
+      </Modal>
+
+      {/* ---- delete ---- */}
+      <Modal
+        open={Boolean(deletingId)}
+        onClose={() => setDeletingId(null)}
+        title={`Delete ${deleting?.invoice_number ?? "invoice"}?`}
+        description="This removes the invoice and its line items. It can't be undone."
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setDeletingId(null)}>
+              Keep it
+            </Button>
+            <Button variant="danger" onClick={confirmDelete}>
+              <Trash2 className="h-4 w-4" />
+              Delete invoice
+            </Button>
+          </>
+        }
+      />
     </div>
   );
 }
