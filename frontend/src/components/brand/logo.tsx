@@ -34,7 +34,10 @@ export function Logo({
       height={height}
       priority={priority}
       className={className}
-      style={{ height, width: "auto" }}
+      // Both dimensions are set explicitly (width is derived from the
+      // wordmark ratio) — mixing a fixed height with `width: auto` makes
+      // next/image warn about a modified aspect ratio.
+      style={{ height, width }}
     />
   );
 

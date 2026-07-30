@@ -73,6 +73,18 @@ surfaces use `graphite`. This is what keeps the UI calm.
 **Fill vs text are different needs.** `brass` is dark enough for white text (4.9:1);
 `brass-ink` is tuned for brass text on the page background. Do not swap them.
 
+**Typography:**
+
+| Token | Family | Where |
+|---|---|---|
+| `font-sans` (default) | Inter | Everything in the app, and all body copy |
+| `font-display` | Instrument Serif | Marketing headlines only — accent words, oversized numerals, step numbers |
+
+The serif is an *accent*, never a body face. On the landing page it carries one
+or two words per heading (usually italic, usually in `brass-ink` /
+`brass-on-dark`) and the large figures in the proof band and pricing card.
+Never set a paragraph, a label or any in-app text in it.
+
 **Component rules:**
 - Cards: `bg-card`, soft shadow, 12–16px border radius
 - Primary action: `bg-brass` + `text-white`, hover `bg-brass-strong`
@@ -99,6 +111,41 @@ redrawn — only the ink was remapped — so the wordmark shapes are unchanged:
 
 The working files `logo/mynvoiceB.png` and `logo_prompt/logo_dark_light.png` are
 source material, are not shipped, and still show the old palette.
+
+## Landing Page
+
+`src/app/page.tsx` is a thin composition; everything lives in
+`src/components/landing/`:
+
+| File | Role |
+|---|---|
+| `primitives.tsx` | All shared motion: `Reveal`, `MaskText`, `Magnetic`, `Tilt`/`Depth`, `Spotlight`, `Marquee`, `CountUp`, `Aurora`, `GridLines`, `Grain`, `ScrollProgress`, `ShimmerBorder`, `Eyebrow`, `DrawPath` |
+| `nav.tsx` | Floating pill nav + full-screen mobile sheet |
+| `hero.tsx` / `invoice-card.tsx` | Graphite hero and its live product mock |
+| `bands.tsx` | Capability marquee + the four-number proof band |
+| `story.tsx` | Pinned three-act scroll story (desktop) / stack (mobile) |
+| `features.tsx` | Bento grid where each tile animates its own feature |
+| `insight.tsx` | Dashboard section that unfolds in 3D on scroll |
+| `pricing.tsx`, `faq.tsx`, `footer.tsx` | Closing sections |
+
+Rules that keep it coherent:
+
+- **Section rhythm alternates graphite and light.** hero → ticker (graphite),
+  proof (light), story (graphite), features + dashboard (light), pricing
+  (graphite), faq (light), footer (graphite).
+- **Brass never fills a large surface**, here least of all. It appears as the
+  `Aurora` glow, hairlines, accent words, focus rings and solid buttons.
+  Big dark areas are `graphite`.
+- **Animate transform and opacity only.** No width/height/top/left tweens
+  except where an element is genuinely a bar chart.
+- **Reduced motion:** use `useCalmMotion()` from `primitives.tsx`, never
+  `useReducedMotion()` directly — the raw hook reports `false` during SSR and
+  the real value on the client, which breaks hydration for exactly the people
+  it's meant to help. The page is also wrapped in
+  `<MotionConfig reducedMotion="user">`.
+- **`overflow-hidden` kills `position: sticky`.** Sections that pin something
+  must clip their decorative layers in a nested absolute container instead.
+- The page force-removes the `.dark` class: dark mode is an app-only setting.
 
 ## Core Features
 

@@ -32,6 +32,7 @@
   /* Mode-independent: the sidebar and auth panel are graphite in BOTH
      themes, so brass sitting on them needs one fixed light value. */
   --color-brass-on-dark: #c79a5b;
+  --color-positive-on-dark: #7bae88;
 
   /* Semantic states */
   --color-positive: var(--positive);
@@ -50,6 +51,8 @@
 
   /* Font */
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* Editorial display face. Marketing headlines only — the app stays on Inter. */
+  --font-display: "Instrument Serif", ui-serif, Georgia, "Times New Roman", serif;
 }
 
 /* ── Light ─────────────────────────────────────────────── */
@@ -101,6 +104,15 @@
 }
 
 /* Base styles */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Fixed nav overlaps in-page anchor targets — offset them. */
+.landing section[id] {
+  scroll-margin-top: 96px;
+}
+
 body {
   font-family: var(--font-sans);
   color: var(--ink);
@@ -238,11 +250,88 @@ body {
   opacity: 0.16;
 }
 
+/* ============================================================
+   Landing-page helpers.
+   Scoped to the marketing page; the app never uses these.
+   ============================================================ */
+
+/* Softens the hard cut at both ends of a marquee / overflow rail. */
+.fade-x {
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent,
+    black 7%,
+    black 93%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    black 7%,
+    black 93%,
+    transparent
+  );
+}
+
+/* Brass gradient text — used once, on the hero's accent word. */
+.brass-text {
+  background: linear-gradient(
+    100deg,
+    #c79a5b 0%,
+    #f0d9b0 38%,
+    #c79a5b 60%,
+    #8a6a3d 100%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: brass-sweep 9s ease-in-out infinite;
+}
+
+@keyframes brass-sweep {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* A single hairline that breathes — used to divide dark sections. */
+.hairline-brass {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(199, 154, 91, 0.45),
+    transparent
+  );
+  height: 1px;
+}
+
+/* Frosted panel on the graphite hero. */
+.glass-dark {
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .brass-text {
+    animation: none;
+  }
+
+  html {
+    scroll-behavior: auto;
   }
 }
