@@ -3,35 +3,37 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from app.schemas.types import Money
+
 
 class RevenueByPeriod(BaseModel):
     period: str
-    invoiced: Decimal
-    received: Decimal
-    outstanding: Decimal
+    invoiced: Money
+    received: Money
+    outstanding: Money
 
 
 class RevenueByClient(BaseModel):
     client_id: UUID
     client_name: str
-    invoiced: Decimal
-    received: Decimal
-    outstanding: Decimal
+    invoiced: Money
+    received: Money
+    outstanding: Money
 
 
 class ExpensesByCategory(BaseModel):
     category_id: UUID | None
     category_name: str
-    total: Decimal
+    total: Money
     count: int
 
 
 class ReportSummary(BaseModel):
-    total_invoiced: Decimal
-    total_received: Decimal
-    total_outstanding: Decimal
-    total_expenses: Decimal
-    net_profit: Decimal
+    total_invoiced: Money
+    total_received: Money
+    total_outstanding: Money
+    total_expenses: Money
+    net_profit: Money
 
 
 class ReportsResponse(BaseModel):

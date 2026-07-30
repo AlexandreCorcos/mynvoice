@@ -43,24 +43,31 @@ async def get_dashboard(
                 ),
                 0,
             ).label("paid_amount"),
+            # Outstanding means money you have asked for and not received:
+            # SENT + OVERDUE. Drafts are excluded because the client has
+            # never seen them, and overdue invoices are the most outstanding
+            # money there is. This now matches the ageing buckets below and
+            # the per-client receivables.
             func.count(
                 case(
                     (
                         Invoice.status.in_(
-                            [InvoiceStatus.SENT, InvoiceStatus.DRAFT]
+                            [InvoiceStatus.SENT, InvoiceStatus.OVERDUE]
                         ),
                         Invoice.id,
                     )
                 )
             ).label("unpaid_count"),
+            # balance_due, not total: a part-paid invoice is only outstanding
+            # for what is left on it.
             func.coalesce(
                 func.sum(
                     case(
                         (
                             Invoice.status.in_(
-                                [InvoiceStatus.SENT, InvoiceStatus.DRAFT]
+                                [InvoiceStatus.SENT, InvoiceStatus.OVERDUE]
                             ),
-                            Invoice.total,
+                            Invoice.balance_due,
                         )
                     )
                 ),
@@ -133,7 +140,7 @@ async def get_dashboard(
         result = await db.execute(
             select(
                 func.count(Invoice.id),
-                func.coalesce(func.sum(Invoice.total), 0),
+                func.coalesce(func.sum(Invoice.balance_due), 0),
             ).where(and_(*conditions))
         )
         row = result.one()

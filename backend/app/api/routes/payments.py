@@ -1,4 +1,6 @@
+import re
 import uuid
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -7,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
+from app.models.company import Company
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.payment import Payment
 from app.models.user import User
@@ -16,11 +19,32 @@ router = APIRouter()
 
 
 async def _generate_payment_number(db: AsyncSession, user_id: uuid.UUID) -> str:
+    """PAY-00001, mirroring the invoice scheme and honouring the same
+    year-in-number setting so the two read as one system.
+
+    Derived from the highest number already issued rather than a row count:
+    counting reuses a number after a deletion, and a payment reference that
+    can point at two different payments is worse than a gap in the sequence.
+    """
     result = await db.execute(
-        select(func.count(Payment.id)).where(Payment.user_id == user_id)
+        select(Payment.payment_number).where(Payment.user_id == user_id)
     )
-    count = (result.scalar() or 0) + 1
-    return str(count)
+    highest = 0
+    for (value,) in result.all():
+        match = re.search(r"(\d+)\s*$", value or "")
+        if match:
+            highest = max(highest, int(match.group(1)))
+    number = highest + 1
+
+    company_result = await db.execute(
+        select(Company).where(Company.user_id == user_id)
+    )
+    company = company_result.scalar_one_or_none()
+
+    if company and company.use_year_in_number:
+        year_suffix = datetime.now(timezone.utc).strftime("%y")
+        return f"PAY-{year_suffix}-{number:05d}"
+    return f"PAY-{number:05d}"
 
 
 @router.get("/", response_model=list[PaymentResponse])

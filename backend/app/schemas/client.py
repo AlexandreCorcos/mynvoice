@@ -4,6 +4,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, EmailStr
 
+from app.schemas.types import Money
+
 
 class ClientCreate(BaseModel):
     company_name: str
@@ -80,7 +82,7 @@ class ClientResponse(BaseModel):
     bank_iban: str | None
     bank_swift: str | None
     notes: str | None
-    total_receivables: Decimal = Decimal("0.00")
+    total_receivables: Money = Decimal("0.00")
     created_at: datetime
 
     model_config = {"from_attributes": True}

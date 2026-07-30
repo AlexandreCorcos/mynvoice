@@ -2,37 +2,39 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
+from app.schemas.types import Money
+
 
 class DashboardStats(BaseModel):
-    total_revenue: Decimal
-    total_paid: Decimal
-    total_unpaid: Decimal
-    total_overdue: Decimal
+    total_revenue: Money
+    total_paid: Money
+    total_unpaid: Money
+    total_overdue: Money
     invoices_count: int
     invoices_paid_count: int
     invoices_unpaid_count: int
     invoices_overdue_count: int
     clients_count: int
-    total_expenses: Decimal
+    total_expenses: Money
 
 
 class AgingBucket(BaseModel):
     label: str
-    amount: Decimal
+    amount: Money
     count: int
 
 
 class PeriodSummary(BaseModel):
     label: str  # "Today", "This Week", etc.
-    sales: Decimal
-    receipts: Decimal
-    due: Decimal
+    sales: Money
+    receipts: Money
+    due: Money
 
 
 class MonthlyTrend(BaseModel):
     month: str  # "2026-01"
-    revenue: Decimal
-    expenses: Decimal
+    revenue: Money
+    expenses: Money
 
 
 class DashboardResponse(BaseModel):

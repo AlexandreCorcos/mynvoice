@@ -6,6 +6,8 @@ from pydantic import BaseModel
 
 from app.models.expense import ExpenseType
 
+from app.schemas.types import Money
+
 
 class ExpenseCategoryCreate(BaseModel):
     name: str
@@ -25,7 +27,7 @@ class ExpenseCategoryResponse(BaseModel):
 class ExpenseCreate(BaseModel):
     category_id: uuid.UUID | None = None
     description: str
-    amount: Decimal
+    amount: Money
     currency: str = "GBP"
     expense_type: ExpenseType = ExpenseType.VARIABLE
     expense_date: date
@@ -38,7 +40,7 @@ class ExpenseCreate(BaseModel):
 class ExpenseUpdate(BaseModel):
     category_id: uuid.UUID | None = None
     description: str | None = None
-    amount: Decimal | None = None
+    amount: Money | None = None
     currency: str | None = None
     expense_type: ExpenseType | None = None
     expense_date: date | None = None
@@ -52,7 +54,7 @@ class ExpenseResponse(BaseModel):
     id: uuid.UUID
     category_id: uuid.UUID | None
     description: str
-    amount: Decimal
+    amount: Money
     currency: str
     expense_type: ExpenseType
     expense_date: date

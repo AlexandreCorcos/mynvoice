@@ -6,11 +6,13 @@ from pydantic import BaseModel
 
 from app.models.invoice import InvoiceStatus, PaymentMethod
 
+from app.schemas.types import Money
+
 
 class InvoiceItemCreate(BaseModel):
     description: str
-    quantity: Decimal = Decimal("1.00")
-    unit_price: Decimal
+    quantity: Money = Decimal("1.00")
+    unit_price: Money
     unit: str | None = None
     sort_order: int = 0
 
@@ -18,9 +20,9 @@ class InvoiceItemCreate(BaseModel):
 class InvoiceItemResponse(BaseModel):
     id: uuid.UUID
     description: str
-    quantity: Decimal
-    unit_price: Decimal
-    amount: Decimal
+    quantity: Money
+    unit_price: Money
+    amount: Money
     unit: str | None
     sort_order: int
 
@@ -32,8 +34,8 @@ class InvoiceCreate(BaseModel):
     reference: str | None = None
     issue_date: date
     due_date: date
-    tax_rate: Decimal = Decimal("0.00")
-    discount_amount: Decimal = Decimal("0.00")
+    tax_rate: Money = Decimal("0.00")
+    discount_amount: Money = Decimal("0.00")
     currency: str = "GBP"
     notes: str | None = None
     terms: str | None = None
@@ -47,8 +49,8 @@ class InvoiceUpdate(BaseModel):
     reference: str | None = None
     issue_date: date | None = None
     due_date: date | None = None
-    tax_rate: Decimal | None = None
-    discount_amount: Decimal | None = None
+    tax_rate: Money | None = None
+    discount_amount: Money | None = None
     currency: str | None = None
     notes: str | None = None
     terms: str | None = None
@@ -71,13 +73,13 @@ class InvoiceResponse(BaseModel):
     status: InvoiceStatus
     issue_date: date
     due_date: date
-    subtotal: Decimal
-    tax_rate: Decimal
-    tax_amount: Decimal
-    discount_amount: Decimal
-    total: Decimal
-    amount_paid: Decimal
-    balance_due: Decimal
+    subtotal: Money
+    tax_rate: Money
+    tax_amount: Money
+    discount_amount: Money
+    total: Money
+    amount_paid: Money
+    balance_due: Money
     currency: str
     payment_method: PaymentMethod | None
     payment_date: date | None
@@ -101,9 +103,9 @@ class InvoiceListResponse(BaseModel):
     status: InvoiceStatus
     issue_date: date
     due_date: date
-    total: Decimal
-    amount_paid: Decimal
-    balance_due: Decimal
+    total: Money
+    amount_paid: Money
+    balance_due: Money
     currency: str
     created_at: datetime
 

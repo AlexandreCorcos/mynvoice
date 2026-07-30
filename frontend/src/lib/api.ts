@@ -1,5 +1,20 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
+/** Routes that are reachable signed-out and must survive a dead session. */
+const PUBLIC_AUTH_ROUTES = [
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/set-password",
+];
+
+function isPublicAuthRoute(pathname: string): boolean {
+  return PUBLIC_AUTH_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
+  );
+}
+
 class ApiClient {
   private getToken(): string | null {
     if (typeof window === "undefined") return null;
@@ -38,11 +53,18 @@ class ApiClient {
         if (retry.status === 204) return undefined as T;
         return retry.json();
       }
-      // Redirect to login
+      // The session is genuinely dead — drop it.
       if (typeof window !== "undefined") {
         localStorage.removeItem("access_token");
         localStorage.removeItem("refresh_token");
-        window.location.href = "/login";
+
+        /* ...but don't bounce off a public auth page. Someone arriving from
+           a password-reset email while holding an expired session would
+           otherwise be thrown to /login and lose the token in the URL —
+           and an expired session is exactly why people reset passwords. */
+        if (!isPublicAuthRoute(window.location.pathname)) {
+          window.location.href = "/login";
+        }
       }
       throw new ApiError(401, "Unauthorized");
     }

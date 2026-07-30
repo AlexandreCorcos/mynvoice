@@ -4,11 +4,13 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
+from app.schemas.types import Money
+
 
 class PaymentCreate(BaseModel):
     invoice_id: uuid.UUID | None = None
     client_id: uuid.UUID | None = None
-    amount: Decimal
+    amount: Money
     currency: str = "GBP"
     payment_date: date
     payment_mode: str | None = None
@@ -21,7 +23,7 @@ class PaymentResponse(BaseModel):
     invoice_id: uuid.UUID | None
     client_id: uuid.UUID | None
     payment_number: str
-    amount: Decimal
+    amount: Money
     currency: str
     payment_date: date
     payment_mode: str | None
