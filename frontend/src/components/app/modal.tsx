@@ -69,12 +69,14 @@ export function Modal({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.99, transition: { duration: 0.15 } }}
             transition={{ duration: 0.35, ease: EASE_OUT }}
+            /* Capped and scrollable: the client form is long, and a panel
+               taller than the viewport hides its own submit button. */
             className={cn(
-              "relative w-full overflow-hidden rounded-t-[20px] bg-card shadow-[var(--shadow-dropdown)] ring-1 ring-line sm:rounded-[18px]",
+              "relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[20px] bg-card shadow-[var(--shadow-dropdown)] ring-1 ring-line sm:rounded-[18px]",
               width
             )}
           >
-            <div className="flex items-start justify-between gap-4 p-5 pb-0">
+            <div className="flex flex-none items-start justify-between gap-4 p-5 pb-0">
               <div className="min-w-0">
                 <h2 className="text-[16px] font-bold tracking-[-0.01em] text-ink">
                   {title}
@@ -94,10 +96,14 @@ export function Modal({
               </button>
             </div>
 
-            {children ? <div className="p-5">{children}</div> : <div className="h-5" />}
+            {children ? (
+              <div className="min-h-0 flex-1 overflow-y-auto p-5">{children}</div>
+            ) : (
+              <div className="h-5 flex-none" />
+            )}
 
             {footer ? (
-              <div className="flex flex-wrap justify-end gap-2 border-t border-line bg-elevated/40 px-5 py-3.5">
+              <div className="flex flex-none flex-wrap justify-end gap-2 border-t border-line bg-elevated/40 px-5 py-3.5">
                 {footer}
               </div>
             ) : null}

@@ -1,22 +1,206 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import {
-  Package,
-  Plus,
-  Search,
-  Pencil,
-  Trash2,
-  X,
-  MoreHorizontal,
-} from "lucide-react";
+/* =========================================================================
+   Items & Services — the catalogue behind the invoice editor.
+
+   Small records, so they get compact rows rather than cards. Inactive
+   items stay visible but recede: they're still pickable history, not
+   deleted, and hiding them makes the list lie about what exists.
+   ========================================================================= */
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Loader2, Package, Pencil, Plus, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
-import { formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
+import { EASE_OUT } from "@/components/motion";
+import { PageHeader } from "@/components/app/page-header";
+import { Button } from "@/components/app/button";
+import { Field, Input, SearchInput, Select, Textarea } from "@/components/app/form";
+import { Modal } from "@/components/app/modal";
+import { RowMenu } from "@/components/app/menu";
+import { SegmentedControl } from "@/components/app/segmented-control";
 import EmptyState from "@/components/ui/empty-state";
 import type { Item } from "@/types";
 
 const UNIT_OPTIONS = ["hour", "day", "item", "project"] as const;
+const CUSTOM = "__custom";
+
+type Filter = "all" | "active" | "archived";
+
+/* ------------------------------------------------------------------ */
+/* Form                                                                */
+/* ------------------------------------------------------------------ */
+
+function ItemForm({
+  item,
+  open,
+  currency,
+  onClose,
+  onSaved,
+}: {
+  item: Item | null;
+  open: boolean;
+  currency: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const preset = item?.unit && (UNIT_OPTIONS as readonly string[]).includes(item.unit);
+
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [price, setPrice] = useState("");
+  const [unit, setUnit] = useState<string>("hour");
+  const [customUnit, setCustomUnit] = useState("");
+  const [active, setActive] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setName(item?.name ?? "");
+    setDescription(item?.description ?? "");
+    setPrice(item ? String(item.unit_price) : "");
+    setUnit(item?.unit ? (preset ? item.unit : CUSTOM) : "hour");
+    setCustomUnit(item?.unit && !preset ? item.unit : "");
+    setActive(item?.is_active ?? true);
+    setError("");
+  }, [open, item, preset]);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      const payload = {
+        name,
+        description: description || null,
+        unit_price: parseFloat(price) || 0,
+        unit: (unit === CUSTOM ? customUnit : unit) || null,
+        is_active: active,
+      };
+      if (item) await api.put(`/items/${item.id}`, payload);
+      else await api.post("/items/", payload);
+      onSaved();
+    } catch {
+      setError("Couldn't save this item. Check the price and try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      size="md"
+      title={item ? `Edit ${item.name}` : "New item"}
+      description="Anything you bill for more than once belongs here."
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" type="submit" form="item-form" disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {saving ? "Saving…" : item ? "Save changes" : "Add item"}
+          </Button>
+        </>
+      }
+    >
+      <form id="item-form" onSubmit={submit} className="space-y-3.5">
+        {error ? (
+          <p className="rounded-[10px] bg-negative/10 px-3.5 py-2.5 text-[12.5px] font-medium text-negative ring-1 ring-negative/20">
+            {error}
+          </p>
+        ) : null}
+
+        <Field label="Name" required>
+          <Input
+            required
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Web development"
+          />
+        </Field>
+
+        <Field label="Description" hint="Appears under the line item on the invoice.">
+          <Textarea
+            rows={2}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Front-end build, two rounds of revisions"
+          />
+        </Field>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label={`Unit price (${currency})`} required>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              required
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="0.00"
+              className="tabular-nums"
+            />
+          </Field>
+
+          <Field label="Unit">
+            {unit === CUSTOM ? (
+              <div className="flex gap-2">
+                <Input
+                  autoFocus
+                  value={customUnit}
+                  onChange={(e) => setCustomUnit(e.target.value)}
+                  placeholder="e.g. licence"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setUnit("hour");
+                    setCustomUnit("");
+                  }}
+                >
+                  Presets
+                </Button>
+              </div>
+            ) : (
+              <Select value={unit} onChange={(e) => setUnit(e.target.value)}>
+                {UNIT_OPTIONS.map((u) => (
+                  <option key={u} value={u}>
+                    per {u}
+                  </option>
+                ))}
+                <option value={CUSTOM}>Something else…</option>
+              </Select>
+            )}
+          </Field>
+        </div>
+
+        <label className="flex items-center gap-2.5">
+          <input
+            type="checkbox"
+            checked={active}
+            onChange={(e) => setActive(e.target.checked)}
+            className="h-4 w-4 rounded border-line accent-[var(--brass)]"
+          />
+          <span className="text-[12.5px] text-ink">
+            Available in the invoice editor
+          </span>
+        </label>
+      </form>
+    </Modal>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Screen                                                              */
+/* ------------------------------------------------------------------ */
 
 export default function ItemsPage() {
   const { user } = useAuth();
@@ -25,451 +209,218 @@ export default function ItemsPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [editingItem, setEditingItem] = useState<Item | null>(null);
-  const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const [filter, setFilter] = useState<Filter>("all");
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Item | null>(null);
+  const [deleting, setDeleting] = useState<Item | null>(null);
 
   const fetchItems = useCallback(async () => {
     try {
-      const params = search ? `?search=${encodeURIComponent(search)}` : "";
-      const res = await api.get<Item[]>(`/items/${params}`);
-      setItems(res);
+      setItems(await api.get<Item[]>("/items/"));
     } catch {
-      // handle error
+      /* empty state covers it */
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, []);
 
   useEffect(() => {
     fetchItems();
   }, [fetchItems]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this item? This cannot be undone.")) return;
-    await api.delete(`/items/${id}`);
-    setItems((prev) => prev.filter((i) => i.id !== id));
-    setMenuOpen(null);
+  const counts = useMemo(
+    () => ({
+      all: items.length,
+      active: items.filter((i) => i.is_active).length,
+      archived: items.filter((i) => !i.is_active).length,
+    }),
+    [items]
+  );
+
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return items.filter((i) => {
+      if (filter === "active" && !i.is_active) return false;
+      if (filter === "archived" && i.is_active) return false;
+      if (!q) return true;
+      return (
+        i.name.toLowerCase().includes(q) ||
+        (i.description ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [items, filter, search]);
+
+  const remove = async () => {
+    if (!deleting) return;
+    await api.delete(`/items/${deleting.id}`);
+    setItems((prev) => prev.filter((i) => i.id !== deleting.id));
+    setDeleting(null);
   };
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handleClick = () => setMenuOpen(null);
-    document.addEventListener("click", handleClick);
-    return () => document.removeEventListener("click", handleClick);
-  }, [menuOpen]);
-
-  const filtered = items.filter((item) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      item.name.toLowerCase().includes(q) ||
-      (item.description && item.description.toLowerCase().includes(q))
-    );
-  });
+  const openNew = () => {
+    setEditing(null);
+    setFormOpen(true);
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
-          <input
-            type="text"
-            placeholder="Search items..."
+      <PageHeader
+        eyebrow="Items & services"
+        title="What you sell, priced once."
+        subtitle="Save the things you bill for and drop them into any invoice from the catalogue picker."
+        actions={
+          <Button variant="primary" onClick={openNew}>
+            <Plus className="h-4 w-4" />
+            New item
+          </Button>
+        }
+      />
+
+      {items.length > 0 ? (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <SegmentedControl<Filter>
+            layoutId="item-filter"
+            value={filter}
+            onChange={setFilter}
+            options={[
+              { value: "all", label: "All", count: counts.all },
+              { value: "active", label: "Active", count: counts.active },
+              { value: "archived", label: "Archived", count: counts.archived },
+            ]}
+          />
+          <SearchInput
+            placeholder="Search the catalogue…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-[var(--radius-input)] border border-gray-300 py-2.5 pl-10 pr-4 text-sm focus:border-brass-soft focus:outline-none"
+            className="sm:w-64"
           />
         </div>
-        <button
-          onClick={() => {
-            setEditingItem(null);
-            setShowModal(true);
-          }}
-          className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-brass px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brass-strong"
-        >
-          <Plus className="h-4 w-4" />
-          New Item
-        </button>
-      </div>
+      ) : null}
 
-      {/* Content */}
       {loading ? (
-        <div className="rounded-[var(--radius-card)] bg-white shadow-[var(--shadow-card)] overflow-hidden">
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="h-14 animate-pulse border-b border-gray-50 last:border-0"
-            />
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-[62px] animate-pulse rounded-[14px] bg-elevated" />
           ))}
         </div>
-      ) : filtered.length === 0 && !search ? (
+      ) : visible.length === 0 ? (
         <EmptyState
           icon={Package}
-          title="No items yet"
-          description="Goods and Services. If they have a price tag, put them here."
+          title={items.length === 0 ? "Nothing in the catalogue yet" : "Nothing matches that"}
+          description={
+            items.length === 0
+              ? "Add the services and products you bill for and they become one-click line items."
+              : "Try a different name, or switch the filter."
+          }
           action={
-            <button
-              onClick={() => setShowModal(true)}
-              className="inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-brass px-4 py-2.5 text-sm font-semibold text-white hover:bg-brass-strong transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              Add your first item
-            </button>
+            items.length === 0 ? (
+              <Button variant="primary" onClick={openNew}>
+                <Plus className="h-4 w-4" />
+                Add your first item
+              </Button>
+            ) : undefined
           }
         />
-      ) : filtered.length === 0 && search ? (
-        <div className="flex flex-col items-center justify-center rounded-[var(--radius-card)] bg-white px-8 py-16 text-center shadow-[var(--shadow-card)]">
-          <Search className="h-7 w-7 text-ink-muted" />
-          <h3 className="mt-4 text-base font-semibold text-ink">
-            No results found
-          </h3>
-          <p className="mt-1.5 text-sm text-ink-muted">
-            No items match &ldquo;{search}&rdquo;
-          </p>
-        </div>
       ) : (
-        /* Table */
-        <div className="rounded-[var(--radius-card)] bg-white shadow-[var(--shadow-card)] overflow-visible">
-          {/* Table header */}
-          <div className="hidden sm:grid sm:grid-cols-[1fr_1.5fr_0.75fr_0.6fr_0.6fr_0.4fr] gap-4 border-b border-gray-100 px-5 py-3 text-xs font-semibold uppercase tracking-wider text-ink-muted">
-            <span>Name</span>
-            <span>Description</span>
-            <span>Rate</span>
-            <span>Unit</span>
-            <span>Status</span>
-            <span className="text-right">Actions</span>
-          </div>
-
-          {/* Rows */}
-          {filtered.map((item) => (
-            <div
-              key={item.id}
-              className="group relative grid grid-cols-1 sm:grid-cols-[1fr_1.5fr_0.75fr_0.6fr_0.6fr_0.4fr] gap-2 sm:gap-4 items-center border-b border-gray-50 px-5 py-3.5 last:border-0 transition-colors hover:bg-surface/50"
-            >
-              {/* Name */}
-              <div className="flex items-center gap-3">
-                <div className="hidden sm:flex h-8 w-8 items-center justify-center rounded-lg bg-brass/5">
-                  <Package className="h-4 w-4 text-ink" />
-                </div>
-                <span className="text-sm font-semibold text-ink truncate">
-                  {item.name}
+        <motion.div layout className="space-y-2">
+          <AnimatePresence mode="popLayout" initial={false}>
+            {visible.map((item, i) => (
+              <motion.div
+                key={item.id}
+                layout
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.99, transition: { duration: 0.15 } }}
+                transition={{ duration: 0.4, delay: Math.min(i, 8) * 0.03, ease: EASE_OUT }}
+                className={cn(
+                  "flex items-center gap-4 rounded-[14px] bg-card px-4 py-3 ring-1 ring-line transition-shadow duration-200 hover:shadow-[var(--shadow-card)]",
+                  !item.is_active && "opacity-60"
+                )}
+              >
+                <span className="flex h-9 w-9 flex-none items-center justify-center rounded-[11px] bg-brass/[0.08] text-brass-ink">
+                  <Package className="h-4 w-4" />
                 </span>
-              </div>
 
-              {/* Description */}
-              <span className="text-sm text-ink-muted truncate">
-                {item.description || "\u2014"}
-              </span>
-
-              {/* Rate */}
-              <span className="text-sm font-medium text-ink">
-                {formatCurrency(item.unit_price, currency)}
-              </span>
-
-              {/* Unit */}
-              <span className="text-sm text-ink-muted capitalize">
-                {item.unit || "\u2014"}
-              </span>
-
-              {/* Status */}
-              <div>
-                <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    item.is_active
-                      ? "bg-emerald-50 text-emerald-600"
-                      : "bg-gray-100 text-gray-500"
-                  }`}
-                >
-                  {item.is_active ? "Active" : "Inactive"}
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-2">
+                    <span className="truncate text-[14px] font-bold tracking-[-0.01em] text-ink">
+                      {item.name}
+                    </span>
+                    {!item.is_active ? (
+                      <span className="flex-none rounded-full bg-elevated px-2 py-0.5 text-[10.5px] font-semibold text-ink-muted ring-1 ring-line">
+                        Archived
+                      </span>
+                    ) : null}
+                  </span>
+                  {item.description ? (
+                    <span className="mt-0.5 block truncate text-[12.5px] text-ink-muted">
+                      {item.description}
+                    </span>
+                  ) : null}
                 </span>
-              </div>
 
-              {/* Actions */}
-              <div className="flex justify-end">
-                <div className="relative">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setMenuOpen(menuOpen === item.id ? null : item.id);
-                    }}
-                    className="rounded-lg p-1.5 text-ink-muted opacity-0 transition-opacity hover:bg-gray-100 group-hover:opacity-100"
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </button>
-                  {menuOpen === item.id && (
-                    <div
-                      className="absolute right-0 top-8 z-50 w-36 rounded-xl bg-white py-1 shadow-[var(--shadow-dropdown)]"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <button
-                        onClick={() => {
-                          setEditingItem(item);
-                          setShowModal(true);
-                          setMenuOpen(null);
-                        }}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-surface"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(item.id)}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Delete
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+                <span className="flex-none text-right">
+                  <span className="block text-[14.5px] font-bold tabular-nums text-ink">
+                    {formatCurrency(item.unit_price, currency)}
+                  </span>
+                  {item.unit ? (
+                    <span className="block text-[11.5px] text-ink-muted">per {item.unit}</span>
+                  ) : null}
+                </span>
 
-      {/* Modal */}
-      {showModal && (
-        <ItemModal
-          item={editingItem}
-          currency={currency}
-          onClose={() => {
-            setShowModal(false);
-            setEditingItem(null);
-          }}
-          onSaved={() => {
-            setShowModal(false);
-            setEditingItem(null);
-            fetchItems();
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-function ItemModal({
-  item,
-  currency,
-  onClose,
-  onSaved,
-}: {
-  item: Item | null;
-  currency: string;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [form, setForm] = useState({
-    name: item?.name || "",
-    description: item?.description || "",
-    unit_price: item?.unit_price?.toString() || "",
-    unit: item?.unit || "hour",
-    is_active: item?.is_active ?? true,
-  });
-  const [customUnit, setCustomUnit] = useState(
-    item?.unit && !UNIT_OPTIONS.includes(item.unit as (typeof UNIT_OPTIONS)[number])
-      ? item.unit
-      : ""
-  );
-  const [useCustomUnit, setUseCustomUnit] = useState(
-    item?.unit != null &&
-      !UNIT_OPTIONS.includes(item.unit as (typeof UNIT_OPTIONS)[number])
-  );
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setError("");
-
-    const resolvedUnit = useCustomUnit ? customUnit : form.unit;
-
-    try {
-      const data = {
-        name: form.name,
-        description: form.description || null,
-        unit_price: parseFloat(form.unit_price),
-        unit: resolvedUnit || null,
-        is_active: form.is_active,
-      };
-
-      if (item) {
-        await api.put(`/items/${item.id}`, data);
-      } else {
-        await api.post("/items/", data);
-      }
-      onSaved();
-    } catch {
-      setError("Failed to save item. Please try again.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-[var(--radius-card)] bg-white shadow-[var(--shadow-dropdown)]">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="text-lg font-semibold text-ink">
-            {item ? "Edit Item" : "New Item"}
-          </h2>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-ink-muted hover:bg-surface transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {error && (
-            <div className="rounded-[var(--radius-input)] bg-red-50 px-4 py-3 text-sm text-red-600">
-              {error}
-            </div>
-          )}
-
-          {/* Name */}
-          <div>
-            <label className="block text-sm font-medium text-ink mb-1">
-              Name *
-            </label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              required
-              placeholder="e.g. Web Development, Logo Design"
-              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
-            />
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium text-ink mb-1">
-              Description
-            </label>
-            <textarea
-              value={form.description}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, description: e.target.value }))
-              }
-              rows={2}
-              placeholder="Optional description for this item"
-              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none resize-none"
-            />
-          </div>
-
-          {/* Rate & Unit */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-ink mb-1">
-                Rate ({currency}) *
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.unit_price}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, unit_price: e.target.value }))
-                }
-                required
-                placeholder="0.00"
-                className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-ink mb-1">
-                Unit
-              </label>
-              {useCustomUnit ? (
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={customUnit}
-                    onChange={(e) => setCustomUnit(e.target.value)}
-                    placeholder="Custom unit"
-                    className="flex-1 rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setUseCustomUnit(false);
-                      setCustomUnit("");
-                      setForm((f) => ({ ...f, unit: "hour" }));
-                    }}
-                    className="rounded-[var(--radius-input)] border border-gray-300 px-2 text-ink-muted hover:bg-gray-50 transition-colors"
-                    title="Use preset units"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ) : (
-                <select
-                  value={form.unit}
-                  onChange={(e) => {
-                    if (e.target.value === "__custom") {
-                      setUseCustomUnit(true);
-                    } else {
-                      setForm((f) => ({ ...f, unit: e.target.value }));
-                    }
-                  }}
-                  className="w-full rounded-[var(--radius-input)] border border-gray-300 px-3 py-2 text-sm focus:border-brass-soft focus:outline-none bg-white"
-                >
-                  {UNIT_OPTIONS.map((u) => (
-                    <option key={u} value={u}>
-                      {u.charAt(0).toUpperCase() + u.slice(1)}
-                    </option>
-                  ))}
-                  <option value="__custom">Custom...</option>
-                </select>
-              )}
-            </div>
-          </div>
-
-          {/* Status (only visible when editing) */}
-          {item && (
-            <div className="flex items-center gap-3">
-              <label className="relative inline-flex cursor-pointer items-center">
-                <input
-                  type="checkbox"
-                  checked={form.is_active}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, is_active: e.target.checked }))
-                  }
-                  className="peer sr-only"
+                <RowMenu
+                  label={`Actions for ${item.name}`}
+                  items={[
+                    {
+                      label: "Edit",
+                      icon: Pencil,
+                      onSelect: () => {
+                        setEditing(item);
+                        setFormOpen(true);
+                      },
+                    },
+                    {
+                      label: "Delete",
+                      icon: Trash2,
+                      tone: "danger",
+                      onSelect: () => setDeleting(item),
+                    },
+                  ]}
                 />
-                <div className="h-5 w-9 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all peer-checked:bg-brass peer-checked:after:translate-x-full" />
-              </label>
-              <span className="text-sm text-ink">Active</span>
-            </div>
-          )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </motion.div>
+      )}
 
-          {/* Actions */}
-          <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-[var(--radius-button)] border border-gray-300 px-4 py-2 text-sm font-medium text-ink hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-[var(--radius-button)] bg-brass px-4 py-2 text-sm font-semibold text-white hover:bg-brass-strong disabled:opacity-50 transition-colors"
-            >
-              {saving ? "Saving..." : item ? "Update" : "Create"}
-            </button>
-          </div>
-        </form>
-      </div>
+      <ItemForm
+        open={formOpen}
+        item={editing}
+        currency={currency}
+        onClose={() => setFormOpen(false)}
+        onSaved={() => {
+          setFormOpen(false);
+          fetchItems();
+        }}
+      />
+
+      <Modal
+        open={Boolean(deleting)}
+        onClose={() => setDeleting(null)}
+        title={`Delete ${deleting?.name ?? "item"}?`}
+        description="Invoices that already use it keep their line — only the catalogue entry goes."
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setDeleting(null)}>
+              Keep it
+            </Button>
+            <Button variant="danger" onClick={remove}>
+              <Trash2 className="h-4 w-4" />
+              Delete item
+            </Button>
+          </>
+        }
+      />
     </div>
   );
 }
