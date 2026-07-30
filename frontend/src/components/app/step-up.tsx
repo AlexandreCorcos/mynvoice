@@ -34,7 +34,12 @@ export type StepUpHeaders = Record<string, string>;
 
 export type StepUp = ReturnType<typeof useStepUp>;
 
-export function useStepUp() {
+/**
+ * `enabled` gates the status fetch. Hooks can't sit behind an early return, so
+ * a non-admin landing on the panel would otherwise fire /sys/totp and collect
+ * a 403 in the console for nothing.
+ */
+export function useStepUp({ enabled = true }: { enabled?: boolean } = {}) {
   const [enrolled, setEnrolled] = useState<boolean | null>(null);
   const [unlockedUntil, setUnlockedUntil] = useState<number | null>(null);
   const [prompt, setPrompt] = useState<null | "code" | "enrol" | "manage">(null);
@@ -50,11 +55,12 @@ export function useStepUp() {
   const pendingRef = useRef<((headers: StepUpHeaders) => Promise<void>) | null>(null);
 
   useEffect(() => {
+    if (!enabled) return;
     api
       .get<{ enrolled: boolean }>("/sys/totp")
       .then((s) => setEnrolled(s.enrolled))
       .catch(() => setEnrolled(null));
-  }, []);
+  }, [enabled]);
 
   /* Drives the countdown chip, and drops the token the moment it expires. */
   useEffect(() => {

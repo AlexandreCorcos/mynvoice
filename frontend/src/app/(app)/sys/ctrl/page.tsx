@@ -14,7 +14,6 @@
    ========================================================================= */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
@@ -40,7 +39,7 @@ import {
 import { useAuth } from "@/contexts/auth-context";
 import { EASE_OUT } from "@/components/motion";
 import { PageHeader } from "@/components/app/page-header";
-import { Button } from "@/components/app/button";
+import { Button, ButtonLink } from "@/components/app/button";
 import { Panel, PanelHeader, Overline } from "@/components/app/panel";
 import { MetricCard } from "@/components/app/metric";
 import { SearchInput, Field, Input } from "@/components/app/form";
@@ -159,7 +158,6 @@ function Chip({
 
 export default function SysCtrlPage() {
   const { user } = useAuth();
-  const router = useRouter();
 
   const [metrics, setMetrics] = useState<SysMetrics | null>(null);
   const [users, setUsers] = useState<SysUser[]>([]);
@@ -173,11 +171,7 @@ export default function SysCtrlPage() {
   const [target, setTarget] = useState("");
   const [savingTarget, setSavingTarget] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
-  const stepUp = useStepUp();
-
-  useEffect(() => {
-    if (user && !user.is_admin) router.replace("/dashboard");
-  }, [user, router]);
+  const stepUp = useStepUp({ enabled: Boolean(user?.is_admin) });
 
   const load = useCallback(async () => {
     if (!user?.is_admin) return;
@@ -307,7 +301,39 @@ export default function SysCtrlPage() {
     }
   };
 
-  if (user && !user.is_admin) return null;
+  /* A silent bounce to the dashboard is indistinguishable from a broken page,
+     which is exactly how an hour gets lost. Say which it is. */
+  if (user && !user.is_admin) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          eyebrow="Control panel"
+          title="This area is restricted."
+          subtitle="Your account doesn't have admin access."
+        />
+        <Panel>
+          <div className="flex flex-col items-start gap-4 py-2 sm:flex-row sm:items-center">
+            <span className="flex h-11 w-11 flex-none items-center justify-center rounded-[13px] bg-elevated text-ink-muted">
+              <ShieldOff className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13.5px] leading-relaxed text-ink">
+                Admin is granted on the server, never from inside the app. If you
+                should have it, whoever runs this MYNVOICE has to grant it.
+              </p>
+              <p className="mt-2 text-[12.5px] leading-relaxed text-ink-muted">
+                Just been granted it? Sign out and back in — your access is read
+                once, when the session loads.
+              </p>
+            </div>
+            <ButtonLink href="/dashboard" variant="secondary">
+              Back to dashboard
+            </ButtonLink>
+          </div>
+        </Panel>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
