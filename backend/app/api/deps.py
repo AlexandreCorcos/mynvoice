@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
@@ -8,6 +10,9 @@ from app.db.session import get_db
 from app.models.user import User
 
 security = HTTPBearer()
+
+# How stale last_seen_at may get before a request bothers to update it.
+PRESENCE_WRITE_INTERVAL = timedelta(minutes=1)
 
 
 async def get_current_user(
@@ -30,6 +35,12 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or inactive",
         )
+
+    # Presence, cheaply: only write when the stored value is more than a
+    # minute stale, so a burst of requests is one UPDATE rather than twenty.
+    now = datetime.now(timezone.utc)
+    if user.last_seen_at is None or (now - user.last_seen_at) > PRESENCE_WRITE_INTERVAL:
+        user.last_seen_at = now
 
     return user
 

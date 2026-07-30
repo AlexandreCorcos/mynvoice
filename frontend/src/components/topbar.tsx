@@ -34,6 +34,10 @@ function buildCrumbs(pathname: string): Crumb[] {
   const parts = pathname.split("/").filter(Boolean);
   if (parts.length === 0) return [{ label: "Dashboard" }];
 
+  // The admin panel is two segments deep but is a single destination —
+  // "sys › Details" tells nobody anything.
+  if (pathname.startsWith("/sys/ctrl")) return [{ label: "Control panel" }];
+
   const [section, ...rest] = parts;
   const label = SECTIONS[section] ?? section;
   const crumbs: Crumb[] = [{ label, href: rest.length ? `/${section}` : undefined }];

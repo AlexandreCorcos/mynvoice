@@ -66,6 +66,11 @@ class User(Base):
     last_login_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # Touched by authenticated requests, so it can answer "who is using this
+    # right now" — which last_login_at cannot, since it only moves at sign-in.
+    last_seen_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
 
     # Relationships
     company = relationship("Company", back_populates="user", uselist=False)

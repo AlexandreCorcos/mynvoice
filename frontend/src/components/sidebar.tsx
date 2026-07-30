@@ -137,7 +137,7 @@ export default function Sidebar() {
         ...GROUPS,
         {
           title: "Admin",
-          items: [{ href: "/admin", label: "Admin panel", icon: ShieldCheck }],
+          items: [{ href: "/sys/ctrl", label: "Control panel", icon: ShieldCheck }],
         },
       ]
     : GROUPS;

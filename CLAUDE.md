@@ -209,7 +209,8 @@ Rules:
 | Invoices (list, new, detail, edit) | rebuilt |
 | Shared: status badge, empty state, toast | rebuilt |
 | Clients · Items · Payments · Expenses | rebuilt |
-| Reports · Settings · Admin · Support | rebuilt |
+| Reports · Settings · Support | rebuilt |
+| Control panel (`/sys/ctrl`) | rebuilt |
 | Onboarding checklist | rebuilt |
 | Auth screens (login, register, password reset) | rebuilt |
 
@@ -221,6 +222,26 @@ graphite.
 
 `/invoices/new` and `/invoices/[id]/edit` are thin wrappers — behaviour
 changes belong in `InvoiceEditor`, not in either route.
+
+`/admin` is a redirect to `/sys/ctrl` so old links keep working; there is one
+admin surface, not two.
+
+## Admin access
+
+`/sys/ctrl` and `/api/v1/sys/*` use the ordinary bearer token plus `is_admin`.
+There is no separate admin password — the panel used to have one derived from
+the current date and hour, which meant the public repository handed out access
+to anyone who read it. See **`docs/admin-access.md`**.
+
+Admin is granted on the server and nowhere else:
+
+```
+docker compose exec backend python -m app.cli grant-admin you@example.com
+```
+
+Every privileged action writes an `AdminAuditLog` row. You cannot demote or
+deactivate yourself, and the last admin cannot be removed. Presence comes from
+`users.last_seen_at`, stamped at most once a minute in `get_current_user`.
 
 ## Core Features
 

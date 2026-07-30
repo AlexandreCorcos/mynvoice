@@ -8,8 +8,10 @@ from app.models.expense_category import ExpenseCategory
 from app.models.donation import DonationConfig, Donation
 from app.models.item import Item
 from app.models.payment import Payment
+from app.models.audit import AdminAuditLog
 
 __all__ = [
+    "AdminAuditLog",
     "User",
     "Company",
     "Client",

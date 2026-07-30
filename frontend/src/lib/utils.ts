@@ -67,6 +67,33 @@ export function formatPeriodLabel(period: string): string {
   return date.toLocaleDateString("en-GB", { month: "short" });
 }
 
+/**
+ * "just now" / "4 min ago" / "3 days ago" — for activity, where the gap
+ * matters more than the timestamp. Falls back to a date past a month, when
+ * "47 days ago" stops being easier to read than the day itself.
+ */
+export function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "never";
+
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "never";
+
+  const seconds = Math.round((Date.now() - then) / 1000);
+  if (seconds < 0) return "just now";
+  if (seconds < 60) return "just now";
+
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} min ago`;
+
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+
+  const days = Math.round(hours / 24);
+  if (days <= 30) return `${days} ${days === 1 ? "day" : "days"} ago`;
+
+  return formatDate(iso);
+}
+
 export function currencySymbol(currency = "GBP"): string {
   switch (currency) {
     case "EUR":
