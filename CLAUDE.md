@@ -67,7 +67,7 @@ All tokens live in `frontend/src/app/globals.css` and are defined twice — once
 
 **The containment rule (most important):**
 Brass never fills large surfaces. It lives in solid buttons, links, focus rings,
-hairlines and diffuse glows (`.brass-glow`, radial at 10–16% opacity). Large dark
+hairlines and diffuse glows (blurred radials at 20–30% opacity). Large dark
 surfaces use `graphite`. This is what keeps the UI calm.
 
 **Fill vs text are different needs.** `brass` is dark enough for white text (4.9:1);
@@ -149,8 +149,8 @@ Rules that keep it coherent:
 
 ## In-App UI
 
-The app screens are being rebuilt to the same standard as the landing page,
-one area at a time. Shared pieces live in `src/components/app/`:
+Every app screen is built to the same standard as the landing page from one
+shared kit in `src/components/app/`:
 
 | File | Role |
 |---|---|
@@ -166,6 +166,10 @@ one area at a time. Shared pieces live in `src/components/app/`:
 | `menu.tsx` | `RowMenu` — fixed-positioned "…" dropdown that flips near the viewport edge |
 | `segmented-control.tsx` | Filter tabs whose selection slides via `layoutId` |
 | `invoice-editor.tsx` | `InvoiceEditor` shared by /invoices/new and /invoices/[id]/edit |
+
+Auth-only pieces live in `src/components/auth/`: `ui.tsx` (`AuthHeading`,
+`AuthError`, `PasswordInput` with a strength meter) and `password-form.tsx`
+(shared by /set-password and /reset-password).
 
 `form.tsx` also exports `Toggle`; `charts.tsx` also exports `GroupedBarChart`
 and `RankedList`.
@@ -207,7 +211,13 @@ Rules:
 | Clients · Items · Payments · Expenses | rebuilt |
 | Reports · Settings · Admin · Support | rebuilt |
 | Onboarding checklist | rebuilt |
-| Auth screens (login, register, password reset) | pending |
+| Auth screens (login, register, password reset) | rebuilt |
+
+The rebuild is complete — every screen is on the kit and token-only, and
+the `globals.css` legacy utility bridge has been removed. Nothing should
+reintroduce `bg-white` / `border-gray-*` / `bg-emerald-50` and friends;
+a bare `bg-white` now means "white in both themes" and is only correct on
+graphite.
 
 `/invoices/new` and `/invoices/[id]/edit` are thin wrappers — behaviour
 changes belong in `InvoiceEditor`, not in either route.

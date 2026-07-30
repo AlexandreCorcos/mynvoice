@@ -2,99 +2,105 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { motion } from "framer-motion";
+import { ArrowLeft, Loader2, MailCheck } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
+import { EASE_OUT } from "@/components/motion";
+import { Button } from "@/components/app/button";
+import { Field, Input } from "@/components/app/form";
+import { AuthError, AuthHeading } from "@/components/auth/ui";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
       await api.post("/auth/forgot-password", { email });
-      setSubmitted(true);
+      setSent(true);
     } catch (err) {
-      if (err instanceof ApiError) {
-        setError("Something went wrong. Please try again.");
-      } else {
-        setError("Unable to connect to the server.");
-      }
+      setError(
+        err instanceof ApiError
+          ? "Something went wrong. Try again in a moment."
+          : "Couldn't reach the server."
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  if (submitted) {
+  if (sent) {
     return (
-      <div className="text-center">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50">
-          <svg className="h-7 w-7 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: EASE_OUT }}
+      >
+        <div className="rounded-[16px] bg-card p-6 text-center ring-1 ring-line">
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-[14px] bg-brass/[0.08] text-brass-ink ring-1 ring-brass/15">
+            <MailCheck className="h-5 w-5" />
+          </span>
+          <h1 className="mt-4 text-[19px] font-extrabold tracking-[-0.02em] text-ink">
+            Check your email
+          </h1>
+          {/* Deliberately not confirming whether the address exists. */}
+          <p className="mt-2 text-[13.5px] leading-relaxed text-ink-muted">
+            If <span className="font-semibold text-ink">{email}</span> has an
+            account, a reset link is on its way. It expires in an hour.
+          </p>
         </div>
-        <h2 className="text-2xl font-bold text-ink">Check your email</h2>
-        <p className="mt-2 text-sm text-ink-muted">
-          If an account exists for <strong>{email}</strong>, you&apos;ll receive
-          a password reset link shortly.
-        </p>
+
         <Link
           href="/login"
-          className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-brass-ink hover:text-brass-ink transition-colors"
+          className="mt-6 flex items-center justify-center gap-1.5 text-[13px] font-medium text-ink-muted transition-colors hover:text-ink"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-3.5 w-3.5" />
           Back to sign in
         </Link>
-      </div>
+      </motion.div>
     );
   }
 
   return (
     <div>
-      <Link
-        href="/login"
-        className="inline-flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink transition-colors mb-8"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to sign in
-      </Link>
+      <AuthHeading
+        title="Reset your password"
+        subtitle="Tell us your email and we'll send a link to set a new one."
+      />
 
-      <h2 className="text-2xl font-bold text-ink">Reset password</h2>
-      <p className="mt-1.5 text-sm text-ink-muted">
-        Enter your email and we&apos;ll send you a reset link
-      </p>
+      <form onSubmit={submit} className="mt-7 space-y-4">
+        <AuthError message={error} />
 
-      <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-        {error && (
-          <div className="rounded-[var(--radius-input)] bg-red-50 px-4 py-3 text-sm text-negative">{error}</div>
-        )}
-
-        <div>
-          <label className="block text-sm font-medium text-ink mb-1.5">
-            Email
-          </label>
-          <input
+        <Field label="Email">
+          <Input
             type="email"
+            required
+            autoFocus
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-brass-soft focus:ring-0 focus:outline-none"
             placeholder="you@example.com"
           />
-        </div>
+        </Field>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-[var(--radius-button)] bg-brass py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brass-strong disabled:opacity-50"
-        >
-          {loading ? "Sending..." : "Send reset link"}
-        </button>
+        <Button type="submit" variant="primary" className="w-full" disabled={loading}>
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          {loading ? "Sending…" : "Send reset link"}
+        </Button>
       </form>
+
+      <Link
+        href="/login"
+        className="mt-7 flex items-center justify-center gap-1.5 text-[13px] font-medium text-ink-muted transition-colors hover:text-ink"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" />
+        Back to sign in
+      </Link>
     </div>
   );
 }

@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { ApiError } from "@/lib/api";
-import { Logo } from "@/components/brand/logo";
+import { Button } from "@/components/app/button";
+import { Field, Input } from "@/components/app/form";
+import { AuthError, AuthHeading, PasswordInput } from "@/components/auth/ui";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -13,7 +16,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
@@ -22,11 +25,12 @@ export default function LoginPage() {
       await login(email, password);
     } catch (err) {
       if (err instanceof ApiError) {
-        if (err.status === 401) setError("Invalid email or password.");
-        else if (err.status === 403) setError("Please verify your email before logging in. Check your inbox.");
-        else setError("Something went wrong. Please try again.");
+        if (err.status === 401) setError("That email and password don't match.");
+        else if (err.status === 403)
+          setError("Verify your email first — check your inbox for the link.");
+        else setError("Something went wrong. Try again in a moment.");
       } else {
-        setError("Unable to connect to the server.");
+        setError("Couldn't reach the server.");
       }
     } finally {
       setLoading(false);
@@ -35,94 +39,74 @@ export default function LoginPage() {
 
   return (
     <div>
-      {/* Mobile logo */}
-      <div className="mb-8 lg:hidden">
-        <Logo height={34} href={null} />
-      </div>
+      <AuthHeading
+        title="Welcome back"
+        subtitle="Sign in to pick up where you left off."
+      />
 
-      <h2 className="text-2xl font-bold text-ink">Welcome back</h2>
-      <p className="mt-1.5 text-sm text-ink-muted">
-        Sign in to your account to continue
-      </p>
+      <form onSubmit={submit} className="mt-7 space-y-4">
+        <AuthError message={error} />
 
-      <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-        {error && (
-          <div className="rounded-[var(--radius-input)] bg-red-50 px-4 py-3 text-sm text-negative">
-            {error}
-          </div>
-        )}
-
-        <div>
-          <label className="block text-sm font-medium text-ink mb-1.5">
-            Email
-          </label>
-          <input
+        <Field label="Email">
+          <Input
             type="email"
+            required
+            autoFocus
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-brass-soft focus:ring-0 focus:outline-none"
             placeholder="you@example.com"
           />
-        </div>
+        </Field>
 
         <div>
-          <label className="block text-sm font-medium text-ink mb-1.5">
-            Password
-          </label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-brass-soft focus:ring-0 focus:outline-none"
-            placeholder="Enter your password"
-          />
-        </div>
-
-        <div className="flex items-center justify-end">
-          <Link
-            href="/forgot-password"
-            className="text-sm text-brass-ink hover:text-brass-ink transition-colors"
-          >
-            Forgot password?
-          </Link>
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-[var(--radius-button)] bg-brass py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brass-strong disabled:opacity-50"
-        >
-          {loading ? "Signing in..." : "Sign in"}
-        </button>
-
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-200" />
+          <Field label="Password">
+            <PasswordInput
+              required
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+            />
+          </Field>
+          <div className="mt-2 flex justify-end">
+            <Link
+              href="/forgot-password"
+              className="text-[12.5px] font-medium text-brass-ink transition-colors hover:text-ink"
+            >
+              Forgot your password?
+            </Link>
           </div>
-          <div className="relative flex justify-center">
-            <span className="bg-white px-3 text-xs text-ink-muted">
+        </div>
+
+        <Button type="submit" variant="primary" className="w-full" disabled={loading}>
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          {loading ? "Signing in…" : "Sign in"}
+        </Button>
+
+        <div className="relative py-1">
+          <span className="absolute inset-0 flex items-center" aria-hidden>
+            <span className="w-full border-t border-line" />
+          </span>
+          <span className="relative flex justify-center">
+            <span className="bg-surface px-3 text-[11.5px] uppercase tracking-[0.14em] text-ink-muted">
               or
             </span>
-          </div>
+          </span>
         </div>
 
-        <button
-          type="button"
-          className="w-full rounded-[var(--radius-button)] border border-gray-300 bg-white py-2.5 text-sm font-medium text-ink transition-colors hover:bg-gray-50"
-        >
+        <Button type="button" variant="secondary" className="w-full">
           Continue with Google
-        </button>
+        </Button>
       </form>
 
-      <p className="mt-8 text-center text-sm text-ink-muted">
-        Don&apos;t have an account?{" "}
+      <p className="mt-7 text-center text-[13px] text-ink-muted">
+        New here?{" "}
         <Link
           href="/register"
-          className="font-medium text-brass-ink hover:text-brass transition-colors"
+          className="font-semibold text-brass-ink transition-colors hover:text-ink"
         >
-          Sign up free
+          Create a free account
         </Link>
       </p>
     </div>

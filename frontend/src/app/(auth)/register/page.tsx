@@ -2,8 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { motion } from "framer-motion";
+import { Loader2, MailCheck } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
-import { Logo } from "@/components/brand/logo";
+import { EASE_OUT } from "@/components/motion";
+import { Button } from "@/components/app/button";
+import { Field, Input } from "@/components/app/form";
+import { AuthError, AuthHeading } from "@/components/auth/ui";
 
 export default function RegisterPage() {
   const [firstName, setFirstName] = useState("");
@@ -11,111 +16,129 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
+  const [sent, setSent] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      await api.post("/auth/register", { email, first_name: firstName, last_name: lastName });
-      setDone(true);
+      await api.post("/auth/register", {
+        email,
+        first_name: firstName,
+        last_name: lastName,
+      });
+      setSent(true);
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(err.status === 409 ? "This email is already registered." : "Something went wrong. Please try again.");
+        setError(
+          err.status === 409
+            ? "That email already has an account. Try signing in instead."
+            : "Something went wrong. Try again in a moment."
+        );
       } else {
-        setError("Unable to connect to the server.");
+        setError("Couldn't reach the server.");
       }
     } finally {
       setLoading(false);
     }
   };
 
-  if (done) {
+  /* No password here — the account is activated from the emailed link, so
+     the only thing to confirm is that the address was right. */
+  if (sent) {
     return (
-      <div>
-        <div className="mb-8 lg:hidden">
-          <Logo height={34} href={null} />
-        </div>
-        <div className="rounded-[var(--radius-card)] bg-green-50 px-6 py-8 text-center">
-          <div className="text-4xl mb-4">✉️</div>
-          <h2 className="text-xl font-bold text-ink mb-2">Check your email</h2>
-          <p className="text-sm text-ink-muted">
-            We sent a link to <strong>{email}</strong>.<br />
-            Click it to set your password and activate your account.
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: EASE_OUT }}
+      >
+        <div className="rounded-[16px] bg-card p-6 text-center ring-1 ring-line">
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-[14px] bg-brass/[0.08] text-brass-ink ring-1 ring-brass/15">
+            <MailCheck className="h-5 w-5" />
+          </span>
+          <h1 className="mt-4 text-[19px] font-extrabold tracking-[-0.02em] text-ink">
+            Check your email
+          </h1>
+          <p className="mt-2 text-[13.5px] leading-relaxed text-ink-muted">
+            We sent a link to <span className="font-semibold text-ink">{email}</span>.
+            Open it to set your password and you&apos;re in.
           </p>
         </div>
-        <p className="mt-6 text-center text-sm text-ink-muted">
-          Wrong email?{" "}
-          <button onClick={() => setDone(false)} className="font-medium text-brass-ink hover:text-brass-ink transition-colors">
+
+        <p className="mt-6 text-center text-[13px] text-ink-muted">
+          Typo in the address?{" "}
+          <button
+            onClick={() => setSent(false)}
+            className="font-semibold text-brass-ink transition-colors hover:text-ink"
+          >
             Go back
           </button>
         </p>
-      </div>
+      </motion.div>
     );
   }
 
   return (
     <div>
-      <div className="mb-8 lg:hidden">
-        <Logo height={34} href={null} />
-      </div>
+      <AuthHeading
+        title="Create your account"
+        subtitle="Free, forever. No card, no trial clock."
+      />
 
-      <h2 className="text-2xl font-bold text-ink">Create account</h2>
-      <p className="mt-1.5 text-sm text-ink-muted">Start managing your invoices for free</p>
+      <form onSubmit={submit} className="mt-7 space-y-4">
+        <AuthError message={error} />
 
-      <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-        {error && (
-          <div className="rounded-[var(--radius-input)] bg-red-50 px-4 py-3 text-sm text-negative">{error}</div>
-        )}
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-ink mb-1.5">First name</label>
-            <input
-              type="text"
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="First name">
+            <Input
+              required
+              autoFocus
+              autoComplete="given-name"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              required
-              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-brass-soft focus:ring-0 focus:outline-none"
+              placeholder="Alexandre"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-ink mb-1.5">Last name</label>
-            <input
-              type="text"
+          </Field>
+          <Field label="Last name">
+            <Input
+              required
+              autoComplete="family-name"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              required
-              className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-brass-soft focus:ring-0 focus:outline-none"
+              placeholder="Corcos"
             />
-          </div>
+          </Field>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-ink mb-1.5">Email</label>
-          <input
+        <Field label="Email" hint="We'll send a link to set your password.">
+          <Input
             type="email"
+            required
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full rounded-[var(--radius-input)] border border-gray-300 px-4 py-2.5 text-sm transition-colors focus:border-brass-soft focus:ring-0 focus:outline-none"
             placeholder="you@example.com"
           />
-        </div>
+        </Field>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-[var(--radius-button)] bg-brass py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brass-strong disabled:opacity-50"
-        >
-          {loading ? "Sending..." : "Continue"}
-        </button>
+        <Button type="submit" variant="primary" className="w-full" disabled={loading}>
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          {loading ? "Creating…" : "Create account"}
+        </Button>
+
+        <p className="text-center text-[11.5px] leading-relaxed text-ink-muted">
+          By creating an account you agree that your data stays yours — you can
+          export or delete it whenever you like.
+        </p>
       </form>
 
-      <p className="mt-8 text-center text-sm text-ink-muted">
+      <p className="mt-7 text-center text-[13px] text-ink-muted">
         Already have an account?{" "}
-        <Link href="/login" className="font-medium text-brass-ink hover:text-brass-ink transition-colors">
+        <Link
+          href="/login"
+          className="font-semibold text-brass-ink transition-colors hover:text-ink"
+        >
           Sign in
         </Link>
       </p>

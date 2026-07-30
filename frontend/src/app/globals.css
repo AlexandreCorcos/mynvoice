@@ -121,85 +121,15 @@ body {
 }
 
 /* ============================================================
-   Legacy utility bridge.
-   125 `bg-white`, 25+ `border-gray-*` and friends still exist in
-   components. Rather than rewrite them all here, they are
-   retargeted onto the new tokens so dark mode stays correct.
+   Global guarantees.
+   Everything else is a token on a component — these are the two
+   rules that have to hold everywhere.
    ============================================================ */
 
-.dark .bg-white {
-  background-color: var(--card);
-}
-
-.dark .border-gray-100,
-.dark .border-gray-200,
-.dark .border-gray-300 {
-  border-color: var(--line);
-}
-
-.dark .text-gray-600,
-.dark .text-gray-500 {
-  color: var(--ink-muted);
-}
-
-.dark .bg-gray-50,
-.dark .bg-gray-100 {
-  background-color: var(--elevated);
-}
-
-.dark .hover\:bg-gray-50:hover {
-  background-color: var(--elevated);
-}
-
-.dark .hover\:bg-surface:hover {
-  background-color: var(--elevated);
-}
-
-/* Solid brass fills always carry white text — keep it that way
-   even where a component sets a darker colour. */
+/* Solid brass fills always carry white text. */
 .bg-brass,
 .bg-brass:hover {
   color: #ffffff;
-}
-
-/* Inputs */
-.dark input,
-.dark select,
-.dark textarea {
-  background-color: var(--card);
-  border-color: rgba(255, 255, 255, 0.15);
-  color: var(--ink);
-}
-
-.dark input::placeholder,
-.dark textarea::placeholder {
-  color: var(--ink-muted);
-}
-
-/* Tinted status backgrounds */
-.dark .bg-emerald-50 {
-  background-color: rgba(123, 174, 136, 0.12);
-}
-
-.dark .bg-red-50 {
-  background-color: rgba(240, 138, 132, 0.12);
-}
-
-.dark .bg-blue-50 {
-  background-color: rgba(255, 255, 255, 0.06);
-}
-
-.dark .bg-amber-50 {
-  background-color: rgba(199, 154, 91, 0.12);
-}
-
-/* Tables */
-.dark table th {
-  color: var(--ink-muted);
-}
-
-.dark table td {
-  border-color: var(--line);
 }
 
 /* Scrollbar */
@@ -224,30 +154,6 @@ body {
 *:focus-visible {
   outline: 2px solid var(--brass-soft);
   outline-offset: 2px;
-}
-
-/* ============================================================
-   Brass glow — the Cosmic recipe, reinterpreted.
-   Diffuse radial at low opacity. Never a hard gradient fill.
-   Usage: <div class="brass-glow"> on a positioned ancestor.
-   ============================================================ */
-.brass-glow {
-  position: relative;
-  overflow: hidden;
-}
-
-.brass-glow::before {
-  content: "";
-  position: absolute;
-  inset: -40% 25% 55% 25%;
-  background: radial-gradient(ellipse at center, var(--brass-ink), transparent 70%);
-  opacity: 0.1;
-  filter: blur(48px);
-  pointer-events: none;
-}
-
-.dark .brass-glow::before {
-  opacity: 0.16;
 }
 
 /* ============================================================
