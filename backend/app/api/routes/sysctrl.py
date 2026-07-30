@@ -425,13 +425,21 @@ async def sys_totp_status(admin: User = Depends(get_current_admin)):
 
 @router.post("/totp/begin", response_model=TotpEnrolment)
 async def sys_totp_begin(
+    reset: bool = Query(False),
     admin: User = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    """Hand out a fresh secret to scan.
+    """Hand out the secret to scan.
 
     It counts for nothing until /totp/confirm proves a code can be read off
     it, so an abandoned enrolment leaves the account exactly as it was.
+
+    A pending secret is *reused*. Minting a new one per call was a real bug:
+    this endpoint is hit both from the setup button and automatically when a
+    guarded action needs enrolment, so reopening the screen silently killed
+    the QR already sitting in someone's authenticator — and since every entry
+    carries the same issuer and account name, the dead one is impossible to
+    tell from the live one. `reset=true` is the deliberate way to start over.
     """
     if stepup.is_enrolled(admin):
         raise HTTPException(
@@ -439,7 +447,11 @@ async def sys_totp_begin(
             detail="Already set up. Remove the current authenticator first.",
         )
 
-    secret = stepup.new_secret()
+    secret = (
+        stepup.new_secret()
+        if (reset or not admin.admin_totp_secret)
+        else admin.admin_totp_secret
+    )
     admin.admin_totp_secret = secret
     admin.admin_totp_confirmed_at = None
     admin.admin_totp_last_step = None

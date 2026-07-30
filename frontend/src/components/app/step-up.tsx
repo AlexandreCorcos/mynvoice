@@ -81,12 +81,17 @@ export function useStepUp({ enabled = true }: { enabled?: boolean } = {}) {
     return { "X-Admin-Step-Up": tokenRef.current };
   }, [unlockedUntil]);
 
-  const beginEnrolment = useCallback(async () => {
+  /* `reset` mints a brand-new secret and kills whatever is on the phone.
+     Without it the pending secret is reused, so reopening this screen shows
+     the same QR the authenticator already holds. */
+  const beginEnrolment = useCallback(async (reset = false) => {
     setError(null);
     setCode("");
     setBusy(true);
     try {
-      const started = await api.post<Enrolment>("/sys/totp/begin");
+      const started = await api.post<Enrolment>(
+        `/sys/totp/begin${reset ? "?reset=true" : ""}`
+      );
       setEnrolment(started);
       setQr(
         await QRCode.toDataURL(started.uri, {
@@ -385,6 +390,19 @@ export function StepUpModals({ ctl }: { ctl: StepUp }) {
             {ctl.error ? (
               <p className="mt-3 text-[12.5px] font-medium text-negative">{ctl.error}</p>
             ) : null}
+
+            <button
+              type="button"
+              onClick={() => ctl.beginEnrolment(true)}
+              disabled={ctl.busy}
+              className="mt-4 text-[12px] font-semibold text-brass-ink underline decoration-brass/30 underline-offset-2 transition-colors hover:decoration-brass disabled:opacity-50"
+            >
+              Codes rejected? Get a new QR
+            </button>
+            <p className="mt-1 text-[11.5px] leading-relaxed text-ink-muted">
+              Delete any older MYNVOICE entry on your phone first — they all
+              look the same, and only the newest one works.
+            </p>
           </div>
         </div>
 
@@ -428,7 +446,7 @@ export function StepUpModals({ ctl }: { ctl: StepUp }) {
               <Button variant="secondary" onClick={ctl.dismiss}>
                 Not now
               </Button>
-              <Button variant="primary" onClick={ctl.beginEnrolment} disabled={ctl.busy}>
+              <Button variant="primary" onClick={() => ctl.beginEnrolment()} disabled={ctl.busy}>
                 {ctl.busy ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (

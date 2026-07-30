@@ -104,6 +104,16 @@ Enrolment is standard TOTP: `/sys/totp/begin` hands out a secret and an
 nothing until `/sys/totp/confirm` proves a code can be read off it. Google
 Authenticator, 1Password, Authy — anything that does TOTP.
 
+**`begin` reuses a pending secret.** Minting a new one per call was a bug worth
+naming, because the failure is invisible: the endpoint is reached both from the
+setup button and automatically when a guarded action needs enrolment, so
+reopening the screen silently replaced the secret while the authenticator kept
+the entry it had already stored. Every entry carries the same issuer and
+account name, so the dead one cannot be told from the live one — the symptom is
+"I scanned the QR and the code is rejected", with no clue why.
+`POST /sys/totp/begin?reset=true` is the deliberate way to start over, surfaced
+in the panel as "Codes rejected? Get a new QR".
+
 ### If you lose the authenticator
 
 Only the server can clear it:
