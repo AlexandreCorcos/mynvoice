@@ -1,0 +1,8 @@
+# Reporting a vulnerability in MYNVOICE.
+# See https://github.com/AlexandreCorcos/mynvoice/blob/main/SECURITY.md
+
+Contact: https://github.com/AlexandreCorcos/mynvoice/security/advisories/new
+Expires: 2027-07-31T00:00:00.000Z
+Preferred-Languages: en, pt
+Canonical: https://mynvoice.com/.well-known/security.txt
+Policy: https://github.com/AlexandreCorcos/mynvoice/blob/main/SECURITY.md
