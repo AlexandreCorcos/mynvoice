@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import BigInteger, Boolean, DateTime, String, Text
+from sqlalchemy import BigInteger, Boolean, DateTime, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -51,6 +51,20 @@ class User(Base):
         String(128), nullable=True, index=True
     )
     password_reset_token_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # Brute-force throttling, per account.
+    #
+    # In the database rather than in process memory because this is exactly
+    # the case memory cannot cover: the same account tried from many
+    # addresses, across four uvicorn workers. The lock is deliberately short
+    # — a long one turns "guess a password" into "lock someone out of their
+    # own account", which is a nastier attack than the one it prevents.
+    failed_login_attempts: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False, server_default="0"
+    )
+    login_locked_until: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 

@@ -1,7 +1,7 @@
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Request, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +13,7 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
+from app.core import ratelimit
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import (
@@ -99,8 +100,31 @@ class ForgotPasswordRequest(BaseModel):
     email: str
 
 
+# Unthrottled, this endpoint is a mail cannon: it sends a real email to any
+# address on demand. The per-address limit stops one machine spraying; the
+# per-recipient limit stops a chosen victim's inbox being filled from many.
+RESET_PER_IP = 5
+RESET_PER_EMAIL = 3
+RESET_WINDOW = 60 * 60
+
+
 @router.post("/forgot-password", status_code=200)
-async def forgot_password(data: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+async def forgot_password(
+    data: ForgotPasswordRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    ratelimit.limit(
+        f"reset:ip:{ratelimit.client_ip(request)}",
+        limit_count=RESET_PER_IP,
+        per_seconds=RESET_WINDOW,
+    )
+    ratelimit.limit(
+        f"reset:email:{data.email.strip().lower()}",
+        limit_count=RESET_PER_EMAIL,
+        per_seconds=RESET_WINDOW,
+    )
+
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalar_one_or_none()
 
@@ -158,12 +182,53 @@ async def reset_password(data: SetPasswordRequest, db: AsyncSession = Depends(ge
     )
 
 
+# Two guards, because they cover different attacks. The per-address one stops
+# a burst from one machine; the per-account one, held in the database, stops
+# the same account being ground down from many addresses across four workers.
+LOGIN_PER_IP = 12
+LOGIN_PER_IP_WINDOW = 15 * 60
+LOGIN_FAILURES_BEFORE_LOCK = 6
+LOGIN_LOCK = timedelta(minutes=5)
+
+
 @router.post("/login", response_model=TokenResponse)
-async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(
+    data: LoginRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    ip = ratelimit.client_ip(request)
+    ratelimit.limit(
+        f"login:ip:{ip}", limit_count=LOGIN_PER_IP, per_seconds=LOGIN_PER_IP_WINDOW
+    )
+
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalar_one_or_none()
 
+    now = datetime.now(timezone.utc)
+
+    if user and user.login_locked_until:
+        locked_until = user.login_locked_until
+        if locked_until.tzinfo is None:
+            locked_until = locked_until.replace(tzinfo=timezone.utc)
+        if locked_until > now:
+            wait = int((locked_until - now).total_seconds()) + 1
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Too many failed attempts. Try again in {wait} seconds.",
+                headers={"Retry-After": str(wait)},
+            )
+
     if not user or not user.hashed_password or not verify_password(data.password, user.hashed_password):
+        # Count the failure against the account when there is one. The reply
+        # stays identical either way — the point of the generic message is
+        # that it does not say whether the address exists.
+        if user:
+            user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+            if user.failed_login_attempts >= LOGIN_FAILURES_BEFORE_LOCK:
+                user.login_locked_until = now + LOGIN_LOCK
+                user.failed_login_attempts = 0
+            await db.commit()
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
 
     if not user.is_active:
@@ -172,8 +237,14 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
     if not user.is_verified:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Please verify your email before logging in")
 
-    user.last_login_at = datetime.now(timezone.utc)
+    user.last_login_at = now
+    user.failed_login_attempts = 0
+    user.login_locked_until = None
     await db.commit()
+
+    # Someone who fumbled their password twice should not still be carrying
+    # it against them for the next quarter of an hour.
+    ratelimit.forget(f"login:ip:{ip}")
 
     return TokenResponse(
         access_token=create_access_token(str(user.id)),

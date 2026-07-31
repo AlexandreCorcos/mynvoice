@@ -130,8 +130,10 @@ That is deliberate. If the panel could clear it, whoever held the session could
 clear it too, and it would not be a second factor. `list-admins` shows who has
 one set up.
 
-## Still open
+## Rate limiting elsewhere
 
-**Rate limiting on `/sys/*` as a whole.** Nothing throttles the read endpoints.
-It matters least here — you must already be an admin — but it is the obvious
-next control.
+The TOTP throttle above is not the only one any more. `/auth/login` and
+`/auth/forgot-password` are limited in `app/core/ratelimit.py`; login also
+carries a per-account lock in the database, which is the case in-memory
+counters cannot cover. `/sys/*` reads are still unlimited — least urgent,
+since you must already hold an admin session to reach them.
