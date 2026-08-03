@@ -333,6 +333,7 @@ async def sys_send_reset(
         to_email=user.email,
         first_name=user.first_name,
         token=token,
+        valid_hours=24,  # matches the expiry set above
     )
     # The token is live either way; say so honestly rather than claiming an
     # email went out when SMTP is not configured.

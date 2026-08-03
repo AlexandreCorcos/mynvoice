@@ -1,3 +1,23 @@
+"""Transactional email.
+
+Every message is built from one shell (`_shell`), so the palette lives in a
+single place. Before this there were four hand-written copies of the same
+table markup, which is why three of them were still on the retired teal and
+orange palette long after the product moved to Graphite & Brass.
+
+Email is not the web, and the constraints drive the markup:
+
+* **Tables and inline styles.** Outlook renders with Word's engine — no flex,
+  no grid, and stylesheets are unreliable.
+* **No webfonts.** The wordmark is set in the system stack rather than Inter;
+  it is the one place the brand's typeface is not available and pretending
+  otherwise just produces a fallback nobody chose.
+* **No SVG.** So the mark is not drawn here — the wordmark alone carries the
+  brand, as text, which every client renders and no client blocks. Remote
+  images are blocked by default in most inboxes, so a logo image would leave
+  a broken box for a large share of readers.
+"""
+
 import logging
 
 import aiosmtplib
@@ -9,6 +29,20 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Graphite & Brass. Literal hex because email has no custom properties.
+GRAPHITE = "#1C1917"
+SURFACE = "#FAF9F7"
+CARD = "#FFFFFF"
+ELEVATED = "#F1EFEC"
+LINE = "#E4E0D9"
+INK = "#1C1917"
+INK_MUTED = "#6E6862"
+BRASS = "#8A6A3D"  # solid fills — always with white text
+BRASS_ON_DARK = "#C79A5B"  # brass on the graphite band
+POSITIVE = "#3F6B4A"
+
+FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,Helvetica,sans-serif"
+
 
 def fmt_currency(amount, currency="GBP"):
     symbols = {"GBP": "£", "EUR": "€", "USD": "$"}
@@ -16,104 +50,68 @@ def fmt_currency(amount, currency="GBP"):
     return f"{symbol}{amount:,.2f}"
 
 
-def _build_html_body(
-    invoice_number: str,
-    client_name: str,
-    total: str,
-    due_date: str,
-    company_name: str,
-) -> str:
+def _escape(text: str) -> str:
+    """Anything that came from a person before it goes into HTML."""
+    return (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
+def _shell(*, body: str, heading: str = "", preheader: str = "") -> str:
+    """The frame every message shares: graphite band, white card, quiet footer.
+
+    `preheader` is the line inboxes show next to the subject. Hidden in the
+    body, so without one the preview shows whatever text comes first — usually
+    "MYnvoice", which tells the reader nothing.
+    """
+    heading_html = (
+        f'<h1 style="margin:0 0 18px;color:{INK};font-size:22px;font-weight:700;'
+        f'line-height:1.3;letter-spacing:-0.01em;">{heading}</h1>'
+        if heading
+        else ""
+    )
+
     return f"""\
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light only" />
 </head>
-<body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:#F0F3F5;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F0F3F5;padding:40px 16px;">
+<body style="margin:0;padding:0;background:{SURFACE};font-family:{FONT};">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">{preheader}</div>
+
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:{SURFACE};">
     <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(15,76,92,0.08);">
+      <td align="center" style="padding:40px 16px;">
+        <!-- width="100%" with a max-width, not width="560": the HTML attribute
+             wins over CSS in most mail clients, and a fixed 560 forces a phone
+             to scroll sideways. -->
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
+               style="width:100%;max-width:560px;background:{CARD};border-radius:16px;
+                      border:1px solid {LINE};overflow:hidden;">
 
-          <!-- Header -->
           <tr>
-            <td style="background:linear-gradient(135deg,#0F4C5C 0%,#2C7A7B 100%);padding:36px 40px 32px;">
-              <p style="margin:0 0 6px;color:rgba(255,255,255,0.65);font-size:12px;letter-spacing:2px;text-transform:uppercase;">Invoice from</p>
-              <h1 style="margin:0 0 4px;color:#ffffff;font-size:26px;font-weight:700;line-height:1.2;">{company_name}</h1>
-              <p style="margin:0;color:rgba(255,255,255,0.6);font-size:13px;">{invoice_number}</p>
+            <td style="background:{GRAPHITE};padding:22px 36px;">
+              <span style="font-size:19px;font-weight:800;letter-spacing:-0.02em;color:{BRASS_ON_DARK};">MY</span><span style="font-size:19px;font-weight:600;letter-spacing:-0.02em;color:#FFFFFF;">nvoice</span>
             </td>
           </tr>
 
-          <!-- Amount highlight -->
           <tr>
-            <td style="background:#0F4C5C;padding:0 40px 28px;">
-              <table cellpadding="0" cellspacing="0" style="background:rgba(255,255,255,0.08);border-radius:12px;width:100%;">
-                <tr>
-                  <td style="padding:20px 24px;">
-                    <p style="margin:0 0 4px;color:rgba(255,255,255,0.6);font-size:12px;letter-spacing:1px;text-transform:uppercase;">Amount due</p>
-                    <p style="margin:0;color:#ffffff;font-size:32px;font-weight:700;line-height:1;">{total}</p>
-                    <p style="margin:6px 0 0;color:rgba(255,255,255,0.55);font-size:13px;">Payment due by {due_date}</p>
-                  </td>
-                </tr>
-              </table>
+            <td style="padding:34px 36px 30px;">
+              {heading_html}
+              {body}
             </td>
           </tr>
 
-          <!-- Body -->
           <tr>
-            <td style="padding:36px 40px 28px;">
-              <p style="margin:0 0 20px;color:#1B263B;font-size:16px;line-height:1.7;">
-                Hi {client_name},
-              </p>
-              <p style="margin:0 0 20px;color:#1B263B;font-size:16px;line-height:1.7;">
-                Hope you're doing well! Please find your invoice attached to this email.
-                The full details are in the PDF, but here's a quick summary:
-              </p>
-
-              <!-- Summary box -->
-              <table cellpadding="0" cellspacing="0" style="width:100%;background:#F0F3F5;border-radius:10px;margin:0 0 24px;">
-                <tr>
-                  <td style="padding:20px 24px;">
-                    <table width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="color:#5C677D;font-size:13px;padding-bottom:10px;">Invoice number</td>
-                        <td style="color:#1B263B;font-size:13px;font-weight:600;text-align:right;padding-bottom:10px;">{invoice_number}</td>
-                      </tr>
-                      <tr>
-                        <td style="color:#5C677D;font-size:13px;padding-bottom:10px;">Amount</td>
-                        <td style="color:#1B263B;font-size:13px;font-weight:600;text-align:right;padding-bottom:10px;">{total}</td>
-                      </tr>
-                      <tr>
-                        <td style="color:#5C677D;font-size:13px;">Due date</td>
-                        <td style="color:#1B263B;font-size:13px;font-weight:600;text-align:right;">{due_date}</td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <p style="margin:0 0 28px;color:#1B263B;font-size:16px;line-height:1.7;">
-                If you have any questions about this invoice or need anything adjusted,
-                just reply to this email — happy to help.
-              </p>
-
-              <p style="margin:0 0 4px;color:#1B263B;font-size:16px;line-height:1.7;">
-                Thank you for your continued trust — it means a lot! 🙏
-              </p>
-
-              <p style="margin:24px 0 0;color:#0F4C5C;font-size:15px;font-weight:700;">
-                {company_name}
-              </p>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="padding:20px 40px;background:#F8FAFB;border-top:1px solid #e8edf2;">
-              <p style="margin:0;color:#5C677D;font-size:12px;text-align:center;line-height:1.6;">
-                This invoice was sent via <strong>MYNVOICE</strong> · Your business. Your invoices.<br/>
-                If you believe this was sent in error, please ignore this email.
+            <td style="padding:18px 36px;background:{ELEVATED};border-top:1px solid {LINE};">
+              <p style="margin:0;color:{INK_MUTED};font-size:12px;line-height:1.6;">
+                Sent by <strong style="color:{INK};">MYNVOICE</strong> — your business, your invoices.
               </p>
             </td>
           </tr>
@@ -124,6 +122,40 @@ def _build_html_body(
   </table>
 </body>
 </html>"""
+
+
+def _paragraph(text: str, *, muted: bool = False, top: int = 0) -> str:
+    colour = INK_MUTED if muted else INK
+    size = 13 if muted else 15
+    return (
+        f'<p style="margin:{top}px 0 16px;color:{colour};font-size:{size}px;'
+        f'line-height:1.7;">{text}</p>'
+    )
+
+
+def _button(href: str, label: str) -> str:
+    """Solid brass with white text — the design system's primary action.
+
+    Wrapped in its own table because a padded <a> collapses in Outlook.
+    """
+    return f"""\
+<table cellpadding="0" cellspacing="0" role="presentation" style="margin:24px 0;">
+  <tr>
+    <td style="background:{BRASS};border-radius:10px;">
+      <a href="{href}" style="display:inline-block;padding:14px 28px;color:#FFFFFF;
+         font-family:{FONT};font-size:15px;font-weight:600;text-decoration:none;">{label}</a>
+    </td>
+  </tr>
+</table>"""
+
+
+def _fallback_link(href: str) -> str:
+    """Some clients strip the button, and some people don't trust one."""
+    return (
+        f'<p style="margin:0;color:{INK_MUTED};font-size:12px;line-height:1.6;'
+        f'word-break:break-all;">Button not working? Paste this into your browser:<br/>'
+        f'<a href="{href}" style="color:{BRASS};">{href}</a></p>'
+    )
 
 
 async def _send(msg: MIMEMultipart) -> bool:
@@ -148,136 +180,155 @@ async def _send(msg: MIMEMultipart) -> bool:
         return False
 
 
+def _message(to_email: str, subject: str, html: str, text: str) -> MIMEMultipart:
+    msg = MIMEMultipart("alternative")
+    msg["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
+    msg["To"] = to_email
+    msg["Subject"] = subject
+    msg.attach(MIMEText(text, "plain", "utf-8"))
+    msg.attach(MIMEText(html, "html", "utf-8"))
+    return msg
+
+
+APP_URL = "https://app.mynvoice.com"
+
+
+# ------------------------------------------------------------------ welcome
+
+
 async def send_verification_email(
     to_email: str,
     first_name: str,
     token: str,
 ) -> bool:
-    app_url = "https://app.mynvoice.com"
-    link = f"{app_url}/set-password?token={token}"
+    link = f"{APP_URL}/set-password?token={token}"
 
-    html = f"""\
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8" /></head>
-<body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:#F0F3F5;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F0F3F5;padding:32px 0;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;">
-          <tr>
-            <td style="background:#0F4C5C;padding:28px 32px;">
-              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Welcome to MYNVOICE</h1>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:32px;">
-              <p style="margin:0 0 16px;color:#1B263B;font-size:16px;line-height:1.6;">Hi {first_name},</p>
-              <p style="margin:0 0 24px;color:#1B263B;font-size:16px;line-height:1.6;">
-                Your account has been created. Click the button below to set your password and activate your account.
-              </p>
-              <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
-                <tr>
-                  <td style="background:#E05A2B;border-radius:8px;padding:14px 28px;">
-                    <a href="{link}" style="color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;">
-                      Set my password
-                    </a>
-                  </td>
-                </tr>
-              </table>
-              <p style="margin:0 0 8px;color:#5C677D;font-size:13px;">
-                This link expires in 24 hours. If you didn't create an account, you can safely ignore this email.
-              </p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:16px 32px;border-top:1px solid #e2e8f0;">
-              <p style="margin:0;color:#5C677D;font-size:12px;text-align:center;">Sent via MYNVOICE</p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>"""
+    html = _shell(
+        heading="Set your password",
+        preheader="Your MYNVOICE account is ready — choose a password to get started.",
+        body=(
+            _paragraph(f"Hi {_escape(first_name)},")
+            + _paragraph(
+                "Your account is ready. Choose a password and you're in — there's "
+                "nothing else to set up."
+            )
+            + _button(link, "Set my password")
+            + _paragraph(
+                "The link works for 24 hours. If you didn't sign up, you can ignore "
+                "this — no account is active until someone sets a password on it.",
+                muted=True,
+            )
+            + _fallback_link(link)
+        ),
+    )
 
-    msg = MIMEMultipart("alternative")
-    msg["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
-    msg["To"] = to_email
-    msg["Subject"] = "Activate your MYNVOICE account"
-    msg.attach(MIMEText(html, "html", "utf-8"))
+    text = (
+        f"Hi {first_name},\n\n"
+        "Your MYNVOICE account is ready. Choose a password to get started:\n\n"
+        f"{link}\n\n"
+        "The link works for 24 hours. If you didn't sign up, you can ignore this."
+    )
 
-    ok = await _send(msg)
+    ok = await _send(_message(to_email, "Set your MYNVOICE password", html, text))
     if ok:
         logger.info("Verification email sent to %s", to_email)
     return ok
+
+
+# ----------------------------------------------------------- password reset
 
 
 async def send_password_reset_email(
     to_email: str,
     first_name: str,
     token: str,
+    valid_hours: int = 1,
 ) -> bool:
-    app_url = "https://app.mynvoice.com"
-    link = f"{app_url}/reset-password?token={token}"
+    """`valid_hours` matches whatever the caller actually set on the token.
 
-    html = f"""\
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8" /></head>
-<body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:#F0F3F5;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F0F3F5;padding:32px 0;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;">
-          <tr>
-            <td style="background:#0F4C5C;padding:28px 32px;">
-              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Reset your password</h1>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:32px;">
-              <p style="margin:0 0 16px;color:#1B263B;font-size:16px;line-height:1.6;">Hi {first_name},</p>
-              <p style="margin:0 0 24px;color:#1B263B;font-size:16px;line-height:1.6;">
-                We received a request to reset your MYNVOICE password. Click the button below to choose a new one.
-              </p>
-              <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
-                <tr>
-                  <td style="background:#E05A2B;border-radius:8px;padding:14px 28px;">
-                    <a href="{link}" style="color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;">
-                      Reset my password
-                    </a>
-                  </td>
-                </tr>
-              </table>
-              <p style="margin:0 0 8px;color:#5C677D;font-size:13px;">
-                This link expires in 1 hour. If you didn&apos;t request a password reset, you can safely ignore this email.
-              </p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:16px 32px;border-top:1px solid #e2e8f0;">
-              <p style="margin:0;color:#5C677D;font-size:12px;text-align:center;">Sent via MYNVOICE</p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>"""
+    It used to be hard-coded to "1 hour" in the copy while an admin-triggered
+    reset issued a 24-hour token — the mail contradicted the system.
+    """
+    link = f"{APP_URL}/reset-password?token={token}"
+    window = "1 hour" if valid_hours == 1 else f"{valid_hours} hours"
 
-    msg = MIMEMultipart("alternative")
-    msg["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
-    msg["To"] = to_email
-    msg["Subject"] = "Reset your MYNVOICE password"
-    msg.attach(MIMEText(html, "html", "utf-8"))
+    html = _shell(
+        heading="Reset your password",
+        preheader=f"Choose a new MYNVOICE password. The link works for {window}.",
+        body=(
+            _paragraph(f"Hi {_escape(first_name)},")
+            + _paragraph("Someone asked to reset the password on your account.")
+            + _button(link, "Choose a new password")
+            + _paragraph(
+                f"The link works for {window} and can only be used once. If this "
+                "wasn't you, ignore it — your current password still works and "
+                "nothing has changed.",
+                muted=True,
+            )
+            + _fallback_link(link)
+        ),
+    )
 
-    ok = await _send(msg)
+    text = (
+        f"Hi {first_name},\n\n"
+        "Someone asked to reset the password on your MYNVOICE account:\n\n"
+        f"{link}\n\n"
+        f"The link works for {window} and can only be used once. If this wasn't "
+        "you, ignore it — your current password still works."
+    )
+
+    ok = await _send(_message(to_email, "Reset your MYNVOICE password", html, text))
     if ok:
         logger.info("Password reset email sent to %s", to_email)
     return ok
+
+
+# ------------------------------------------------------------------ invoice
+
+
+def _build_html_body(
+    invoice_number: str,
+    client_name: str,
+    total: str,
+    due_date: str,
+    company_name: str,
+) -> str:
+    """The invoice mail.
+
+    This one is sent *by* the user to *their* client, so it leads with their
+    business, not ours. MYNVOICE appears only in the footer.
+    """
+    return _shell(
+        preheader=f"{invoice_number} from {_escape(company_name)} — {total}, due {due_date}.",
+        body=(
+            f'<p style="margin:0 0 6px;color:{INK_MUTED};font-size:11px;'
+            f'letter-spacing:0.14em;text-transform:uppercase;">Invoice {_escape(invoice_number)}</p>'
+            f'<h1 style="margin:0 0 22px;color:{INK};font-size:24px;font-weight:700;'
+            f'letter-spacing:-0.015em;">{_escape(company_name)}</h1>'
+            # The amount is the one thing the reader is looking for.
+            f"""
+            <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
+                   style="background:{ELEVATED};border-radius:12px;margin:0 0 24px;">
+              <tr>
+                <td style="padding:22px 24px;">
+                  <p style="margin:0 0 4px;color:{INK_MUTED};font-size:11px;
+                            letter-spacing:0.14em;text-transform:uppercase;">Amount due</p>
+                  <p style="margin:0;color:{INK};font-size:30px;font-weight:800;
+                            letter-spacing:-0.02em;line-height:1;">{total}</p>
+                  <p style="margin:8px 0 0;color:{INK_MUTED};font-size:13px;">Due {due_date}</p>
+                </td>
+              </tr>
+            </table>"""
+            + _paragraph(f"Hi {_escape(client_name)},")
+            + _paragraph("Your invoice is attached as a PDF.")
+            + _paragraph(
+                "Any questions, or something that needs changing — just reply to "
+                "this email."
+            )
+            + f'<p style="margin:22px 0 0;color:{INK};font-size:15px;font-weight:600;">'
+            f"{_escape(company_name)}</p>"
+        ),
+    )
 
 
 async def send_invoice_email(
@@ -326,16 +377,7 @@ async def send_invoice_email(
         return False
 
 
-def _escape(text: str) -> str:
-    """Message bodies are typed by a human into a textarea, then dropped into
-    HTML. Escape first, then turn newlines into breaks — the paragraphs are
-    ours, the angle brackets are not."""
-    return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-    )
+# ----------------------------------------------------------- admin message
 
 
 async def send_admin_message_email(
@@ -347,68 +389,30 @@ async def send_admin_message_email(
 ) -> bool:
     """A note from whoever runs MYNVOICE to one of its users.
 
-    Deliberately plain. This is a person writing to another person — asking
-    how it's going, whether they need a hand — so it should not arrive dressed
-    as a system notification with a call-to-action button.
-
-    Graphite & Brass, unlike the older templates in this file, which are still
-    on the retired teal palette.
+    Deliberately plain — no heading, no call to action. This is a person
+    writing to another person, asking how it's going; dressed as a system
+    notification, nobody replies.
     """
     paragraphs = "".join(
-        f'<p style="margin:0 0 16px;color:#1C1917;font-size:15px;line-height:1.75;">{line}</p>'
-        for line in _escape(body).split("\n\n")
-        if line.strip()
-    ).replace("\n", "<br/>")
+        _paragraph(block.replace("\n", "<br/>"))
+        for block in _escape(body).split("\n\n")
+        if block.strip()
+    )
 
-    html = f"""\
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#FAF9F7;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#FAF9F7;padding:40px 16px;">
-    <tr>
-      <td align="center">
-        <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #E4E0D9;">
+    html = _shell(
+        preheader=subject,
+        body=(
+            _paragraph(f"Hi {_escape(first_name)},")
+            + paragraphs
+            + f'<p style="margin:26px 0 0;color:{INK_MUTED};font-size:14px;'
+            f'line-height:1.7;">— {_escape(from_name)}</p>'
+        ),
+    )
 
-          <tr>
-            <td style="background:#1C1917;padding:26px 36px;">
-              <p style="margin:0;color:#C79A5B;font-size:11px;letter-spacing:2px;text-transform:uppercase;">MYNVOICE</p>
-            </td>
-          </tr>
+    text = (
+        f"Hi {first_name},\n\n{body}\n\n— {from_name}\n\n"
+        "You're getting this because you have a MYNVOICE account. Just reply if "
+        "you'd like to talk."
+    )
 
-          <tr>
-            <td style="padding:34px 36px 30px;">
-              <p style="margin:0 0 20px;color:#1C1917;font-size:15px;line-height:1.75;">Hi {_escape(first_name)},</p>
-              {paragraphs}
-              <p style="margin:26px 0 0;color:#6E6862;font-size:14px;line-height:1.7;">
-                — {_escape(from_name)}
-              </p>
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:18px 36px;background:#F1EFEC;border-top:1px solid #E4E0D9;">
-              <p style="margin:0;color:#6E6862;font-size:12px;line-height:1.6;">
-                You're getting this because you have a MYNVOICE account.
-                Just reply if you'd like to talk — a real person reads it.
-              </p>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>"""
-
-    text = f"Hi {first_name},\n\n{body}\n\n— {from_name}\n\nYou're getting this because you have a MYNVOICE account. Just reply if you'd like to talk."
-
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
-    msg["To"] = to_email
-    msg.attach(MIMEText(text, "plain"))
-    msg.attach(MIMEText(html, "html"))
-
-    return await _send(msg)
+    return await _send(_message(to_email, subject, html, text))
