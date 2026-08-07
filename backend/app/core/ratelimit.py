@@ -65,17 +65,36 @@ _window = _Window()
 def client_ip(request: Request) -> str:
     """The caller's address, as well as it can be known.
 
-    Traefik terminates TLS and appends the peer to `X-Forwarded-For`, so the
-    **last** entry is the one it observed. Anything to the left was supplied
-    by the client and is worth nothing — reading the first entry, which is
-    the common mistake, would let an attacker rotate their own limit key by
-    inventing a header.
+    There are two proxies, not one. Cloudflare sits in front of Traefik — the
+    project's own notes said otherwise, but every hostname answers with
+    `server: cloudflare` and a `cf-ray`, so the notes were stale.
+
+    That matters, because it inverts the usual advice. With a single proxy the
+    last `X-Forwarded-For` entry is the real client. With Cloudflare in front,
+    the chain reaching us is `<client>, <cloudflare edge>` — the last entry is
+    Cloudflare, and keying on it would put *every* user into one bucket. The
+    limit would then punish a busy hour rather than an attacker.
+
+    So: `CF-Connecting-IP` first, which Cloudflare sets to the true client and
+    overwrites on every request, then the last forwarded entry for a
+    Cloudflare-less deployment, then the socket.
+
+    Caveat worth knowing: `CF-Connecting-IP` is only as good as the guarantee
+    that traffic arrives through Cloudflare. Someone who finds the origin
+    address and connects to it directly can invent the header. Closing that
+    means restricting the origin to Cloudflare's ranges, which is a firewall
+    change, not a code one.
     """
+    cf = request.headers.get("cf-connecting-ip")
+    if cf:
+        return cf.strip()
+
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
         parts = [p.strip() for p in forwarded.split(",") if p.strip()]
         if parts:
             return parts[-1]
+
     return request.client.host if request.client else "unknown"
 
 

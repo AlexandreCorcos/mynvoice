@@ -26,12 +26,20 @@ The app is deployed via **Coolify** as a Docker Compose stack using `docker-comp
 - To manually redeploy: Coolify dashboard → MYNVOICE resource → **Deploy**
 
 ### DNS — Cloudflare
-All DNS is managed in Cloudflare. `api.mynvoice.com` and `app.mynvoice.com` are set to **DNS only** (not proxied) so Traefik can manage SSL via Let's Encrypt.
+All DNS is managed in Cloudflare.
+
+> **Every hostname is proxied through Cloudflare** — `mynvoice.com`, `www`,
+> `app`, `api`, and anything the wildcard catches all answer with
+> `server: cloudflare` and a `cf-ray`. This page previously said `api` and
+> `app` were DNS-only; they are not, and the difference is load-bearing:
+> Cloudflare terminates TLS, sets the security headers (HSTS included), and is
+> the only reliable source of the client's address — `CF-Connecting-IP`, not
+> the last `X-Forwarded-For` entry, which is Cloudflare's own edge.
 
 | Type | Name | Points to | Proxy |
 |------|------|-----------|-------|
-| A | `app` | Server IP | DNS only |
-| A | `api` | Server IP | DNS only |
+| A | `app` | Server IP | Proxied |
+| A | `api` | Server IP | Proxied |
 | CNAME | `storage` | R2 bucket | Proxied (Cloudflare) |
 
 ### File Storage — Cloudflare R2
@@ -218,7 +226,9 @@ Common causes: DB not ready, migration error, missing env var.
 - Check browser console for CORS or network errors
 
 **SSL issues**
-- `api.mynvoice.com` and `app.mynvoice.com` must be DNS only in Cloudflare (not proxied)
+- Both hostnames are proxied, so Cloudflare terminates TLS at the edge. The
+  origin certificate still has to be valid for Cloudflare to trust it — check
+  the SSL/TLS mode is **Full (strict)**, not Flexible.
 - Wait 2-3 minutes after first deploy for Let's Encrypt to issue certificates
 
 ---
