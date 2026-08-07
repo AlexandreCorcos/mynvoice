@@ -1,7 +1,7 @@
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Request, Depends, HTTPException, status
+from fastapi import APIRouter, Request, Response, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +14,7 @@ from app.core.security import (
     verify_password,
 )
 from app.core import ratelimit
+from app.core.cookies import REFRESH_COOKIE, clear_session, set_session
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import (
@@ -38,6 +39,19 @@ class RegisterRequest(BaseModel):
 class SetPasswordRequest(BaseModel):
     token: str
     password: str
+
+
+def _issue_session(response: Response, user: User) -> TokenResponse:
+    """Plant the session cookies and hand the tokens back.
+
+    The body still carries them so that clients without a cookie jar — a
+    future mobile app, curl — have a way in. The web app ignores them: it
+    never touches a token, which is the entire point of the move.
+    """
+    access = create_access_token(str(user.id))
+    refresh = create_refresh_token(str(user.id))
+    set_session(response, access, refresh)
+    return TokenResponse(access_token=access, refresh_token=refresh)
 
 
 @router.post("/register", status_code=201)
@@ -70,7 +84,11 @@ async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/set-password", response_model=TokenResponse)
-async def set_password(data: SetPasswordRequest, db: AsyncSession = Depends(get_db)):
+async def set_password(
+    data: SetPasswordRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
     if len(data.password) < 8:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Password must be at least 8 characters")
 
@@ -90,10 +108,7 @@ async def set_password(data: SetPasswordRequest, db: AsyncSession = Depends(get_
     user.last_login_at = datetime.now(timezone.utc)
     await db.commit()
 
-    return TokenResponse(
-        access_token=create_access_token(str(user.id)),
-        refresh_token=create_refresh_token(str(user.id)),
-    )
+    return _issue_session(response, user)
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -157,7 +172,11 @@ async def forgot_password(
 
 
 @router.post("/reset-password", response_model=TokenResponse)
-async def reset_password(data: SetPasswordRequest, db: AsyncSession = Depends(get_db)):
+async def reset_password(
+    data: SetPasswordRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
     if len(data.password) < 8:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Password must be at least 8 characters")
 
@@ -176,10 +195,7 @@ async def reset_password(data: SetPasswordRequest, db: AsyncSession = Depends(ge
     user.last_login_at = datetime.now(timezone.utc)
     await db.commit()
 
-    return TokenResponse(
-        access_token=create_access_token(str(user.id)),
-        refresh_token=create_refresh_token(str(user.id)),
-    )
+    return _issue_session(response, user)
 
 
 # Two guards, because they cover different attacks. The per-address one stops
@@ -195,6 +211,7 @@ LOGIN_LOCK = timedelta(minutes=5)
 async def login(
     data: LoginRequest,
     request: Request,
+    response: Response,
     db: AsyncSession = Depends(get_db),
 ):
     ip = ratelimit.client_ip(request)
@@ -246,15 +263,39 @@ async def login(
     # it against them for the next quarter of an hour.
     ratelimit.forget(f"login:ip:{ip}")
 
-    return TokenResponse(
-        access_token=create_access_token(str(user.id)),
-        refresh_token=create_refresh_token(str(user.id)),
-    )
+    return _issue_session(response, user)
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh_token(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
-    payload = decode_token(data.refresh_token)
+async def refresh_token(
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    """Renew the session.
+
+    Two ways in, so the body is read by hand rather than declared: browsers
+    send the cookie and no body at all, other clients POST the token. Declaring
+    it as an optional model looked right but rejected `{}` with a 422 before
+    the cookie was ever looked at — the validation fired first.
+    """
+    # The cookie is scoped to this path precisely so it arrives here and
+    # nowhere else.
+    token = request.cookies.get(REFRESH_COOKIE)
+
+    if not token:
+        try:
+            body = await request.json()
+            token = (body or {}).get("refresh_token")
+        except Exception:
+            token = None
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="No refresh token"
+        )
+
+    payload = decode_token(token)
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
@@ -265,7 +306,16 @@ async def refresh_token(data: RefreshRequest, db: AsyncSession = Depends(get_db)
     if not user or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
 
-    return TokenResponse(
-        access_token=create_access_token(str(user.id)),
-        refresh_token=create_refresh_token(str(user.id)),
-    )
+    return _issue_session(response, user)
+
+
+@router.post("/logout", status_code=200)
+async def logout(response: Response):
+    """Sign out.
+
+    This has to be a round trip now. The session cookie is `HttpOnly`, so the
+    page cannot delete it — only the server that set it can, and it does so by
+    matching the same name, path and flags.
+    """
+    clear_session(response)
+    return {"ok": True}

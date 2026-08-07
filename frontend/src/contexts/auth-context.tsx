@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { api } from "@/lib/api";
-import type { User, Company, TokenResponse } from "@/types";
+import type { User, Company } from "@/types";
 
 interface AuthState {
   user: User | null;
@@ -16,7 +16,7 @@ interface AuthState {
   company: Company | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   /** Call after changing the company — the sidebar shows its logo. */
   refreshCompany: () => Promise<void>;
@@ -31,11 +31,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUser = useCallback(async () => {
     try {
-      const token = localStorage.getItem("access_token");
-      if (!token) {
-        setLoading(false);
-        return;
-      }
+      // No token to check first — the cookie either travels with this
+      // request or it doesn't, and the server is the one that knows.
       const u = await api.get<User>("/profile/me");
       setUser(u);
 
@@ -46,10 +43,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .then(setCompany)
         .catch(() => setCompany(null));
     } catch {
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
+      /* Not signed in, or the session expired. */
+      setUser(null);
+      setCompany(null);
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  /* Purge the tokens the old scheme left behind.
+     Anyone signed in before the move to cookies still has a refresh token
+     sitting in localStorage, valid for a week. Leaving it there would undo
+     the point of the change for every existing user — the session they can
+     no longer use is still readable by any script for seven days. */
+  useEffect(() => {
+    try {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+    } catch {
+      /* storage disabled — nothing to purge */
     }
   }, []);
 
@@ -58,12 +70,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [fetchUser]);
 
   const login = async (email: string, password: string) => {
-    const res = await api.post<TokenResponse>("/auth/login", {
-      email,
-      password,
-    });
-    localStorage.setItem("access_token", res.access_token);
-    localStorage.setItem("refresh_token", res.refresh_token);
+    /* The response still carries tokens, for clients without a cookie jar.
+       We ignore them — what signs this browser in is the Set-Cookie. */
+    await api.post("/auth/login", { email, password });
     await fetchUser();
   };
 
@@ -75,9 +84,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const logout = () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
+  /* A round trip now: the cookie is HttpOnly, so only the server that set it
+     can remove it. Local state is cleared either way — a failed call must not
+     strand someone in a session they asked to leave. */
+  const logout = async () => {
+    try {
+      await api.post("/auth/logout");
+    } catch {
+      /* already signed out, or offline */
+    }
     setUser(null);
     setCompany(null);
   };

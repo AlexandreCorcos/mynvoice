@@ -1,5 +1,20 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
+/* =========================================================================
+   API client.
+
+   The session is an `HttpOnly` cookie set by the API. Nothing here reads or
+   stores a token — there is no token to read, which is the point: an injected
+   script cannot take the session away.
+
+   Two consequences worth knowing:
+
+   * Every request needs `credentials: "include"`. The API is on a different
+     origin, so the browser will not attach the cookie otherwise.
+   * Signing out is a request, not a `localStorage.removeItem`. Only the
+     server can delete a cookie it marked `HttpOnly`.
+   ========================================================================= */
+
 /** Routes that are reachable signed-out and must survive a dead session. */
 const PUBLIC_AUTH_ROUTES = [
   "/login",
@@ -15,56 +30,56 @@ function isPublicAuthRoute(pathname: string): boolean {
   );
 }
 
-class ApiClient {
-  private getToken(): string | null {
-    if (typeof window === "undefined") return null;
-    return localStorage.getItem("access_token");
-  }
+/** The readable half of the double-submit pair the API expects back. */
+function csrfToken(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(?:^|;\s*)mynv_csrf=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
 
+class ApiClient {
   private async request<T>(
     path: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const token = this.getToken();
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       ...((options.headers as Record<string, string>) || {}),
     };
 
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
+    const method = (options.method ?? "GET").toUpperCase();
+    if (method !== "GET" && method !== "HEAD") {
+      const csrf = csrfToken();
+      if (csrf) headers["X-CSRF-Token"] = csrf;
     }
 
-    const res = await fetch(`${API_BASE}${path}`, {
-      ...options,
-      headers,
-    });
+    const send = () =>
+      fetch(`${API_BASE}${path}`, { ...options, headers, credentials: "include" });
+
+    const res = await send();
 
     if (res.status === 401) {
-      // Try refresh
+      // The access cookie lasts 30 minutes; the refresh cookie lasts a week.
+      // One silent renewal, then give up.
       const refreshed = await this.refreshToken();
       if (refreshed) {
-        headers["Authorization"] = `Bearer ${this.getToken()}`;
-        const retry = await fetch(`${API_BASE}${path}`, {
-          ...options,
-          headers,
-        });
+        const csrf = csrfToken();
+        if (csrf && method !== "GET" && method !== "HEAD") {
+          headers["X-CSRF-Token"] = csrf;
+        }
+        const retry = await send();
         if (!retry.ok) throw new ApiError(retry.status, await retry.text());
         if (retry.status === 204) return undefined as T;
         return retry.json();
       }
-      // The session is genuinely dead — drop it.
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("refresh_token");
 
-        /* ...but don't bounce off a public auth page. Someone arriving from
-           a password-reset email while holding an expired session would
-           otherwise be thrown to /login and lose the token in the URL —
-           and an expired session is exactly why people reset passwords. */
-        if (!isPublicAuthRoute(window.location.pathname)) {
-          window.location.href = "/login";
-        }
+      /* The session is genuinely gone. Nothing to clear — the server already
+         did — but don't bounce off a public auth page: someone arriving from
+         a password-reset email would otherwise be thrown to /login and lose
+         the token in the URL, and an expired session is exactly why people
+         reset passwords. */
+      if (typeof window !== "undefined" && !isPublicAuthRoute(window.location.pathname)) {
+        window.location.href = "/login";
       }
       throw new ApiError(401, "Unauthorized");
     }
@@ -79,22 +94,13 @@ class ApiClient {
   }
 
   private async refreshToken(): Promise<boolean> {
-    const refreshToken = localStorage.getItem("refresh_token");
-    if (!refreshToken) return false;
-
     try {
       const res = await fetch(`${API_BASE}/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: refreshToken }),
+        credentials: "include",
       });
-
-      if (!res.ok) return false;
-
-      const data = await res.json();
-      localStorage.setItem("access_token", data.access_token);
-      localStorage.setItem("refresh_token", data.refresh_token);
-      return true;
+      return res.ok;
     } catch {
       return false;
     }
@@ -131,18 +137,22 @@ class ApiClient {
   }
 
   async upload<T>(path: string, formData: FormData): Promise<T> {
-    const token = this.getToken();
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-
+    /* No Content-Type: the browser has to set it, boundary and all. */
+    const csrf = csrfToken();
     const res = await fetch(`${API_BASE}${path}`, {
       method: "POST",
-      headers,
+      headers: csrf ? { "X-CSRF-Token": csrf } : {},
+      credentials: "include",
       body: formData,
     });
 
     if (!res.ok) throw new ApiError(res.status, await res.text());
     return res.json();
+  }
+
+  /** A raw authenticated fetch, for responses that aren't JSON — the PDF. */
+  async raw(path: string, options: RequestInit = {}): Promise<Response> {
+    return fetch(`${API_BASE}${path}`, { ...options, credentials: "include" });
   }
 }
 

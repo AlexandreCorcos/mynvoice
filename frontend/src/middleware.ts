@@ -15,9 +15,10 @@ import { NextResponse, type NextRequest } from "next/server";
 
    What this policy does buy, and it is not nothing:
 
-   * `connect-src` — an injected script cannot post a stolen token anywhere
-     but our own API. With access tokens in `localStorage`, this is the
-     single most valuable directive in the list.
+   * `connect-src` — an injected script cannot reach anywhere but our own
+     API. Less load-bearing than it was, now that the session is an HttpOnly
+     cookie and there is no token in the page to exfiltrate, but it still
+     stops a script quietly shipping page data off-site.
    * `script-src` without a wildcard — no loading attacker-hosted script.
    * `frame-ancestors 'none'` — clickjacking, the modern form of the
      `X-Frame-Options` in next.config.ts.

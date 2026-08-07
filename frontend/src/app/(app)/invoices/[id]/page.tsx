@@ -211,16 +211,14 @@ export default function InvoiceDetailPage() {
     if (!invoice) return;
     setDownloading(true);
     try {
-      const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-      const token = localStorage.getItem("access_token");
-
       /* A network or CORS failure *rejects* rather than returning a
          non-ok response, so this needs a catch as well as an `ok` check —
          without it the rejection escaped and the button did nothing at
-         all, with no message to the user. */
-      const res = await fetch(`${base}/invoices/${invoice.id}/pdf`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+         all, with no message to the user.
+
+         `api.raw` rather than `api.get`: the response is a PDF, not JSON,
+         and it still needs the session cookie sent with it. */
+      const res = await api.raw(`/invoices/${invoice.id}/pdf`);
 
       if (!res.ok) {
         setToast({

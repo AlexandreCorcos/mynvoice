@@ -1,26 +1,42 @@
 from datetime import datetime, timedelta, timezone
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import stepup
+from app.core.cookies import ACCESS_COOKIE
 from app.core.security import decode_token
 from app.db.session import get_db
 from app.models.user import User
 
-security = HTTPBearer()
+# `auto_error=False` so a request carrying only the session cookie is not
+# rejected before it is looked at. The header is still accepted, for clients
+# that have no cookie jar — a future mobile app, or curl.
+security = HTTPBearer(auto_error=False)
 
 # How stale last_seen_at may get before a request bothers to update it.
 PRESENCE_WRITE_INTERVAL = timedelta(minutes=1)
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    payload = decode_token(credentials.credentials)
+    # Cookie first: it is what the browser sends, and it is the one an
+    # injected script cannot read.
+    token = request.cookies.get(ACCESS_COOKIE) or (
+        credentials.credentials if credentials else None
+    )
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+        )
+
+    payload = decode_token(token)
     if payload is None or payload.get("type") != "access":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

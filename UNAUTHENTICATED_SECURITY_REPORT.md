@@ -348,6 +348,7 @@ not be tested. `/auth/login` accepted unlimited guesses and
 | F-09 | Wildcard subdomains | **Open — needs Cloudflare.** Its worst consequence is closed by the CORS fix |
 | F-10 | Credentialed CORS | **Fixed** — regex removed, exact list only. Re-verified in production |
 | F-11 | Public donation endpoint | No change — intended |
+| — | Tokens in `localStorage` *(reported as safe)* | **Fixed** — session is now an `HttpOnly` cookie |
 | — | No rate limiting *(not in report)* | **Fixed** — per-address and per-account limits on login, per-address and per-recipient on password reset |
 
 Headers verified live on `https://app.mynvoice.com/login` after deploy.
@@ -365,10 +366,26 @@ sent to our own API, no attacker-hosted script can load, and `base-uri` /
 `form-action` stop a `<base>` tag or a rewritten form redirecting credentials
 elsewhere.
 
-### Still open, by choice
+### The `localStorage` finding — now closed
 
-**Access tokens in `localStorage`.** The real fix is `httpOnly` cookies, which
-touches login, refresh, the API client and CSRF handling. An auth refactor,
-not hardening — pending a decision.
+The session moved to an `HttpOnly` cookie, which is what the executive summary
+had already (incorrectly) credited the app with. Verified in the browser:
+`document.cookie` returns only the readable CSRF token, and `localStorage`
+holds nothing but an onboarding flag.
+
+Worth stating precisely, because it is easy to oversell: an XSS on the page can
+still *make* authenticated requests, since the browser attaches the cookie for
+it. What it can no longer do is take the session away — read the token, send it
+elsewhere, and keep using the account after the tab is closed. That is the
+difference between a compromised page and a compromised account.
+
+Cookies are attached automatically, so CSRF protection had to be added
+deliberately to replace what the `Authorization` header gave for free: strict
+CORS, plus a double-submit token required on every state-changing request.
+
+The cookie is **host-only on `api.mynvoice.com`** rather than
+`Domain=.mynvoice.com`. Sharing it across the domain would have sent the
+session to every subdomain — and per F-09 those all resolve to an unrelated
+site. That would have re-opened the CORS hole in a worse place.
 
 **Cloudflare-side items (F-06, F-09)** and confirming Minimum TLS Version 1.2.

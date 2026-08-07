@@ -255,6 +255,27 @@ changes belong in `InvoiceEditor`, not in either route.
 `/admin` is a redirect to `/sys/ctrl` so old links keep working; there is one
 admin surface, not two.
 
+## Sessions
+
+The session is an **`HttpOnly` cookie** set by the API, not a token in
+`localStorage`. Nothing in the frontend reads or stores a token — there isn't
+one to read. Consequences that catch people out:
+
+- Every request needs `credentials: "include"`; the API is a different origin.
+  `lib/api.ts` does this centrally, so use `api.*` rather than bare `fetch`
+  (there is `api.raw` for non-JSON responses like the PDF).
+- **Signing out is a request.** Only the server can delete a cookie it marked
+  `HttpOnly`.
+- State-changing requests carry `X-CSRF-Token`, echoing the readable
+  `mynv_csrf` cookie. Cookies ride along automatically, so this replaces the
+  CSRF protection the `Authorization` header used to give for free.
+- The cookie is **host-only on the API's hostname**. Never give it
+  `Domain=.mynvoice.com` — DNS resolves every subdomain, so that would hand
+  the session to anything squatting on one.
+
+`app/core/cookies.py` and `app/core/csrf.py` hold the whole of it. The API
+still accepts `Authorization: Bearer` for clients with no cookie jar.
+
 ## Admin access
 
 `/sys/ctrl` and `/api/v1/sys/*` use the ordinary bearer token plus `is_admin`.

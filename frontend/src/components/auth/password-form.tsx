@@ -67,8 +67,7 @@ export function PasswordSetForm({
     setLoading(true);
     try {
       const res = await api.post<TokenResponse>(endpoint, { token, password });
-      localStorage.setItem("access_token", res.access_token);
-      localStorage.setItem("refresh_token", res.refresh_token);
+      /* The endpoint set the session cookie; there is nothing to store. */
 
       /* Storing the tokens isn't enough — the auth context still has
          `user: null`, so the app layout would bounce straight back to

@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.core.config import settings
+from app.core.csrf import csrf_middleware
 
 
 @asynccontextmanager
@@ -46,6 +47,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Registered after CORS so it runs *inside* it — a rejection still carries the
+# CORS headers, and the browser shows the 403 instead of an opaque failure.
+app.middleware("http")(csrf_middleware)
 
 app.include_router(api_router, prefix=settings.API_PREFIX)
 

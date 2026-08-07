@@ -37,8 +37,6 @@ consisting solely of automated scanner output.
 These are known and either accepted or scheduled — please don't spend your
 time re-reporting them:
 
-- **Access tokens are kept in `localStorage`.** A move to `httpOnly` cookies
-  is under consideration; it is an auth refactor, not a header change.
 - **The password-reset token travels in the query string.** The links are
   single-use and expire in 24 hours, and `Referrer-Policy` keeps the path out
   of cross-origin referrers.
