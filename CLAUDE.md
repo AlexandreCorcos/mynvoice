@@ -266,9 +266,17 @@ one to read. Consequences that catch people out:
   (there is `api.raw` for non-JSON responses like the PDF).
 - **Signing out is a request.** Only the server can delete a cookie it marked
   `HttpOnly`.
-- State-changing requests carry `X-CSRF-Token`, echoing the readable
-  `mynv_csrf` cookie. Cookies ride along automatically, so this replaces the
-  CSRF protection the `Authorization` header used to give for free.
+- State-changing requests carry `X-CSRF-Token`. Cookies ride along
+  automatically, so this replaces the CSRF protection the `Authorization`
+  header used to give for free. The value comes from `GET /auth/csrf`, held in
+  memory by `lib/api.ts` — **not** read from `document.cookie`, which cannot
+  see it: the cookie is on the API's hostname and the app is on another. That
+  distinction is invisible on localhost, where both are the same host.
+- The CSRF middleware is registered **before** CORS so it runs *inside* it.
+  Starlette makes the last-registered middleware outermost, and a rejection
+  raised outside CORS carries no `Access-Control-Allow-Origin` — the browser
+  discards it and `fetch` rejects, so the page shows its catch-all message
+  instead of the real reason.
 - The cookie is **host-only on the API's hostname**. Never give it
   `Domain=.mynvoice.com` — DNS resolves every subdomain, so that would hand
   the session to anything squatting on one.

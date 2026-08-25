@@ -14,7 +14,13 @@ from app.core.security import (
     verify_password,
 )
 from app.core import ratelimit
-from app.core.cookies import REFRESH_COOKIE, clear_session, set_session
+from app.core.cookies import (
+    CSRF_COOKIE,
+    REFRESH_COOKIE,
+    clear_session,
+    issue_csrf,
+    set_session,
+)
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import (
@@ -319,3 +325,23 @@ async def logout(response: Response):
     """
     clear_session(response)
     return {"ok": True}
+
+
+@router.get("/csrf")
+async def csrf(request: Request, response: Response):
+    """Hand the page its CSRF token.
+
+    The token lives in a cookie on the API's hostname, and the app runs on a
+    different one — `document.cookie` cannot cross that gap. So the page is
+    told the value instead of reading it.
+
+    This does not weaken the double-submit: a cross-site attacker still cannot
+    obtain the token, because CORS lets only the app's own origin read this
+    response. What it avoids is the alternative fix — widening the cookie to
+    `Domain=.mynvoice.com` — which would hand it to every subdomain, and DNS
+    still resolves all of them.
+    """
+    token = request.cookies.get(CSRF_COOKIE)
+    if not token:
+        token = issue_csrf(response)
+    return {"csrf_token": token}

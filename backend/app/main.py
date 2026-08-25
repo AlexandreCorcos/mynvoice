@@ -40,6 +40,17 @@ app = FastAPI(
 # app.mynvoice.com.evil.com both correctly fail, because Starlette matches the
 # regex with `fullmatch` — so from outside it looks like an exact allowlist.
 # The hole is only visible from here.
+# Order matters, and it is the reverse of what it looks like: Starlette treats
+# the *last* middleware registered as the outermost. So the CSRF check is
+# registered first, which puts it inside CORS.
+#
+# Getting this backwards is not cosmetic. A rejection raised outside CORS
+# carries no `Access-Control-Allow-Origin`, so the browser discards the
+# response entirely and `fetch` rejects — the page cannot read the 403, cannot
+# tell why, and shows whatever its catch-all says. That is exactly what
+# "Couldn't create the invoice. Check the dates and line items." was.
+app.middleware("http")(csrf_middleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -47,10 +58,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Registered after CORS so it runs *inside* it — a rejection still carries the
-# CORS headers, and the browser shows the 403 instead of an opaque failure.
-app.middleware("http")(csrf_middleware)
 
 app.include_router(api_router, prefix=settings.API_PREFIX)
 

@@ -72,17 +72,31 @@ def set_session(response: Response, access_token: str, refresh_token: str) -> No
         samesite="lax",
         path=REFRESH_PATH,
     )
-    # Same lifetime as the refresh cookie: the page needs it for as long as
-    # the session can be renewed.
+    issue_csrf(response)
+
+
+def issue_csrf(response: Response) -> str:
+    """Mint a CSRF token and return it.
+
+    Not `HttpOnly` by convention, but the app cannot read it anyway — it is a
+    cookie on the API's hostname and the app is served from another. The value
+    reaches the page through `GET /auth/csrf`; the cookie exists so the server
+    has something to compare the header against.
+
+    Same lifetime as the refresh cookie: the page needs it for as long as the
+    session can be renewed.
+    """
+    token = secrets.token_urlsafe(24)
     response.set_cookie(
         CSRF_COOKIE,
-        secrets.token_urlsafe(24),
+        token,
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         httponly=False,
         secure=_secure(),
         samesite="lax",
         path="/",
     )
+    return token
 
 
 def clear_session(response: Response) -> None:

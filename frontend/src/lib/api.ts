@@ -47,11 +47,39 @@ type RequestOptions = {
   redirectOnUnauthorized?: boolean;
 };
 
-/** The readable half of the double-submit pair the API expects back. */
-function csrfToken(): string | null {
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(/(?:^|;\s*)mynv_csrf=([^;]*)/);
-  return match ? decodeURIComponent(match[1]) : null;
+/* The CSRF token, held in memory.
+ *
+ * It cannot be read from `document.cookie`: the cookie belongs to the API's
+ * hostname and the app is served from another one, so the page never sees it.
+ * That was the bug — every write 403'd in production while working perfectly
+ * on localhost, where both sides are the same host and the cookie *is*
+ * readable. The value now comes from the API and is kept here.
+ *
+ * Fetched on first need rather than on load, since most page views never
+ * write anything.
+ */
+let csrfCache: string | null = null;
+
+async function csrfToken(force = false): Promise<string | null> {
+  if (csrfCache && !force) return csrfCache;
+  try {
+    const res = await fetch(`${API_BASE}/auth/csrf`, { credentials: "include" });
+    if (!res.ok) return null;
+    csrfCache = (await res.json())?.csrf_token ?? null;
+    return csrfCache;
+  } catch {
+    return null;
+  }
+}
+
+/** Did this response come back because the CSRF token was stale or missing? */
+async function isCsrfFailure(res: Response): Promise<boolean> {
+  if (res.status !== 403) return false;
+  try {
+    return (await res.clone().text()).includes("csrf_failed");
+  } catch {
+    return false;
+  }
 }
 
 class ApiClient {
@@ -66,23 +94,38 @@ class ApiClient {
     };
 
     const method = (options.method ?? "GET").toUpperCase();
-    if (method !== "GET" && method !== "HEAD") {
-      const csrf = csrfToken();
+    const unsafe = method !== "GET" && method !== "HEAD";
+
+    if (unsafe) {
+      const csrf = await csrfToken();
       if (csrf) headers["X-CSRF-Token"] = csrf;
     }
 
     const send = () =>
       fetch(`${API_BASE}${path}`, { ...options, headers, credentials: "include" });
 
-    const res = await send();
+    let res = await send();
+
+    /* A stale token — the session was renewed, or this tab sat open past the
+       cookie's life. Fetch a fresh one and try once more, so the person does
+       not lose what they just typed to an error they cannot act on. */
+    if (unsafe && (await isCsrfFailure(res))) {
+      const fresh = await csrfToken(true);
+      if (fresh) {
+        headers["X-CSRF-Token"] = fresh;
+        res = await send();
+      }
+    }
 
     if (res.status === 401) {
       // The access cookie lasts 30 minutes; the refresh cookie lasts a week.
       // One silent renewal, then give up.
       const refreshed = await this.refreshToken();
       if (refreshed) {
-        const csrf = csrfToken();
-        if (csrf && method !== "GET" && method !== "HEAD") {
+        /* Renewing the session mints a new CSRF token, so the cached one is
+           now the wrong one. */
+        const csrf = await csrfToken(true);
+        if (csrf && unsafe) {
           headers["X-CSRF-Token"] = csrf;
         }
         const retry = await send();
@@ -160,7 +203,7 @@ class ApiClient {
 
   async upload<T>(path: string, formData: FormData): Promise<T> {
     /* No Content-Type: the browser has to set it, boundary and all. */
-    const csrf = csrfToken();
+    const csrf = await csrfToken();
     const res = await fetch(`${API_BASE}${path}`, {
       method: "POST",
       headers: csrf ? { "X-CSRF-Token": csrf } : {},
