@@ -15,8 +15,9 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v
      server can delete a cookie it marked `HttpOnly`.
    ========================================================================= */
 
-/** Routes that are reachable signed-out and must survive a dead session. */
-const PUBLIC_AUTH_ROUTES = [
+/** Routes reachable signed-out, which must never be bounced to /login. */
+const PUBLIC_ROUTES = [
+  "/", // the landing page — most visitors here have no account at all
   "/login",
   "/register",
   "/forgot-password",
@@ -24,11 +25,27 @@ const PUBLIC_AUTH_ROUTES = [
   "/set-password",
 ];
 
-function isPublicAuthRoute(pathname: string): boolean {
-  return PUBLIC_AUTH_ROUTES.some(
+function isPublicRoute(pathname: string): boolean {
+  // Exact match, or a child path. "/" only ever matches exactly, since
+  // `startsWith("//")` is false for every real path.
+  return PUBLIC_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
 }
+
+/** Per-call options. */
+type RequestOptions = {
+  /**
+   * Whether a dead session should send the browser to /login.
+   *
+   * True for anything the app does on your behalf — a 401 there means your
+   * session ended mid-task. False for the probe that *asks* whether you are
+   * signed in: 401 is a legitimate answer to that question, not a failure,
+   * and treating it as one threw every anonymous visitor off the landing
+   * page.
+   */
+  redirectOnUnauthorized?: boolean;
+};
 
 /** The readable half of the double-submit pair the API expects back. */
 function csrfToken(): string | null {
@@ -40,7 +57,8 @@ function csrfToken(): string | null {
 class ApiClient {
   private async request<T>(
     path: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    { redirectOnUnauthorized = true }: RequestOptions = {}
   ): Promise<T> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -78,7 +96,11 @@ class ApiClient {
          a password-reset email would otherwise be thrown to /login and lose
          the token in the URL, and an expired session is exactly why people
          reset passwords. */
-      if (typeof window !== "undefined" && !isPublicAuthRoute(window.location.pathname)) {
+      if (
+        redirectOnUnauthorized &&
+        typeof window !== "undefined" &&
+        !isPublicRoute(window.location.pathname)
+      ) {
         window.location.href = "/login";
       }
       throw new ApiError(401, "Unauthorized");
@@ -106,8 +128,8 @@ class ApiClient {
     }
   }
 
-  get<T>(path: string) {
-    return this.request<T>(path);
+  get<T>(path: string, opts?: RequestOptions) {
+    return this.request<T>(path, {}, opts);
   }
 
   post<T>(path: string, body?: unknown, headers?: Record<string, string>) {

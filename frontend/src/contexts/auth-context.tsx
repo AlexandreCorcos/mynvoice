@@ -31,15 +31,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUser = useCallback(async () => {
     try {
-      // No token to check first — the cookie either travels with this
-      // request or it doesn't, and the server is the one that knows.
-      const u = await api.get<User>("/profile/me");
+      /* No token to check first — the cookie either travels with this
+         request or it doesn't, and the server is the one that knows.
+
+         `redirectOnUnauthorized: false` because this runs on every page,
+         including the landing page, where most visitors have no account.
+         A 401 here means "not signed in", which is an answer, not a fault. */
+      const u = await api.get<User>("/profile/me", {
+        redirectOnUnauthorized: false,
+      });
       setUser(u);
 
       /* Best effort: no company yet is the normal state before onboarding,
          and it must never keep someone out of the app. */
       api
-        .get<Company | null>("/profile/company")
+        .get<Company | null>("/profile/company", { redirectOnUnauthorized: false })
         .then(setCompany)
         .catch(() => setCompany(null));
     } catch {
