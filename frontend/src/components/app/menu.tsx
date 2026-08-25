@@ -9,6 +9,7 @@
    ========================================================================= */
 
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { MoreHorizontal } from "lucide-react";
@@ -38,10 +39,14 @@ export function RowMenu({
 }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const visible = items.filter((i) => i.show !== false);
+
+  /* The dropdown is portalled to <body>, so it must only mount client-side. */
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (!open) return;
@@ -98,59 +103,64 @@ export function RowMenu({
         <MoreHorizontal className="h-4 w-4" />
       </button>
 
-      <AnimatePresence>
-        {open && pos ? (
-          <motion.div
-            ref={menuRef}
-            initial={{ opacity: 0, y: -6, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.98, transition: { duration: 0.12 } }}
-            transition={{ duration: 0.2, ease: EASE_OUT }}
-            style={{ top: pos.top, right: pos.right }}
-            className="fixed z-[70] w-48 origin-top-right overflow-hidden rounded-[12px] bg-card p-1 shadow-[var(--shadow-dropdown)] ring-1 ring-line"
-          >
-            {visible.map((item) => {
-              const content = (
-                <>
-                  <item.icon className="h-3.5 w-3.5 flex-none" />
-                  {item.label}
-                </>
-              );
-              const cls = cn(
-                "flex w-full items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-[13px] font-medium transition-colors",
-                item.tone === "danger"
-                  ? "text-negative hover:bg-negative/10"
-                  : "text-ink hover:bg-elevated"
-              );
-
-              if (item.href) {
-                return (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    onClick={() => setOpen(false)}
-                    className={cls}
-                  >
-                    {content}
-                  </Link>
-                );
-              }
-              return (
-                <button
-                  key={item.label}
-                  onClick={() => {
-                    setOpen(false);
-                    item.onSelect?.();
-                  }}
-                  className={cls}
+      {mounted
+        ? createPortal(
+            <AnimatePresence>
+              {open && pos ? (
+                <motion.div
+                  ref={menuRef}
+                  initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.98, transition: { duration: 0.12 } }}
+                  transition={{ duration: 0.2, ease: EASE_OUT }}
+                  style={{ top: pos.top, right: pos.right }}
+                  className="fixed z-[70] w-48 origin-top-right overflow-hidden rounded-[12px] bg-card p-1 shadow-[var(--shadow-dropdown)] ring-1 ring-line"
                 >
-                  {content}
-                </button>
-              );
-            })}
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+                  {visible.map((item) => {
+                    const content = (
+                      <>
+                        <item.icon className="h-3.5 w-3.5 flex-none" />
+                        {item.label}
+                      </>
+                    );
+                    const cls = cn(
+                      "flex w-full items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-[13px] font-medium transition-colors",
+                      item.tone === "danger"
+                        ? "text-negative hover:bg-negative/10"
+                        : "text-ink hover:bg-elevated"
+                    );
+
+                    if (item.href) {
+                      return (
+                        <Link
+                          key={item.label}
+                          href={item.href}
+                          onClick={() => setOpen(false)}
+                          className={cls}
+                        >
+                          {content}
+                        </Link>
+                      );
+                    }
+                    return (
+                      <button
+                        key={item.label}
+                        onClick={() => {
+                          setOpen(false);
+                          item.onSelect?.();
+                        }}
+                        className={cls}
+                      >
+                        {content}
+                      </button>
+                    );
+                  })}
+                </motion.div>
+              ) : null}
+            </AnimatePresence>,
+            document.body
+          )
+        : null}
     </>
   );
 }
