@@ -16,6 +16,7 @@ import { motion } from "framer-motion";
 import {
   AlertTriangle,
   ArrowLeft,
+  Ban,
   Check,
   CheckCircle2,
   Copy,
@@ -23,6 +24,7 @@ import {
   Loader2,
   Mail,
   Pencil,
+  RotateCcw,
   Send,
   Trash2,
 } from "lucide-react";
@@ -56,7 +58,11 @@ const STEPS: { key: InvoiceStatus; label: string; done: string }[] = [
 ];
 
 function Timeline({ invoice }: { invoice: Invoice }) {
-  /* Overdue is "sent, and late" rather than a fourth step in the line. */
+  /* Overdue is "sent, and late" rather than a fourth step in the line.
+     Cancelled sits outside the line entirely: it shows the history that did
+     happen (created, and sent if it was) in a muted tone, with nothing
+     "current", because the invoice is no longer moving towards paid. */
+  const cancelled = invoice.status === "cancelled";
   const reached =
     invoice.status === "paid" ? 2 : invoice.status === "draft" ? 0 : 1;
   const late = invoice.status === "overdue";
@@ -65,16 +71,18 @@ function Timeline({ invoice }: { invoice: Invoice }) {
     <ol className="relative">
       {STEPS.map((step, i) => {
         const done = i < reached;
-        const current = i === reached;
-        const pending = i > reached;
         /* A step earns its checkmark once the invoice has genuinely passed that
            milestone — not only when a *later* step has begun. "Sent" is reached
            the moment the invoice has a sent_at, so a freshly-sent (or overdue)
-           invoice checks its Sent step instead of leaving it a bare dot. */
-        const completed =
-          done ||
-          (step.key === "sent" && Boolean(invoice.sent_at)) ||
-          (step.key === "paid" && invoice.status === "paid");
+           invoice checks its Sent step instead of leaving it a bare dot. On a
+           cancelled invoice only the history that happened stays checked. */
+        const completed = cancelled
+          ? step.key === "draft" || (step.key === "sent" && Boolean(invoice.sent_at))
+          : done ||
+            (step.key === "sent" && Boolean(invoice.sent_at)) ||
+            (step.key === "paid" && invoice.status === "paid");
+        const current = !cancelled && i === reached;
+        const pending = !completed && !current;
 
         return (
           <li key={step.key} className="relative flex gap-3.5 pb-5 last:pb-0">
@@ -85,7 +93,10 @@ function Timeline({ invoice }: { invoice: Invoice }) {
                   initial={{ scaleY: 0 }}
                   animate={{ scaleY: done ? 1 : 0 }}
                   transition={{ duration: 0.5, delay: 0.15 + i * 0.1, ease: EASE_OUT }}
-                  className="block h-full w-full origin-top bg-brass"
+                  className={cn(
+                    "block h-full w-full origin-top",
+                    cancelled ? "bg-ink-muted/30" : "bg-brass"
+                  )}
                 />
               </span>
             ) : null}
@@ -97,7 +108,9 @@ function Timeline({ invoice }: { invoice: Invoice }) {
               className={cn(
                 "relative z-10 flex h-[23px] w-[23px] flex-none items-center justify-center rounded-full ring-1",
                 completed
-                  ? "bg-brass text-white ring-brass"
+                  ? cancelled
+                    ? "bg-elevated text-ink-muted ring-line"
+                    : "bg-brass text-white ring-brass"
                   : current
                     ? late
                       ? "bg-negative/10 text-negative ring-negative/30"
@@ -127,17 +140,19 @@ function Timeline({ invoice }: { invoice: Invoice }) {
                 ) : null}
               </span>
               <span className="block text-[11.5px] text-ink-muted">
-                {step.key === "sent" && invoice.sent_at
-                  ? `${formatDate(invoice.sent_at)}${
-                      invoice.sent_to_email ? ` · ${invoice.sent_to_email}` : ""
-                    }`
-                  : step.key === "paid" && invoice.payment_date
-                    ? formatDate(invoice.payment_date)
-                    : step.key === "draft"
-                      ? formatDate(invoice.created_at)
-                      : pending
-                        ? "Not yet"
-                        : step.done}
+                {cancelled && step.key === "paid"
+                  ? "Cancelled"
+                  : step.key === "sent" && invoice.sent_at
+                    ? `${formatDate(invoice.sent_at)}${
+                        invoice.sent_to_email ? ` · ${invoice.sent_to_email}` : ""
+                      }`
+                    : step.key === "paid" && invoice.payment_date
+                      ? formatDate(invoice.payment_date)
+                      : step.key === "draft"
+                        ? formatDate(invoice.created_at)
+                        : pending
+                          ? "Not yet"
+                          : step.done}
               </span>
             </span>
           </li>
@@ -289,16 +304,34 @@ export default function InvoiceDetailPage() {
   if (!invoice) return null;
 
   const paid = invoice.status === "paid";
+  const cancelled = invoice.status === "cancelled";
   const partly = Number(invoice.amount_paid) > 0 && Number(invoice.balance_due) > 0;
 
   const menu: MenuItem[] = [
-    { label: "Edit", icon: Pencil, href: `/invoices/${invoice.id}/edit`, show: !paid },
+    {
+      label: "Edit",
+      icon: Pencil,
+      href: `/invoices/${invoice.id}/edit`,
+      show: !paid && !cancelled,
+    },
     { label: "Duplicate", icon: Copy, onSelect: duplicate },
     {
       label: "Mark overdue",
       icon: AlertTriangle,
       onSelect: () => setStatus("overdue"),
       show: invoice.status === "sent",
+    },
+    {
+      label: "Cancel invoice",
+      icon: Ban,
+      onSelect: () => setStatus("cancelled"),
+      show: !paid && !cancelled,
+    },
+    {
+      label: "Reopen",
+      icon: RotateCcw,
+      onSelect: () => setStatus("draft"),
+      show: cancelled,
     },
     {
       label: "Delete",
@@ -549,6 +582,27 @@ export default function InvoiceDetailPage() {
             </motion.div>
           ) : null}
 
+          {cancelled ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.45, ease: EASE_OUT }}
+              className="flex items-center gap-3 rounded-[16px] bg-elevated p-4 ring-1 ring-line"
+            >
+              <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-ink/[0.06]">
+                <Ban className="h-[18px] w-[18px] text-ink-muted" />
+              </span>
+              <span>
+                <span className="block text-[13.5px] font-bold text-ink">
+                  Cancelled
+                </span>
+                <span className="block text-[12px] text-ink-muted">
+                  Voided — no longer owed or counted.
+                </span>
+              </span>
+            </motion.div>
+          ) : null}
+
           <Panel>
             <PanelHeader title="Progress" caption="Where this invoice has got to" />
             <div className="mt-5">
@@ -566,6 +620,16 @@ export default function InvoiceDetailPage() {
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 Mark as sent
               </Button>
+            ) : cancelled ? (
+              <Button
+                variant="secondary"
+                className="mt-5 w-full"
+                disabled={busy}
+                onClick={() => setStatus("draft")}
+              >
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                Reopen invoice
+              </Button>
             ) : !paid ? (
               <Button
                 variant="primary"
@@ -578,7 +642,7 @@ export default function InvoiceDetailPage() {
               </Button>
             ) : null}
 
-            {!paid ? (
+            {!paid && !cancelled ? (
               <ButtonLink
                 href={`/invoices/${invoice.id}/edit`}
                 variant="ghost"
@@ -592,15 +656,25 @@ export default function InvoiceDetailPage() {
 
           <Panel>
             <PanelHeader title="Amount" />
-            <p className="mt-3 text-[30px] font-extrabold leading-none tracking-[-0.025em] tabular-nums text-ink">
-              {formatCurrency(paid ? invoice.total : invoice.balance_due, invoice.currency)}
+            <p
+              className={cn(
+                "mt-3 text-[30px] font-extrabold leading-none tracking-[-0.025em] tabular-nums text-ink",
+                cancelled && "line-through decoration-ink-muted/40"
+              )}
+            >
+              {formatCurrency(
+                paid || cancelled ? invoice.total : invoice.balance_due,
+                invoice.currency
+              )}
             </p>
             <p className="mt-1.5 text-[12.5px] text-ink-muted">
-              {paid
-                ? "Received in full"
-                : partly
-                  ? `of ${formatCurrency(invoice.total, invoice.currency)} still outstanding`
-                  : "outstanding"}
+              {cancelled
+                ? "Cancelled — no longer owed"
+                : paid
+                  ? "Received in full"
+                  : partly
+                    ? `of ${formatCurrency(invoice.total, invoice.currency)} still outstanding`
+                    : "outstanding"}
             </p>
           </Panel>
         </div>

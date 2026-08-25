@@ -15,12 +15,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Ban,
   CheckCircle,
   Copy,
   Eye,
   FileText,
   Pencil,
   Plus,
+  RotateCcw,
   Send,
   Trash2,
 } from "lucide-react";
@@ -226,6 +228,7 @@ export default function InvoicesPage() {
       sent: 0,
       paid: 0,
       overdue: 0,
+      cancelled: 0,
     };
     for (const i of invoices) base[i.status] += 1;
     return base;
@@ -274,6 +277,16 @@ export default function InvoicesPage() {
     fetchData();
   };
 
+  const cancel = async (id: string) => {
+    await api.patch(`/invoices/${id}/status`, { status: "cancelled" });
+    fetchData();
+  };
+
+  const reopen = async (id: string) => {
+    await api.patch(`/invoices/${id}/status`, { status: "draft" });
+    fetchData();
+  };
+
   const duplicate = async (id: string) => {
     await api.post(`/invoices/${id}/duplicate`);
     fetchData();
@@ -292,7 +305,7 @@ export default function InvoicesPage() {
       label: "Edit",
       icon: Pencil,
       href: `/invoices/${inv.id}/edit`,
-      show: inv.status !== "paid",
+      show: inv.status !== "paid" && inv.status !== "cancelled",
     },
     {
       label: "Mark as sent",
@@ -307,6 +320,18 @@ export default function InvoicesPage() {
       show: inv.status === "sent" || inv.status === "overdue",
     },
     { label: "Duplicate", icon: Copy, onSelect: () => duplicate(inv.id) },
+    {
+      label: "Cancel invoice",
+      icon: Ban,
+      onSelect: () => cancel(inv.id),
+      show: inv.status !== "paid" && inv.status !== "cancelled",
+    },
+    {
+      label: "Reopen",
+      icon: RotateCcw,
+      onSelect: () => reopen(inv.id),
+      show: inv.status === "cancelled",
+    },
     {
       label: "Delete",
       icon: Trash2,
@@ -353,6 +378,7 @@ export default function InvoicesPage() {
             { value: "sent", label: "Sent", count: counts.sent },
             { value: "overdue", label: "Overdue", count: counts.overdue },
             { value: "paid", label: "Paid", count: counts.paid },
+            { value: "cancelled", label: "Cancelled", count: counts.cancelled },
           ]}
         />
         <SearchInput

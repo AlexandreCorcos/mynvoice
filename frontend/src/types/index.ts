@@ -94,7 +94,12 @@ export interface Item {
 }
 
 // Invoice
-export type InvoiceStatus = "draft" | "sent" | "paid" | "overdue";
+export type InvoiceStatus =
+  | "draft"
+  | "sent"
+  | "paid"
+  | "overdue"
+  | "cancelled";
 export type PaymentMethod = "bank_transfer" | "card" | "cash" | "other";
 
 export interface InvoiceItem {

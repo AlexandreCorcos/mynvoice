@@ -268,6 +268,16 @@ async def update_invoice_status(
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
 
+    # A sent/overdue/draft invoice can be voided, but a paid one cannot —
+    # cancelling it would silently erase revenue that was actually recorded.
+    if (
+        data.status == InvoiceStatus.CANCELLED
+        and invoice.status == InvoiceStatus.PAID
+    ):
+        raise HTTPException(status_code=400, detail="Cannot cancel a paid invoice")
+
+    was_cancelled = invoice.status == InvoiceStatus.CANCELLED
+
     invoice.status = data.status
     if data.payment_method:
         invoice.payment_method = data.payment_method
@@ -278,6 +288,12 @@ async def update_invoice_status(
     if data.status == InvoiceStatus.PAID:
         invoice.amount_paid = invoice.total
         invoice.balance_due = Decimal("0.00")
+    elif data.status == InvoiceStatus.CANCELLED:
+        # Nothing is owed on a cancelled invoice; keep it out of every balance sum.
+        invoice.balance_due = Decimal("0.00")
+    elif was_cancelled:
+        # Reopening a cancelled invoice restores what's still owed on it.
+        invoice.balance_due = invoice.total - (invoice.amount_paid or Decimal("0.00"))
 
     # Auto-create payment record when marking as paid
     if data.status == InvoiceStatus.PAID:

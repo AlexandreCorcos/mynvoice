@@ -23,6 +23,7 @@ class InvoiceStatus(str, enum.Enum):
     SENT = "sent"
     PAID = "paid"
     OVERDUE = "overdue"
+    CANCELLED = "cancelled"
 
 
 class PaymentMethod(str, enum.Enum):

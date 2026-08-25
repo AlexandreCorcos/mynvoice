@@ -6,11 +6,16 @@ import type { InvoiceStatus } from "@/types";
 
    Colour never carries the meaning on its own — every badge has a dot and
    a word. Draft is neutral (nothing has happened yet), sent is brass (it's
-   in flight), paid is positive, overdue is negative. Those are the only
-   four states the system has, so they get the four tones it has.
+   in flight), paid is positive, overdue is negative. Cancelled is neutral
+   too — a void is not an error, so it stays off the negative tone the design
+   reserves for money owed — and its label is struck through so it never reads
+   as another kind of draft.
    ========================================================================= */
 
-const STYLES: Record<InvoiceStatus, { chip: string; dot: string; label: string }> = {
+const STYLES: Record<
+  InvoiceStatus,
+  { chip: string; dot: string; label: string; strike?: boolean }
+> = {
   draft: {
     chip: "bg-elevated text-ink-muted ring-line",
     dot: "bg-ink-muted/60",
@@ -30,6 +35,12 @@ const STYLES: Record<InvoiceStatus, { chip: string; dot: string; label: string }
     chip: "bg-negative/10 text-negative ring-negative/20",
     dot: "bg-negative",
     label: "Overdue",
+  },
+  cancelled: {
+    chip: "bg-elevated text-ink-muted ring-line",
+    dot: "bg-ink-muted/40",
+    label: "Cancelled",
+    strike: true,
   },
 };
 
@@ -53,7 +64,9 @@ export default function StatusBadge({
       )}
     >
       <span className={cn("h-1.5 w-1.5 rounded-full", s.dot)} />
-      {s.label}
+      <span className={cn(s.strike && "line-through decoration-ink-muted/50")}>
+        {s.label}
+      </span>
     </span>
   );
 }
