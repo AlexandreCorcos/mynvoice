@@ -310,6 +310,20 @@ held in React state, never `localStorage`. The frontend side is
 prompts, enrols and replays on its own — callers never see the 403. Lost
 authenticator: `python -m app.cli reset-totp <email>`, server-side only.
 
+## Audits
+
+`docs/Audit/audit.md` is the entry point for every runnable audit playbook. When the owner says
+**"read audit.md"**, show the numbered menu and ask which one, loop or single pass, and for how long —
+then wait. Never start an audit unprompted.
+
+The shared context (environments, the two accounts an isolation test needs, DB access, bug policy)
+lives in `audit.md` alone; the playbooks under `docs/Audit/playbooks/` are scope only. Results go to
+`docs/Audit/result/` with a row appended to `RUN_LOG.md`.
+
+The one that matters most is **account isolation**: MYNVOICE has no tenants, so `users.id` is the only
+boundary in the system and it is enforced by hand in every query. There is no framework guarantee
+behind it.
+
 ## Core Features
 
 1. **Auth:** Email/password + Google OAuth. Design auth structure to accommodate Apple Sign-In later without implementation.
