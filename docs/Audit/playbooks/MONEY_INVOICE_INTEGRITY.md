@@ -1,7 +1,7 @@
 # Money & invoice integrity (SCOPE)
 
 > **Read `docs/Audit/audit.md` § MANDATORY SHARED CONTEXT first.** This file is the **SCOPE**.
-> **Mode:** 🟠 read-write + concurrency, **local**.
+> **Mode:** 🟠 read-write + concurrency. **Local first, then production** (audit.md §9).
 
 Act as a **forensic accountant who can read code**. This is somebody's books. An invoicing app that
 loses a payment, double-counts revenue, reuses an invoice number or rounds tax the wrong way does not
@@ -138,6 +138,24 @@ HAVING i.subtotal <> COALESCE(SUM(li.quantity * li.unit_price), 0);
 
 Adjust the column names to the models if they have drifted — and if a name has drifted, say so in the
 report.
+
+## 7b. The production pass
+
+The arithmetic is environment-independent, but three things are not, and they are the reasons to
+repeat this live:
+
+- **The `Money` serialisation** depends on the deployed build, not on your local one. Re-assert
+  `typeof === "number"` on every production endpoint; a field added since the last deploy is exactly
+  where a bare `Decimal` slips back in.
+- **Numbering under concurrency** behaves differently with four uvicorn workers than with one. Fire
+  ten simultaneous invoice creates in production **as an audit account** and check for duplicates —
+  the local single-worker run cannot show you this.
+- **The reconciliation SQL in §7 is worth running against the real data**, once, read-only, across
+  *all* accounts. It is the cheapest possible check that nobody's books are already broken, and it
+  answers a question the owner actually has. Report the counts; do not fix anything you find in
+  another account's data without asking.
+
+Everything created is `ZZ-AUDIT-` prefixed and removed afterwards.
 
 ## 8. The PDF must match the record
 

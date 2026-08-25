@@ -2,8 +2,9 @@
 
 > **Read `docs/Audit/audit.md` § MANDATORY SHARED CONTEXT first** — environments, accounts, DB access,
 > tools, bug policy. This file is the **SCOPE**.
-> **Mode:** 🔴 authenticated security, **local** (it writes). Attempts to write across the boundary must
-> be *blocked* — and you verify in the database that nothing actually changed.
+> **Mode:** 🔴 authenticated security. **Local first, then production** (audit.md §9). Attempts to
+> write across the boundary must be *blocked* — and you verify in the database that nothing actually
+> changed, in whichever environment you are in.
 
 Act as a **senior application-security engineer** hunting the one breach that would end this product:
 **a logged-in user reaching another user's invoices, clients, revenue or files.**
@@ -135,6 +136,28 @@ Fire A and B simultaneously (`asyncio.gather`, confirmed wall-clock overlap):
 - The same request repeated twice in parallel (double-click a Save) — one row or two?
 
 ---
+
+## The production pass
+
+Everything above runs again against production, with one addition and one subtraction.
+
+**The addition — a third party.** In production the audit accounts are not the only accounts. The
+owner's account is there too, with real invoices and real revenue, and it is the strongest possible
+test subject precisely because a leak there would matter most. So: as audit account **A**, run §3
+(aggregates) and §6 (admin surfaces) knowing that a *real* account exists alongside you. If A's
+dashboard, reports, search or list endpoints can be made to surface **anything** belonging to the
+owner — a number, a name, a count — that is the finding this whole playbook exists for.
+
+Do this by **reading only**. Never take the owner's ids and fire writes at them: a `PATCH` that is
+supposed to 404 and does not is a corrupted invoice in someone's real books. Read probes against the
+owner's ids are permitted and expected; write probes against them are not. Use the second audit
+account as the write target.
+
+**The subtraction — concurrency at volume.** §8 stays local. Ten simultaneous creates is fine; the
+race-hunting loop is not something to run against the live server.
+
+Everything you create in production is `ZZ-AUDIT-` prefixed and deleted afterwards, per audit.md §9,
+with the before/after inventory in the report.
 
 ## Evidence standard
 

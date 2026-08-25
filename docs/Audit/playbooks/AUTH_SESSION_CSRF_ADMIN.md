@@ -1,9 +1,9 @@
 # Session, CSRF, admin & step-up (SCOPE)
 
 > **Read `docs/Audit/audit.md` § MANDATORY SHARED CONTEXT first.** This file is the **SCOPE**.
-> **Mode:** 🔴 authenticated security. **Local for the destructive parts, and §7 re-verifies against
-> production** — the local environment structurally cannot reproduce the conditions that broke this
-> twice.
+> **Mode:** 🔴 authenticated security. **Local first, then production** (audit.md §9) — and here the
+> production pass is not a formality: the local environment structurally cannot reproduce the
+> conditions that broke this twice.
 
 Act as a **senior application-security engineer** attacking the session itself: can it be stolen,
 forged, replayed, kept alive after it should be dead, or used from somewhere it should not work? And
@@ -111,10 +111,10 @@ Guards the four actions that cannot be taken back (`app/core/stepup.py`).
 - Disabling TOTP is itself a step-up action. The only way back from a lost authenticator is
   `python -m app.cli reset-totp` — confirm there is no API path that clears it.
 
-## 7. Production re-verification — mandatory, not optional
+## 7. Production re-verification — the point of this playbook
 
-Everything above except the destructive parts must be re-run against **production**, with the test
-account, because **local cannot reproduce the conditions that broke this twice**:
+Everything above except the destructive parts must be re-run against **production**, with the audit
+accounts, because **local cannot reproduce the conditions that broke this twice**:
 
 - locally the app and the API are the same host, so cookie scope is not exercised;
 - locally there is no Cloudflare, so proxy-derived client IPs are not exercised;
@@ -123,6 +123,15 @@ account, because **local cannot reproduce the conditions that broke this twice**
 At minimum, in production: sign in, confirm `document.cookie` cannot see the session, `GET /auth/csrf`
 returns a token, **a real write succeeds**, a write without the header returns a *readable* 403, and
 logout revokes. Clean up anything created.
+
+Also production-only, because they do not exist locally:
+
+- **`Secure` cookie behaviour over real HTTPS**, and whether anything breaks on an http→https hop.
+- **Rate-limit keying behind Cloudflare** — send a forged `X-Forwarded-For` from a real browser and
+  confirm the limit key does not move. Do this **only against an audit account** (audit.md §9):
+  exhausting a limit keyed on a shared Cloudflare edge would affect real users.
+- **The four-worker reality.** The in-memory throttle is per process, so the production allowance is
+  roughly four times the number in the code. Measure it rather than repeating the number.
 
 > A run of this playbook that never touched production has not tested the thing that has actually
 > broken. Say so explicitly in the coverage-gaps section if you skip it.

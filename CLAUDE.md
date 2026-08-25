@@ -320,6 +320,11 @@ The shared context (environments, the two accounts an isolation test needs, DB a
 lives in `audit.md` alone; the playbooks under `docs/Audit/playbooks/` are scope only. Results go to
 `docs/Audit/result/` with a row appended to `RUN_LOG.md`.
 
+**Every audit finishes against production**, not just locally — the last three production defects all
+passed locally and failed live. `audit.md` §9 holds the rules that make that safe: the owner's account
+is never a test subject, everything created is `ZZ-AUDIT-` prefixed and deleted, and the abusive
+probes (mail, decompression bombs, SSRF, load) stay local.
+
 The one that matters most is **account isolation**: MYNVOICE has no tenants, so `users.id` is the only
 boundary in the system and it is enforced by hand in every query. There is no framework guarantee
 behind it.

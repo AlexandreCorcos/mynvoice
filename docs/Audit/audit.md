@@ -31,16 +31,19 @@ the owner a menu and collect the run parameters:
 ### The menu (runnable playbooks)
 | # | Playbook | File | Target | Mode |
 |---|---|---|---|---|
-| **1** | Cross-account isolation — does data leak between users? | [`playbooks/ACCOUNT_ISOLATION.md`](playbooks/ACCOUNT_ISOLATION.md) | **LOCAL** | 🔴 authenticated security — cross-boundary writes must be *blocked* |
-| **2** | Money & invoice integrity | [`playbooks/MONEY_INVOICE_INTEGRITY.md`](playbooks/MONEY_INVOICE_INTEGRITY.md) | **LOCAL** | 🟠 read-write + concurrency |
-| **3** | Session, CSRF, admin & step-up | [`playbooks/AUTH_SESSION_CSRF_ADMIN.md`](playbooks/AUTH_SESSION_CSRF_ADMIN.md) | **LOCAL + PROD** | 🔴 authenticated security |
+| **1** | Cross-account isolation — does data leak between users? | [`playbooks/ACCOUNT_ISOLATION.md`](playbooks/ACCOUNT_ISOLATION.md) | **LOCAL → PROD** | 🔴 authenticated security — cross-boundary writes must be *blocked* |
+| **2** | Money & invoice integrity | [`playbooks/MONEY_INVOICE_INTEGRITY.md`](playbooks/MONEY_INVOICE_INTEGRITY.md) | **LOCAL → PROD** | 🟠 read-write + concurrency |
+| **3** | Session, CSRF, admin & step-up | [`playbooks/AUTH_SESSION_CSRF_ADMIN.md`](playbooks/AUTH_SESSION_CSRF_ADMIN.md) | **LOCAL → PROD** | 🔴 authenticated security |
 | **4** | Black-box, unauthenticated public surface | [`playbooks/UNAUTH_BLACKBOX.md`](playbooks/UNAUTH_BLACKBOX.md) | **PROD** | 🔴 unauth — read-only, no login |
-| **5** | Input robustness, uploads, PDF & email abuse | [`playbooks/INPUT_ROBUSTNESS.md`](playbooks/INPUT_ROBUSTNESS.md) | **LOCAL** | 🟠 read-write, hostile input |
+| **5** | Input robustness, uploads, PDF & email abuse | [`playbooks/INPUT_ROBUSTNESS.md`](playbooks/INPUT_ROBUSTNESS.md) | **LOCAL → PROD** *(partial — see §9)* | 🟠 read-write, hostile input |
 
-> **#1, #2, #3 and #5 write, and MYNVOICE has no staging**, so they run against **local**. #4 is
-> unauthenticated and read-only, so it runs against production. #3 additionally re-verifies its
-> cookie and CSRF findings against **production**, for the reason in §6 — the local environment
-> cannot reproduce the cross-host conditions that have already caused two outages.
+> **Every playbook finishes in production.** Local is where you find things fast and break them
+> safely; production is where the answer counts. Run the playbook locally first, then re-run it
+> against production under the audit accounts, following **§9 PRODUCTION DISCIPLINE** — which is not
+> optional and is the difference between an audit and an incident.
+>
+> A run that never reached production has **not** tested the thing that has actually broken here: the
+> last three production defects all passed locally and failed live (§6).
 
 ---
 
@@ -54,14 +57,15 @@ the owner a menu and collect the run parameters:
 | API | `http://localhost:8000/api/v1` | `https://api.mynvoice.com/api/v1` |
 | DB | Postgres on `:5433` (compose) | Postgres inside the Coolify stack |
 
-- **All destructive testing happens locally.** Bring the stack up with `docker compose up -d`.
-  Docker Desktop is usually **not** running — launch
-  `C:\Program Files\Docker\Docker\Docker Desktop.exe` and wait for the engine first.
+- **Local is the rehearsal, production is the answer.** Find and fix fast locally, then re-run the
+  same tests against production under the audit accounts. Both halves are required; see **§9**.
+- Bring the local stack up with `docker compose up -d`. Docker Desktop is usually **not** running —
+  launch `C:\Program Files\Docker\Docker\Docker Desktop.exe` and wait for the engine first.
 - The frontend runs through `preview_start`. Never run `npm run build` while the dev server is up —
   the production build overwrites `.next` and the dev server then serves blank pages with
   `Cannot find module './331.js'`.
-- **Production writes are allowed only under the test account, and only when the playbook says so.**
-  Clean up everything you create. Never touch the owner's own data.
+- **In production you write only as the audit accounts, and you clean up.** The owner's own account
+  and its data are off limits, always, for every playbook.
 - Deploys: push to `main` → GitHub webhook → Coolify. Confirm a deploy landed by polling
   `https://app.mynvoice.com/meta.json` until the version flips.
 - **Cloudflare fronts every hostname.** A plain `curl` or `urllib` request from a script is answered
@@ -75,10 +79,12 @@ the owner a menu and collect the run parameters:
 | **Owner / admin** | `acorcos@gmail.com` | *(owner's own)* | the only admin. **Never** test against its data |
 | **Second account** | *create one* | — | **required for #1** — see below |
 
-**Isolation testing needs two accounts.** MYNVOICE has no tenants: the boundary is `users.id`, and a
-boundary cannot be tested from one side of it. Register a second account (`corcos+audit2@gmail.com`)
-through the normal flow. **No SMTP is configured locally**, so no email is sent — read the token from
-the database instead:
+**Isolation testing needs two accounts, in both environments.** MYNVOICE has no tenants: the boundary
+is `users.id`, and a boundary cannot be tested from one side of it. Register a second account
+(`corcos+audit2@gmail.com`) through the normal flow, **locally and in production**.
+
+In production the signup emails really are delivered, so use a real inbox alias and follow the link.
+**Locally no SMTP is configured**, so no email is sent — read the token from the database instead:
 
 ```bash
 docker compose exec -T db psql -U mynvoice -d mynvoice -t -c \
@@ -87,6 +93,10 @@ docker compose exec -T db psql -U mynvoice -d mynvoice -t -c \
 
 Then `POST /auth/set-password {token, password}`. Give the second account its own company, clients,
 invoices, items, expenses and payments — an isolation test proves nothing if the other side is empty.
+
+The audit accounts are **permanent fixtures in production**. There is no self-service account deletion,
+so treat them as part of the furniture: keep their data recognisable (§9), and never create a third,
+fourth and fifth one per run.
 
 ### 3. Database access — the arbiter
 
@@ -99,8 +109,27 @@ application's guarantees, not the database's. Verify every claim **against the t
 the API's own summary numbers. A 200 that returns another account's row is CRITICAL; a rejection that
 nevertheless mutated a row is also CRITICAL.
 
-Production database, when a playbook genuinely needs it: Coolify → Terminal → the `backend` container,
-then `python -m app.cli`. There is no direct psql from here.
+**In production the database is still the arbiter**, and reaching it takes one more step: Coolify →
+Terminal → the `backend` container. `python -m app.cli` covers the admin commands; for arbitrary
+read-only queries, use the app's own session:
+
+```python
+python - <<'PY'
+import asyncio
+from sqlalchemy import text
+from app.db.session import async_session
+
+async def main():
+    async with async_session() as db:
+        rows = await db.execute(text("SELECT id, email FROM users ORDER BY created_at DESC LIMIT 5"))
+        for r in rows: print(r)
+
+asyncio.run(main())
+PY
+```
+
+**SELECT only, in production above all.** Never mutate production data from a shell — if a test needs
+a row changed, it goes through the API, which is the thing being tested anyway.
 
 ### 4. Authentication — how to get a session
 
@@ -170,9 +199,10 @@ Re-probe these. Each one shipped to production at least once, and each is cheap 
 ### 8. Deliverable + record the run
 
 Keep a running report in the scratchpad, then finish with: a **TL;DR**, a **verdict table** (every test
-id: PASS / FAIL / BLOCKED), **findings** split into *fixed automatically (with version)* versus *needs
-owner decision*, the **reconciliation evidence**, and **coverage gaps** — say plainly what you did not
-get to. A run that reports "all clear" without saying what it did not reach is not finished.
+id: PASS / FAIL / BLOCKED, **with a column for local and a column for production**), **findings** split
+into *fixed automatically (with version)* versus *needs owner decision*, the **reconciliation
+evidence**, the **production cleanup confirmation** (§9), and **coverage gaps** — say plainly what you
+did not get to, and which probes were deliberately kept out of production. A run that reports "all clear" without saying what it did not reach is not finished.
 
 Then copy the report to `result/<playbook>_<YYYY-MM-DD>.md` and append ONE row to
 [`result/RUN_LOG.md`](result/RUN_LOG.md), newest first:
@@ -180,6 +210,48 @@ Then copy the report to `result/<playbook>_<YYYY-MM-DD>.md` and append ONE row t
 ```
 | 2026-08-25 | account-isolation | local | PASS · 2 fixed | [file](result/account_isolation_2026-08-25.md) |
 ```
+
+### 9. PRODUCTION DISCIPLINE — read before every production pass
+
+Production holds a real person's books. Everything below is a hard rule, not advice.
+
+**The owner's account is untouchable.** `acorcos@gmail.com` and its invoices, clients, revenue and
+company are never a test target — not read as a probe, not listed, not messaged, not counted. If a
+test needs "another user's data", that is what the second **audit** account is for. The one exception
+is admin-panel behaviour that can only be exercised as an admin: use it to *act*, never as the
+*subject*.
+
+**Everything you create is labelled.** Prefix every row with `ZZ-AUDIT-` — client names, item names,
+invoice references, expense descriptions, company names. One `LIKE 'ZZ-AUDIT-%'` must find all of it.
+An unlabelled test row in production is indistinguishable from real data six months later.
+
+**Inventory before and after.** Before the pass, record the row counts for the audit accounts. After
+cleanup, they must match. Report any difference in the run report — including one you could not
+resolve.
+
+**Delete what you made, in dependency order** — payments, then invoices, then clients and items, then
+expenses and categories. Verify by re-reading, not by trusting the 204.
+
+**Never in production:**
+
+| Forbidden | Why | Where it goes instead |
+|---|---|---|
+| Mass email — `/sys/message` to real recipients, invoice sends to addresses you don't own | Real delivery, real people, and a burnt SendGrid reputation is not recoverable in an afternoon | Local, where no SMTP is configured |
+| Rate-limit exhaustion against any account but the audit ones | Locks a real person out of their own books | Local |
+| Decompression bombs, 200-line PDF renders, pathological load | One small server, shared with the live app | Local |
+| SSRF probes that reach *our* internal network | You may find it; you may also break something you cannot see | Local |
+| Anything that writes via `psql` or the CLI | The application's guarantees are what is under test | Always the API |
+| Deleting or deactivating accounts other than the audit ones | Obvious, and easy to do by a mis-typed id | — |
+
+**Email in production, when a playbook genuinely needs it**: send only to an address you control
+(`corcos+audit2@`), one message at a time, and say in the report exactly what was delivered.
+
+**If something goes wrong, stop and say so immediately.** A half-cleaned production database is worth
+interrupting the owner for; discovering it a week later is not.
+
+**Every finding gets confirmed in production before it is reported.** A defect that reproduces only
+locally is an environment difference, and saying which is part of the finding — the same is true in
+reverse, and that reverse case is the whole reason this section exists (§6).
 
 ---
 
