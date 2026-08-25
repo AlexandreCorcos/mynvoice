@@ -100,10 +100,9 @@ def _build_items_rows(items, currency: str) -> str:
     for item in sorted_items:
         desc = _esc(getattr(item, "description", ""))
         qty = getattr(item, "quantity", 0)
-        unit = _esc(getattr(item, "unit", "")) if getattr(item, "unit", None) else ""
         unit_price = fmt_currency(getattr(item, "unit_price", 0), currency)
         amount = fmt_currency(getattr(item, "amount", 0), currency)
-        qty_display = f"{qty} {unit}".strip() if unit else str(qty)
+        qty_display = str(qty)
         rows.append(
             f"<tr>"
             f"<td>{desc}</td>"

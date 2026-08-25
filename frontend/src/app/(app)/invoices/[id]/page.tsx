@@ -67,6 +67,14 @@ function Timeline({ invoice }: { invoice: Invoice }) {
         const done = i < reached;
         const current = i === reached;
         const pending = i > reached;
+        /* A step earns its checkmark once the invoice has genuinely passed that
+           milestone — not only when a *later* step has begun. "Sent" is reached
+           the moment the invoice has a sent_at, so a freshly-sent (or overdue)
+           invoice checks its Sent step instead of leaving it a bare dot. */
+        const completed =
+          done ||
+          (step.key === "sent" && Boolean(invoice.sent_at)) ||
+          (step.key === "paid" && invoice.status === "paid");
 
         return (
           <li key={step.key} className="relative flex gap-3.5 pb-5 last:pb-0">
@@ -88,7 +96,7 @@ function Timeline({ invoice }: { invoice: Invoice }) {
               transition={{ duration: 0.35, delay: i * 0.08, ease: EASE_OUT }}
               className={cn(
                 "relative z-10 flex h-[23px] w-[23px] flex-none items-center justify-center rounded-full ring-1",
-                done || (current && invoice.status === "paid")
+                completed
                   ? "bg-brass text-white ring-brass"
                   : current
                     ? late
@@ -97,7 +105,7 @@ function Timeline({ invoice }: { invoice: Invoice }) {
                     : "bg-elevated text-ink-muted/50 ring-line"
               )}
             >
-              {done || (current && invoice.status === "paid") ? (
+              {completed ? (
                 <Check className="h-3 w-3" />
               ) : (
                 <span className="h-1.5 w-1.5 rounded-full bg-current" />
@@ -424,7 +432,6 @@ export default function InvoiceDetailPage() {
                     </td>
                     <td className="py-3 text-right text-[13px] tabular-nums text-ink-muted">
                       {formatQuantity(Number(item.quantity))}
-                      {item.unit ? ` ${item.unit}` : ""}
                     </td>
                     <td className="py-3 text-right text-[13px] tabular-nums text-ink-muted">
                       {formatCurrency(item.unit_price, invoice.currency)}
