@@ -28,6 +28,7 @@ import { Panel, PanelHeader } from "@/components/app/panel";
 import { Field, Input, Select, Textarea, Toggle } from "@/components/app/form";
 import { SegmentedControl } from "@/components/app/segmented-control";
 import Toast, { type ToastType } from "@/components/ui/toast";
+import { useCompanyLogo } from "@/hooks/useCompanyLogo";
 import type { Company } from "@/types";
 
 type Tab = "you" | "business" | "invoicing";
@@ -66,6 +67,9 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  /* The stored URL is not fetchable by the browser - the bucket is
+     private - so the preview comes through the API. */
+  const logoSrc = useCompanyLogo(logoUrl);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -345,14 +349,13 @@ export default function SettingsPage() {
               />
               <div className="mt-5 flex flex-wrap items-center gap-4">
                 <span className="flex h-20 w-20 flex-none items-center justify-center overflow-hidden rounded-[14px] bg-elevated ring-1 ring-line">
-                  {logoUrl ? (
-                    /* A plain <img>: the logo is user-uploaded, already
-                       compressed client-side, and lives on whatever host the
-                       backend serves uploads from — next/image would want
-                       that hostname allow-listed for no benefit here. */
+                  {logoSrc ? (
+                    /* A plain <img>: the source is an object URL built from
+                       bytes the API streamed back, so there is no host for
+                       next/image to optimise or allow-list. */
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={logoUrl}
+                      src={logoSrc}
                       alt="Company logo"
                       className="h-full w-full object-contain"
                     />

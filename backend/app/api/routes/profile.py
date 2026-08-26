@@ -1,6 +1,7 @@
 import uuid as uuid_mod
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -95,6 +96,55 @@ async def update_company(
 
 
 # --- Logo Upload ---
+
+
+# Extension to type, for serving a stored logo back. The upload already
+# restricts what can arrive to ALLOWED_IMAGE_TYPES; this maps the key's
+# suffix back rather than trusting a Content-Type from storage.
+_LOGO_TYPES = {
+    "png": "image/png",
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "webp": "image/webp",
+    "gif": "image/gif",
+}
+
+
+@router.get("/company/logo")
+async def get_logo(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Stream the company logo through the API.
+
+    The bucket holds original invoice PDFs alongside logos, so its public
+    access is deliberately off - which means the browser cannot fetch the
+    stored URL directly. The bytes come back through this route instead, so
+    reading a logo needs the same session as reading anything else.
+    """
+    result = await db.execute(select(Company).where(Company.user_id == user.id))
+    company = result.scalar_one_or_none()
+    if not company or not company.logo_url:
+        raise HTTPException(status_code=404, detail="No logo")
+
+    key = storage.key_from_url(company.logo_url)
+    if key is None:
+        raise HTTPException(status_code=404, detail="No logo")
+
+    try:
+        contents = await storage.download_file(key)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Could not read the logo: {e}")
+
+    ext = key.rsplit(".", 1)[-1].lower()
+    return Response(
+        content=contents,
+        media_type=_LOGO_TYPES.get(ext, "application/octet-stream"),
+        # Private: this is one account's asset behind a session, so a shared
+        # cache must never hold it. The browser may, which keeps the sidebar
+        # from refetching on every navigation.
+        headers={"Cache-Control": "private, max-age=3600"},
+    )
 
 
 @router.post("/company/logo")

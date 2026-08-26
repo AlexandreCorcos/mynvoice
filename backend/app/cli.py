@@ -9,9 +9,15 @@ the database.
     docker compose exec backend python -m app.cli grant-admin you@example.com
     docker compose exec backend python -m app.cli revoke-admin them@example.com
     docker compose exec backend python -m app.cli reset-totp you@example.com
+    docker compose exec backend python -m app.cli import-invoices <manifest.json> [--commit] [--no-pdf]
+
+import-invoices is the only path that sets an invoice number by hand, for
+invoices raised in another system before the move. It checks the manifest
+and reports what it would do; nothing is written without --commit.
 """
 
 import asyncio
+import os
 import sys
 
 from sqlalchemy import func, select
@@ -101,6 +107,35 @@ async def _list() -> int:
         return 0
 
 
+async def _import_invoices(path: str, commit: bool, upload: bool) -> int:
+    from app.services import invoice_import
+
+    try:
+        manifest = invoice_import.load(path)
+    except (OSError, ValueError) as e:
+        print(f"Could not read the manifest: {e}")
+        return 1
+
+    # PDF paths in the manifest are relative to the manifest itself, so a
+    # folder of documents can move without every row being rewritten.
+    pdf_dir = manifest.get("pdf_dir") or os.path.dirname(os.path.abspath(path))
+
+    async with async_session() as db:
+        try:
+            log = await invoice_import.run(
+                db, manifest, pdf_dir, dry_run=not commit, upload=upload
+            )
+        except invoice_import.ManifestError as e:
+            print(e)
+            return 1
+
+    for line in log:
+        print(line)
+    if not commit:
+        print("\nRe-run with --commit to write it.")
+    return 0
+
+
 def main() -> int:
     args = sys.argv[1:]
     if not args:
@@ -111,6 +146,14 @@ def main() -> int:
 
     if command == "list-admins":
         return asyncio.run(_list())
+
+    if command == "import-invoices":
+        if not rest:
+            print("Usage: python -m app.cli import-invoices <manifest.json> [--commit] [--no-pdf]")
+            return 1
+        return asyncio.run(
+            _import_invoices(rest[0], "--commit" in rest, "--no-pdf" not in rest)
+        )
 
     if command == "reset-totp":
         if not rest:

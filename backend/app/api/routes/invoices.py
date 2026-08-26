@@ -17,6 +17,7 @@ from app.models.invoice import Invoice, InvoiceStatus
 from app.models.invoice_item import InvoiceItem
 from app.models.payment import Payment
 from app.models.user import User
+from app.services import storage
 from app.services.ledger import sync_invoice_income
 from app.schemas.invoice import (
     InvoiceCreate,
@@ -52,6 +53,28 @@ def _guard_total(total: Decimal) -> None:
             status_code=422,
             detail="Invoice total cannot be negative — reduce the discount.",
         )
+
+
+async def _invoice_pdf_bytes(invoice: Invoice, client, company) -> bytes:
+    """The PDF for an invoice: the document originally issued when there is
+    one, otherwise a freshly generated one.
+
+    An imported invoice is a historical record. Generating its PDF would print
+    the company profile as it stands today onto a document the client already
+    holds in another form, so the stored original wins.
+    """
+    if invoice.source_pdf_key:
+        try:
+            return await storage.download_file(invoice.source_pdf_key)
+        except Exception as e:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Could not read the original document: {e}",
+            )
+
+    from app.services.pdf import generate_invoice_pdf
+
+    return await generate_invoice_pdf(invoice, client, company)
 
 
 async def _generate_invoice_number(
@@ -479,9 +502,7 @@ async def download_invoice_pdf(
     )
     company = co_result.scalar_one_or_none()
 
-    from app.services.pdf import generate_invoice_pdf
-
-    pdf_bytes = await generate_invoice_pdf(invoice, client, company)
+    pdf_bytes = await _invoice_pdf_bytes(invoice, client, company)
 
     return Response(
         content=pdf_bytes,
@@ -543,10 +564,7 @@ async def send_invoice(
     )
     company = result.scalar_one_or_none()
 
-    # Generate PDF
-    from app.services.pdf import generate_invoice_pdf
-
-    pdf_bytes = await generate_invoice_pdf(invoice, client, company)
+    pdf_bytes = await _invoice_pdf_bytes(invoice, client, company)
 
     # Send email
     client_name = client.company_name if client else "Customer"

@@ -90,6 +90,10 @@ class InvoiceResponse(BaseModel):
     terms: str | None
     footer: str | None
     pdf_template: str
+    # Set when the invoice carries the document it was originally issued as
+    # (an import). The storage key stays server-side; the name is enough for
+    # the UI to say the PDF on offer is the original, not a generated one.
+    source_pdf_name: str | None
     sent_at: datetime | None
     sent_to_email: str | None
     items: list[InvoiceItemResponse]

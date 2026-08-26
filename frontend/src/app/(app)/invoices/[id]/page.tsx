@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   Copy,
   Download,
+  FileText,
   Loader2,
   Mail,
   Pencil,
@@ -392,6 +393,20 @@ export default function InvoiceDetailPage() {
       <div className="grid gap-4 xl:grid-cols-[1fr_320px] xl:items-start">
         {/* ── the document ─────────────────────────────────────── */}
         <Panel className="p-6 sm:p-8">
+          {invoice.source_pdf_name ? (
+            <div className="mb-6 flex items-start gap-3 rounded-[12px] border border-line bg-elevated/60 p-4">
+              <FileText className="mt-0.5 h-4 w-4 shrink-0 text-brass-ink" />
+              <div>
+                <Overline>Original document</Overline>
+                <p className="mt-1 text-[13px] leading-relaxed text-ink-muted">
+                  Imported from another system. Downloading gives you{" "}
+                  <span className="font-medium text-ink">{invoice.source_pdf_name}</span>{" "}
+                  exactly as it was issued, not a copy regenerated from this record.
+                </p>
+              </div>
+            </div>
+          ) : null}
+
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div>
               <Overline>Issued</Overline>

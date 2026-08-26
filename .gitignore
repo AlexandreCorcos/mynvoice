@@ -24,3 +24,9 @@ uploads/
 
 # Playwright / QA artifacts
 .playwright-mcp/
+
+# Invoice import manifests. They carry real client names, amounts and bank
+# details, and this repository is public - the manifest belongs next to the
+# PDFs it describes, outside the tree. See docs/importing-invoices.md.
+docs/import/
+*-invoices.json

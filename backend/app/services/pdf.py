@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import base64
 import html as html_mod
+import logging
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -10,6 +12,9 @@ from urllib.parse import urlparse
 from weasyprint import HTML, default_url_fetcher
 
 from app.core.config import settings
+from app.services import storage
+
+logger = logging.getLogger(__name__)
 
 
 def _allowed_asset_host() -> str | None:
@@ -75,23 +80,56 @@ def _format_date(d) -> str:
         return str(d)
 
 
-def _build_logo_html(company) -> str:
-    """Build the logo <img> tag if a logo file exists."""
-    if not company or not getattr(company, "logo_url", None):
+_LOGO_MIME = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+}
+
+
+async def _logo_data_uri(company) -> str | None:
+    """The company logo, read from storage and inlined as a data: URI.
+
+    Embedded rather than linked. The bucket's public access is off - it also
+    holds the original PDFs of imported invoices, which carry client names,
+    amounts and bank details - so a remote <img src> to the stored URL comes
+    back 401 and the logo silently vanishes from every invoice. Inlining also
+    means the renderer makes no network request at all, which is the thing
+    _safe_url_fetcher exists to constrain.
+    """
+    url = getattr(company, "logo_url", None) if company else None
+    key = storage.key_from_url(url) if url else None
+    if key is None:
+        return None
+    try:
+        contents = await storage.download_file(key)
+    except Exception as e:
+        # A logo that cannot be read must not cost the invoice its PDF.
+        logger.warning("Could not read logo %s for the PDF: %s", key, e)
+        return None
+    mime = _LOGO_MIME.get(Path(key).suffix.lower(), "image/png")
+    encoded = base64.b64encode(contents).decode("ascii")
+    return f"data:{mime};base64,{encoded}"
+
+
+def _build_logo_html(logo_src: str | None) -> str:
+    """Build the logo <img> tag, given an already-resolved source."""
+    if not logo_src:
         return ""
-    logo_path = company.logo_url.lstrip("/")
     return (
-        f'<img src="{_esc(logo_path)}" '
+        f'<img src="{_esc(logo_src)}" '
         'style="max-height:60px; max-width:180px; margin-bottom:8px;" /><br/>'
     )
 
 
-def _build_company_html(company) -> str:
+def _build_company_html(company, logo_src: str | None) -> str:
     """Build the company details block."""
     if not company:
         return ""
     parts: list[str] = []
-    logo = _build_logo_html(company)
+    logo = _build_logo_html(logo_src)
     if logo:
         parts.append(logo)
     name = getattr(company, "legal_name", None) or getattr(company, "name", None) or ""
@@ -246,12 +284,12 @@ def _build_paid_stamp(invoice) -> str:
     )
 
 
-def _build_html(invoice, client, company) -> str:
+def _build_html(invoice, client, company, logo_src: str | None = None) -> str:
     """Build the complete HTML document for the invoice."""
     currency = getattr(invoice, "currency", "GBP") or "GBP"
     items = getattr(invoice, "items", []) or []
 
-    company_html = _build_company_html(company)
+    company_html = _build_company_html(company, logo_src)
     client_html = _build_client_html(client)
     items_rows = _build_items_rows(items, currency)
     totals_html = _build_totals_html(invoice, currency)
@@ -461,12 +499,14 @@ def _build_html(invoice, client, company) -> str:
 </html>"""
 
 
-def _build_html_minimal(invoice, client, company) -> str:
+def _build_html_minimal(invoice, client, company, logo_src: str | None = None) -> str:
     """Minimal template: clean typography, no colored backgrounds, thin lines."""
     currency = getattr(invoice, "currency", "GBP") or "GBP"
     items = getattr(invoice, "items", []) or []
 
-    company_html = _build_company_html(company)
+    # No company block here on purpose: this template puts the sender in the
+    # top bar as a name and an e-mail, and carries no logo. The call that used
+    # to build one was dead - its result was never interpolated.
     client_html = _build_client_html(client)
     items_rows = _build_items_rows(items, currency)
     totals_html = _build_totals_html(invoice, currency)
@@ -702,7 +742,7 @@ def _build_html_minimal(invoice, client, company) -> str:
 </html>"""
 
 
-def _build_html_bold(invoice, client, company) -> str:
+def _build_html_bold(invoice, client, company, logo_src: str | None = None) -> str:
     """Bold/Corporate template: full-width header, accent boxes, strong typography."""
     currency = getattr(invoice, "currency", "GBP") or "GBP"
     items = getattr(invoice, "items", []) or []
@@ -728,7 +768,7 @@ def _build_html_bold(invoice, client, company) -> str:
             company_address_parts.append(f"VAT: {_esc(company.vat_number)}")
     company_sub = "  &bull;  ".join(company_address_parts)
 
-    logo_html = _build_logo_html(company)
+    logo_html = _build_logo_html(logo_src)
 
     # Client details
     client_lines = []
@@ -1075,13 +1115,14 @@ async def generate_invoice_pdf(invoice, client, company) -> bytes:
         The PDF document as raw bytes.
     """
     template = getattr(invoice, "pdf_template", "classic") or "classic"
+    logo_src = await _logo_data_uri(company)
 
     if template == "minimal":
-        html_string = _build_html_minimal(invoice, client, company)
+        html_string = _build_html_minimal(invoice, client, company, logo_src)
     elif template == "bold":
-        html_string = _build_html_bold(invoice, client, company)
+        html_string = _build_html_bold(invoice, client, company, logo_src)
     else:
-        html_string = _build_html(invoice, client, company)
+        html_string = _build_html(invoice, client, company, logo_src)
 
     pdf_bytes: bytes = HTML(
         string=html_string, url_fetcher=_safe_url_fetcher

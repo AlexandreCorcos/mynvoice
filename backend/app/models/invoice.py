@@ -106,6 +106,14 @@ class Invoice(Base):
     # PDF template: "classic" | "minimal" | "bold"
     pdf_template: Mapped[str] = mapped_column(String(50), default="classic")
 
+    # The document as it was originally issued, for invoices imported from
+    # another system. When set, it is served instead of generating one: the
+    # generator would print today's company profile onto a historical record,
+    # and the original is the copy the client holds. A storage key rather than
+    # a public URL, so access still goes through the authenticated PDF route.
+    source_pdf_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_pdf_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
     # Email tracking
     sent_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

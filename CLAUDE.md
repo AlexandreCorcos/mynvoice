@@ -310,6 +310,47 @@ held in React state, never `localStorage`. The frontend side is
 prompts, enrols and replays on its own — callers never see the 403. Lost
 authenticator: `python -m app.cli reset-totp <email>`, server-side only.
 
+## File storage
+
+Uploads live in Cloudflare R2 (`storage.mynvoice.com`), and that bucket's
+**public access is off on purpose** - it holds the original PDFs of imported
+invoices alongside company logos, and those carry client names, amounts and
+bank details. Nothing stored there can be linked to directly from a browser
+or a renderer; every read goes through the API.
+
+`upload_file` still records a public-style URL, so anything needing the
+object itself maps back with `storage.key_from_url()` and then
+`storage.download_file()`. Two consequences that catch people out:
+
+- **Logos are fetched, not linked.** `GET /profile/company/logo` streams the
+  bytes behind the session; the frontend turns them into an object URL via
+  `hooks/useCompanyLogo.ts`. An `<img src={company.logo_url}>` renders a
+  broken image - the stored URL answers 401.
+- **PDFs inline the logo as a `data:` URI.** WeasyPrint would otherwise
+  fetch it over the network and get that same 401. Inlining also means the
+  renderer makes no outbound request at all, which is what the allowlist in
+  `_safe_url_fetcher` exists to constrain.
+
+Re-uploading a logo does not work around any of this: a fresh upload writes
+the same kind of URL.
+
+## Importing invoices issued elsewhere
+
+Invoices raised in another system carry numbers that are already printed on
+documents a client holds, so they have to come in as they stand.
+`POST /invoices` has no `invoice_number` field on purpose - numbers are
+derived, never chosen - so the one path that sets them is server-side:
+
+```
+docker compose exec backend python -m app.cli import-invoices <manifest.json> --commit
+```
+
+It refuses the whole run if any invoice's items disagree with the total
+printed on the original, skips numbers already in the account, and stores
+the PDF as issued so it is served instead of a regenerated one - the
+generator would print today's company profile onto a historical record.
+See **`docs/importing-invoices.md`**.
+
 ## Audits
 
 `docs/Audit/audit.md` is the entry point for every runnable audit playbook. When the owner says

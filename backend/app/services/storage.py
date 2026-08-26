@@ -46,6 +46,13 @@ def _upload_sync(contents: bytes, key: str, content_type: str) -> str:
     return _public_url(key)
 
 
+def _download_sync(key: str) -> bytes:
+    client = _get_client()
+    if client is None:
+        raise RuntimeError("R2 storage is not configured")
+    return client.get_object(Bucket=settings.R2_BUCKET, Key=key)["Body"].read()
+
+
 def _delete_sync(key: str) -> None:
     client = _get_client()
     try:
@@ -60,13 +67,29 @@ async def upload_file(contents: bytes, folder: str, filename: str, content_type:
     return await loop.run_in_executor(None, partial(_upload_sync, contents, key, content_type))
 
 
-async def delete_file(url: str) -> None:
+async def download_file(key: str) -> bytes:
+    """Read an object back by key. Used for files that are private and must be
+    served through an authenticated route rather than a public URL."""
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, partial(_download_sync, key))
+
+
+def key_from_url(url: str) -> str | None:
+    """The storage key behind a stored public URL, or None if it is not ours.
+
+    Uploads record the public URL rather than the key, so anything that has
+    to reach the object itself - deleting it, or reading it back to serve
+    through an authenticated route - has to map back the other way.
+    """
     if not url or not settings.R2_ACCOUNT_ID:
-        return
+        return None
     base = _public_url("").rstrip("/") + "/"
-    if url.startswith(base):
-        key = url[len(base):]
-    else:
+    return url[len(base):] if url.startswith(base) else None
+
+
+async def delete_file(url: str) -> None:
+    key = key_from_url(url)
+    if key is None:
         return
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(None, partial(_delete_sync, key))
