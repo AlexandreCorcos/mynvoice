@@ -114,5 +114,6 @@ class User(Base):
     invoices = relationship("Invoice", back_populates="user")
     expenses = relationship("Expense", back_populates="user")
     expense_categories = relationship("ExpenseCategory", back_populates="user")
+    accounting_periods = relationship("AccountingPeriod", back_populates="user")
     items = relationship("Item", back_populates="user")
     payments = relationship("Payment", back_populates="user")

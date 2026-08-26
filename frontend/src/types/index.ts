@@ -197,6 +197,28 @@ export interface Expense {
   vendor: string | null;
   receipt_url: string | null;
   notes: string | null;
+  reconciled_at: string | null;
+  created_at: string;
+}
+
+// Accounting periods (closing)
+export interface AccountingPeriod {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  closed_at: string | null;
+  is_closed: boolean;
+  snapshot_income: number | null;
+  snapshot_expense: number | null;
+  snapshot_net: number | null;
+  snapshot_entry_count: number | null;
+  snapshot_reconciled_count: number | null;
+  income: number;
+  expense: number;
+  net: number;
+  entry_count: number;
+  reconciled_count: number;
   created_at: string;
 }
 

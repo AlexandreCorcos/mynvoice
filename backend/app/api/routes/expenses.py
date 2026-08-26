@@ -1,10 +1,10 @@
 import csv
 import io
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy import func, select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -84,8 +84,10 @@ async def list_expenses(
     category_id: uuid.UUID | None = Query(None),
     expense_type: ExpenseType | None = Query(None),
     month: str | None = Query(None, pattern=r"^\d{4}-\d{2}$"),
+    date_from: date | None = Query(None),
+    date_to: date | None = Query(None),
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
+    limit: int = Query(50, ge=1, le=500),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -97,6 +99,10 @@ async def list_expenses(
         query = query.where(Expense.category_id == category_id)
     if expense_type:
         query = query.where(Expense.expense_type == expense_type)
+    if date_from:
+        query = query.where(Expense.expense_date >= date_from)
+    if date_to:
+        query = query.where(Expense.expense_date <= date_to)
     if month:
         year, m = month.split("-")
         from sqlalchemy import extract
@@ -182,6 +188,61 @@ async def delete_expense(
             "invoice is unpaid or deleted.",
         )
     await db.delete(expense)
+
+
+async def _get_owned_expense(
+    expense_id: uuid.UUID, user: User, db: AsyncSession
+) -> Expense:
+    result = await db.execute(
+        select(Expense).where(Expense.id == expense_id, Expense.user_id == user.id)
+    )
+    expense = result.scalar_one_or_none()
+    if not expense:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    return expense
+
+
+@router.post("/{expense_id}/reconcile", response_model=ExpenseResponse)
+async def reconcile_expense(
+    expense_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Tick a transaction off against the bank statement."""
+    expense = await _get_owned_expense(expense_id, user, db)
+    expense.reconciled_at = datetime.now(timezone.utc)
+    return expense
+
+
+@router.post("/{expense_id}/unreconcile", response_model=ExpenseResponse)
+async def unreconcile_expense(
+    expense_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    expense = await _get_owned_expense(expense_id, user, db)
+    expense.reconciled_at = None
+    return expense
+
+
+@router.post("/reconcile-bulk")
+async def reconcile_bulk(
+    ids: list[uuid.UUID] = Body(..., embed=True),
+    reconciled: bool = Body(True, embed=True),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Tick or untick many transactions at once (used by 'Tick all')."""
+    if not ids:
+        return {"updated": 0}
+    result = await db.execute(
+        select(Expense).where(Expense.id.in_(ids), Expense.user_id == user.id)
+    )
+    stamp = datetime.now(timezone.utc) if reconciled else None
+    rows = result.scalars().all()
+    for row in rows:
+        row.reconciled_at = stamp
+    return {"updated": len(rows)}
 
 
 @router.post("/convert-to-invoice-items")

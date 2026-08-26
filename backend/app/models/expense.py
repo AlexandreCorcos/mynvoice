@@ -83,6 +83,12 @@ class Expense(Base):
     )
     expense_date: Mapped[date] = mapped_column(Date, nullable=False)
 
+    # Reconciliation: set when this row is ticked off against the bank
+    # statement inside a closing period. Null = not yet reconciled.
+    reconciled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     # Optional
     vendor: Mapped[str | None] = mapped_column(String(255), nullable=True)
     receipt_url: Mapped[str | None] = mapped_column(Text, nullable=True)

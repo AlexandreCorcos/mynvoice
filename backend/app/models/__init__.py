@@ -8,6 +8,7 @@ from app.models.expense_category import ExpenseCategory
 from app.models.donation import DonationConfig, Donation
 from app.models.item import Item
 from app.models.payment import Payment
+from app.models.accounting_period import AccountingPeriod
 from app.models.audit import AdminAuditLog
 
 __all__ = [
@@ -23,4 +24,5 @@ __all__ = [
     "Donation",
     "Item",
     "Payment",
+    "AccountingPeriod",
 ]

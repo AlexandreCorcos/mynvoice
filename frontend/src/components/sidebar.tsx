@@ -23,6 +23,7 @@ import {
   FileText,
   Heart,
   LayoutDashboard,
+  Lock,
   LogOut,
   Menu,
   Package,
@@ -56,7 +57,10 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
   },
   {
     title: "Ledger",
-    items: [{ href: "/transactions", label: "Transactions", icon: ArrowLeftRight }],
+    items: [
+      { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
+      { href: "/closing", label: "Closing", icon: Lock },
+    ],
   },
   {
     title: "Insight",
