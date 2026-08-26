@@ -15,7 +15,7 @@ feature**, because that's what actually costs us signups.
 
 ## Tier 1 — the ones that cost us signups
 
-### ☐ 1. Recurring invoices · **M** · *next up*
+### ☐ 1. Recurring invoices · **M** · *agreed as the next feature — deferred, not started*
 Issue the same invoice on a schedule (weekly / monthly / quarterly / yearly).
 The retainer case — the single most common freelance billing pattern. **Even
 Invoice Ninja's free tier has this.**
@@ -86,6 +86,7 @@ per-user settings (which offsets, opt-out per client/invoice) and a hard rule:
 - ☐ **Unique constraint on `(user_id, payment_number)`** · **S** — the twin of the invoice-number constraint added in v0.23.14. Payment numbering is already protected by the advisory lock; this is the belt-and-braces DB backstop.
 - ☐ **Stripe/BMC donation webhook** · **M** — donations currently land in Stripe/Buy Me a Coffee and never come back into the app, so the `donations` table stays empty. Only worth doing if a progress figure is ever wanted again (the bar was deliberately removed in v0.23.18).
 - ☐ **Retire the orphan donation config** · **S** — `/admin/donations` target/message is still editable in `/sys/ctrl` but no longer displayed anywhere. Owner said leave it for now.
+- ☐ **Persist product suggestions + admin view** · **S** — the in-app suggestion button (v0.23.20) is email-only on purpose: adding a table meant a migration, and the migration chain had work in flight, where a second head would have stopped `alembic upgrade head` and taken the deploy down. Once that lands, add a `feedback` table and a list in `/sys/ctrl` so nothing depends on a mail send succeeding.
 - ☐ **Reconciliation SQL across all accounts in production** · **S** — needs a Coolify DB shell; the audit could only verify the audit account via the API.
 - ☐ **Deactivation / stale-session test** · **S** — audit playbook #1 §7 was blocked locally by the TOTP step-up gate; never exercised end to end.
 

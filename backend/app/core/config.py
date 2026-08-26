@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     SMTP_USER: Optional[str] = None
     SMTP_PASSWORD: Optional[str] = None
     SMTP_FROM_EMAIL: str = "noreply@mynvoice.app"
+
+    # Where product suggestions from the in-app button are delivered. Falls
+    # back to the sending address, which the operator already controls — so no
+    # personal inbox has to be written into a public repository.
+    FEEDBACK_EMAIL: Optional[str] = None
     SMTP_FROM_NAME: str = "MYNVOICE"
 
     # File uploads

@@ -442,3 +442,50 @@ async def send_admin_message_email(
     )
 
     return await _send(_message(to_email, subject, html, text))
+
+
+# ------------------------------------------------------- product suggestions
+
+
+async def send_feedback_email(
+    *,
+    from_email: str,
+    from_name: str,
+    message: str,
+) -> bool:
+    """Deliver a suggestion from the in-app button to whoever runs the instance.
+
+    Goes to FEEDBACK_EMAIL, or the sending address when that isn't set — the
+    operator controls both, so no personal inbox needs to live in a public
+    repository. `reply_to` is the person who wrote it, so answering is one
+    click and the address never has to be pasted by hand.
+    """
+    to_email = settings.FEEDBACK_EMAIL or settings.SMTP_FROM_EMAIL
+
+    # The message is user input on its way into HTML — escape it, and keep the
+    # author's line breaks rather than collapsing the whole thing into a wall.
+    safe = _escape(message).replace("\n", "<br/>")
+
+    html = _shell(
+        heading="A suggestion came in",
+        preheader=f"{from_name} suggested something in MYNVOICE.",
+        body=(
+            _paragraph(f"<strong>{_escape(from_name)}</strong> ({_escape(from_email)}) wrote:")
+            + _paragraph(safe)
+            + _paragraph("Reply straight to this email to answer them.", muted=True)
+        ),
+    )
+
+    text = (
+        f"{from_name} ({from_email}) suggested:\n\n"
+        f"{message}\n\n"
+        "Reply to this email to answer them."
+    )
+
+    msg = _message(to_email, f"MYNVOICE suggestion from {from_name}", html, text)
+    msg["Reply-To"] = from_email
+
+    ok = await _send(msg, tracking=False)
+    if ok:
+        logger.info("Feedback email delivered to %s", to_email)
+    return ok

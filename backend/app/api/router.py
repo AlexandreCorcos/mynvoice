@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.routes import (
     auth,
+    feedback,
     clients,
     dashboard,
     expenses,
@@ -29,3 +30,4 @@ api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboar
 api_router.include_router(admin.router, prefix="/admin", tags=["Admin"])
 api_router.include_router(reports.router, prefix="/reports", tags=["Reports"])
 api_router.include_router(sysctrl.router, prefix="/sys", tags=["Sys"])
+api_router.include_router(feedback.router, prefix="/feedback", tags=["Feedback"])

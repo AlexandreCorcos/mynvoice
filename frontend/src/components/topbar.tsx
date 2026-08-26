@@ -3,17 +3,21 @@
 /* =========================================================================
    Topbar.
 
-   Deliberately slim. It carries orientation (where am I?) and the theme
-   switch — nothing else. The page's real title, subtitle and actions belong
-   to the page, in `PageHeader`, where they can say something specific.
+   Deliberately slim. It carries orientation (where am I?), the theme switch
+   and the suggestion button — nothing else. The page's real title, subtitle
+   and actions belong to the page, in `PageHeader`, where they can say
+   something specific.
    ========================================================================= */
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronRight, Moon, Sun } from "lucide-react";
+import { ChevronRight, Lightbulb, Moon, Sun } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { EASE_OUT } from "@/components/motion";
+import { SuggestModal } from "@/components/app/suggest-modal";
+import Toast, { type ToastType } from "@/components/ui/toast";
 
 const SECTIONS: Record<string, string> = {
   dashboard: "Dashboard",
@@ -59,6 +63,8 @@ export default function Topbar() {
   const crumbs = buildCrumbs(pathname);
   const { theme, toggleTheme } = useTheme();
   const dark = theme === "dark";
+  const [suggesting, setSuggesting] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur-xl">
@@ -85,6 +91,16 @@ export default function Topbar() {
           </ol>
         </nav>
 
+        <div className="flex flex-none items-center gap-2">
+        <button
+          onClick={() => setSuggesting(true)}
+          title="Suggest a feature"
+          aria-label="Suggest a feature"
+          className="group flex h-9 w-9 flex-none items-center justify-center rounded-[10px] text-ink-muted ring-1 ring-line transition-colors hover:bg-elevated hover:text-brass-ink"
+        >
+          <Lightbulb className="h-[17px] w-[17px] transition-transform duration-300 group-hover:-translate-y-0.5" />
+        </button>
+
         <button
           onClick={toggleTheme}
           title={dark ? "Switch to light mode" : "Switch to dark mode"}
@@ -104,7 +120,23 @@ export default function Topbar() {
             </motion.span>
           </AnimatePresence>
         </button>
+        </div>
       </div>
+
+      <SuggestModal
+        open={suggesting}
+        onClose={() => setSuggesting(false)}
+        onDone={(message, ok) =>
+          setToast({ message, type: ok ? "success" : "error" })
+        }
+      />
+      {toast ? (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      ) : null}
     </header>
   );
 }
