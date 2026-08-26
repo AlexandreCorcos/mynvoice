@@ -43,6 +43,10 @@ export interface Company {
   invoice_prefix: string;
   next_invoice_number: number;
   use_year_in_number: boolean;
+  /* The shape of a derived number. Separator "" with 4 digits continues a
+     migrated INV-T0005 as INV-T0006; the defaults give INV-T-00006. */
+  number_separator: string;
+  number_padding: number;
   bank_name: string | null;
   bank_account_name: string | null;
   bank_account_number: string | null;
@@ -69,6 +73,8 @@ export interface Client {
   invoice_prefix: string | null;
   next_invoice_number: number;
   use_year_in_number: boolean;
+  number_separator: string;
+  number_padding: number;
   default_payment_terms_days: number | null;
   default_notes: string | null;
   bank_name: string | null;

@@ -166,13 +166,20 @@ async def _get_or_create_client(db: AsyncSession, user: User, spec: dict) -> Cli
         city=spec.get("city"),
         postcode=spec.get("postcode"),
         country=spec.get("country") or "United Kingdom",
-        invoice_prefix=spec.get("invoice_prefix"),
         bank_sort_code=spec.get("bank_sort_code"),
         bank_account_number=spec.get("bank_account_number"),
     )
     db.add(client)
     await db.flush()
     return client
+
+
+def _shape(prefix, separator, padding, n: int) -> str:
+    """What the next derived number will read as, for the log line."""
+    head = prefix or "INV"
+    sep = "-" if separator is None else separator
+    width = padding or 5
+    return f"{head}{sep}{n:0{width}d}"
 
 
 def _trailing_number(value: str) -> int:
@@ -351,27 +358,53 @@ async def run(
         )
         existing_numbers.add(number)
 
-    # Move the counters past what was imported, so the next invoice raised in
-    # the app continues the series instead of colliding with a historical one.
+    # Numbering is applied here rather than at creation, so it lands on clients
+    # that already existed in the account too. For the clients a manifest names,
+    # the manifest is the statement of how their series continues - the whole
+    # point of the run is that the next number follows the ones being imported.
     for spec in manifest["clients"]:
         client = clients[spec["key"]]
+        if spec.get("invoice_prefix"):
+            client.invoice_prefix = spec["invoice_prefix"]
+        if spec.get("number_separator") is not None:
+            client.number_separator = spec["number_separator"]
+        if spec.get("number_padding"):
+            client.number_padding = spec["number_padding"]
         wanted = spec.get("next_invoice_number")
         if wanted and wanted > (client.next_invoice_number or 1):
             client.next_invoice_number = wanted
-            log.append(
-                f"counter  {spec['company_name']}: next is "
-                f"{client.invoice_prefix or 'INV'}-{wanted:05d}"
+        log.append(
+            f"counter  {spec['company_name']}: next is "
+            + _shape(
+                client.invoice_prefix,
+                client.number_separator,
+                client.number_padding,
+                client.next_invoice_number,
             )
+        )
 
-    company_next = manifest.get("company_next_invoice_number")
-    if company_next:
+    # The company's own series, for invoices raised without a client prefix.
+    company_spec = manifest.get("company") or {}
+    if company_spec:
         company = (
             await db.execute(select(Company).where(Company.user_id == user.id))
         ).scalar_one_or_none()
-        if company and company_next > (company.next_invoice_number or 1):
-            company.next_invoice_number = company_next
+        if company:
+            if company_spec.get("number_separator") is not None:
+                company.number_separator = company_spec["number_separator"]
+            if company_spec.get("number_padding"):
+                company.number_padding = company_spec["number_padding"]
+            wanted = company_spec.get("next_invoice_number")
+            if wanted and wanted > (company.next_invoice_number or 1):
+                company.next_invoice_number = wanted
             log.append(
-                f"counter  company: next is {company.invoice_prefix}-{company_next:05d}"
+                "counter  company: next is "
+                + _shape(
+                    company.invoice_prefix,
+                    company.number_separator,
+                    company.number_padding,
+                    company.next_invoice_number,
+                )
             )
 
     if dry_run:

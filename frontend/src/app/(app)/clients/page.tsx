@@ -24,7 +24,7 @@ import {
   Users,
 } from "lucide-react";
 import { api } from "@/lib/api";
-import { cn, formatCurrency, num } from "@/lib/utils";
+import { cn, formatCurrency, num, previewInvoiceNumber } from "@/lib/utils";
 import { EASE_OUT } from "@/components/motion";
 import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/app/button";
@@ -113,6 +113,8 @@ type FormState = {
   notes: string;
   invoice_prefix: string;
   use_year_in_number: boolean;
+  number_separator: string;
+  number_padding: string;
   default_payment_terms_days: string;
   default_notes: string;
   bank_name: string;
@@ -135,6 +137,8 @@ function blank(client: Client | null): FormState {
     notes: client?.notes ?? "",
     invoice_prefix: client?.invoice_prefix ?? "",
     use_year_in_number: client?.use_year_in_number ?? false,
+    number_separator: client?.number_separator ?? "-",
+    number_padding: String(client?.number_padding ?? 5),
     default_payment_terms_days:
       client?.default_payment_terms_days != null
         ? String(client.default_payment_terms_days)
@@ -207,6 +211,8 @@ function ClientForm({
       vat_number: orNull(form.vat_number),
       notes: orNull(form.notes),
       invoice_prefix: orNull(form.invoice_prefix),
+      number_separator: form.number_separator,
+      number_padding: parseInt(form.number_padding, 10) || 5,
       default_notes: orNull(form.default_notes),
       bank_name: orNull(form.bank_name),
       bank_account_name: orNull(form.bank_account_name),
@@ -326,6 +332,39 @@ function ClientForm({
                 placeholder="INV"
               />
             </Field>
+            <Field
+              label="Separator"
+              hint="Empty runs the prefix straight into the digits."
+            >
+              <Input
+                value={form.number_separator}
+                onChange={(e) => set({ number_separator: e.target.value })}
+                placeholder="-"
+                maxLength={5}
+              />
+            </Field>
+            <Field label="Digits">
+              <Input
+                type="number"
+                min="1"
+                max="10"
+                value={form.number_padding}
+                onChange={(e) => set({ number_padding: e.target.value })}
+                className="tabular-nums"
+              />
+            </Field>
+            <p className="sm:col-span-2 -mt-1 text-[12px] text-ink-muted">
+              Their next number will read{" "}
+              <span className="font-medium tabular-nums text-ink">
+                {previewInvoiceNumber(
+                  form.invoice_prefix || "INV",
+                  form.number_separator,
+                  parseInt(form.number_padding, 10),
+                  form.use_year_in_number
+                )}
+              </span>
+              .
+            </p>
             <Field label="Payment terms (days)">
               <Input
                 type="number"

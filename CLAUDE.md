@@ -349,6 +349,11 @@ It refuses the whole run if any invoice's items disagree with the total
 printed on the original, skips numbers already in the account, and stores
 the PDF as issued so it is served instead of a regenerated one - the
 generator would print today's company profile onto a historical record.
+The shape of a derived number is configurable per client and per company -
+`{prefix}{separator}{number:0{padding}d}` - so a series imported as `INV-T0005`
+continues as `INV-T0006` rather than the default `INV-T-00006`. Counters only
+ever move forward.
+
 See **`docs/importing-invoices.md`**.
 
 ## Audits

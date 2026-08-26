@@ -127,3 +127,25 @@ export function getStatusColour(status: string): string {
       return "bg-gray-100 text-gray-600";
   }
 }
+
+/**
+ * What the next derived invoice number will look like.
+ *
+ * The shape is three settings, not a constant: prefix, separator and how
+ * many digits. An account that moved here from another system keeps its
+ * series readable - separator "" with 4 digits continues INV-T0005 as
+ * INV-T0006, where the default "-" with 5 gives INV-T-00006.
+ */
+export function previewInvoiceNumber(
+  prefix: string,
+  separator: string,
+  padding: number,
+  withYear = false
+): string {
+  const digits = Math.min(Math.max(padding || 5, 1), 10);
+  const first = "1".padStart(digits, "0");
+  const year = String(new Date().getFullYear()).slice(2);
+  return withYear
+    ? `${prefix}${separator}${year}${separator}${first}`
+    : `${prefix}${separator}${first}`;
+}

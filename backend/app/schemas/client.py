@@ -21,6 +21,10 @@ class ClientCreate(BaseModel):
     vat_number: str | None = None
     invoice_prefix: str | None = None
     use_year_in_number: bool = False
+    # The shape of a derived number: separator '' with padding 4 continues
+    # a migrated INV-T0005 as INV-T0006. Defaults keep the old fixed shape.
+    number_separator: str = "-"
+    number_padding: int = 5
     default_payment_terms_days: int | None = None
     default_notes: str | None = None
     bank_name: str | None = None
@@ -46,6 +50,8 @@ class ClientUpdate(BaseModel):
     vat_number: str | None = None
     invoice_prefix: str | None = None
     use_year_in_number: bool | None = None
+    number_separator: str | None = None
+    number_padding: int | None = None
     default_payment_terms_days: int | None = None
     default_notes: str | None = None
     bank_name: str | None = None
@@ -73,6 +79,8 @@ class ClientResponse(BaseModel):
     invoice_prefix: str | None
     next_invoice_number: int
     use_year_in_number: bool
+    number_separator: str
+    number_padding: int
     default_payment_terms_days: int | None
     default_notes: str | None
     bank_name: str | None

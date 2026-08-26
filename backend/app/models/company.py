@@ -52,6 +52,11 @@ class Company(Base):
     invoice_prefix: Mapped[str] = mapped_column(String(10), default="INV")
     next_invoice_number: Mapped[int] = mapped_column(default=1)
     use_year_in_number: Mapped[bool] = mapped_column(default=False)
+    # The shape of a derived number, so a series migrated from another system
+    # can carry on as the client has seen it: separator '' and padding 4 give
+    # INV-T0006 rather than INV-T-00006. Defaults reproduce the old fixed shape.
+    number_separator: Mapped[str] = mapped_column(String(5), default="-")
+    number_padding: Mapped[int] = mapped_column(default=5)
 
     # Bank details (for invoice footer)
     bank_name: Mapped[str | None] = mapped_column(String(255), nullable=True)

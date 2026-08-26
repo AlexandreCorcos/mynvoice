@@ -103,29 +103,37 @@ async def _generate_invoice_number(
 
     # Client prefix takes priority, then company, then default
     if client and client.invoice_prefix:
+        source = client
         prefix = client.invoice_prefix
-        use_year = client.use_year_in_number
         number = client.next_invoice_number or 1
         # Increment client counter
         client.next_invoice_number = number + 1
     elif company:
+        source = company
         prefix = company.invoice_prefix
-        use_year = company.use_year_in_number
         number = company.next_invoice_number or 1
         # Increment company counter
         company.next_invoice_number = number + 1
     else:
+        source = None
         prefix = "INV"
-        use_year = False
         number = 1
+
+    use_year = bool(getattr(source, "use_year_in_number", False))
+    # The separator and padding are settings rather than constants: an account
+    # that moved here from another system has series already printed on
+    # documents in a fixed shape, and the numbering has to carry on in it.
+    # A client that set separator '' and padding 4 continues INV-T0005 as
+    # INV-T0006, where the old fixed shape gave INV-T-00006.
+    separator = getattr(source, "number_separator", None)
+    if separator is None:
+        separator = "-"
+    padding = getattr(source, "number_padding", None) or 5
 
     if use_year:
         year_suffix = datetime.now(timezone.utc).strftime("%y")
-        invoice_number = f"{prefix}-{year_suffix}-{number:05d}"
-    else:
-        invoice_number = f"{prefix}-{number:05d}"
-
-    return invoice_number
+        return f"{prefix}{separator}{year_suffix}{separator}{number:0{padding}d}"
+    return f"{prefix}{separator}{number:0{padding}d}"
 
 
 @router.get("/", response_model=list[InvoiceListResponse])

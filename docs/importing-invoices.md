@@ -58,7 +58,11 @@ projection all land together or not at all.
 {
   "account": "you@example.com",
   "pdf_dir": "D:/path/to/pdfs",        // optional; defaults to the manifest's folder
-  "company_next_invoice_number": 19,   // optional
+  "company": {                         // optional; the account-wide series
+    "next_invoice_number": 19,
+    "number_separator": "-",
+    "number_padding": 4
+  },
   "clients": [
     {
       "key": "acme",                   // referenced by each invoice
@@ -69,7 +73,9 @@ projection all land together or not at all.
       "postcode": "LS1 1AA",
       "country": "United Kingdom",
       "invoice_prefix": "INV-A",
-      "next_invoice_number": 6
+      "next_invoice_number": 6,
+      "number_separator": "",       // "" runs the prefix into the digits
+      "number_padding": 3           // INV-A006, not INV-A-00006
     }
   ],
   "invoices": [
@@ -97,7 +103,10 @@ projection all land together or not at all.
 ```
 
 A client already in the account (matched on name, case-insensitively) is
-reused rather than duplicated.
+reused rather than duplicated. Its **numbering settings are still applied**,
+though - prefix, separator, padding and counter. For the clients a manifest
+names, the manifest is the statement of how their series continues, which is
+the whole point of the run.
 
 ## Things worth knowing before a run
 
@@ -111,12 +120,19 @@ ledger is cash-basis and dates income on the day the money arrived
 into the wrong month — and therefore the wrong accounting period. The importer
 would rather refuse than guess.
 
-**The generated number format differs from most legacy ones.**
-`_generate_invoice_number` produces `{prefix}-{number:05d}`, so a client whose
-imported series reads `INV-A0005` continues as `INV-A-00006`. The numbers stay
-unique and sequential, which is what matters, but the shape changes at the
-handover. If the old shape needs to carry on, the generator is the thing to
-change — not the import.
+**Set the shape, or the series changes appearance at the handover.**
+A derived number is `{prefix}{separator}{number:0{padding}d}`, defaulting to
+`-` and five digits. A series imported as `INV-A005` would otherwise continue
+as `INV-A-00006`. Setting `number_separator: ""` and `number_padding: 3`
+continues it as `INV-A006` instead. The same settings are on the client and
+company screens, with a live preview, so they can be corrected afterwards.
+
+Numbering counters only ever move **forward**. If an account's counter is
+already past what the manifest asks for, it is left alone - a number that has
+been issued is never handed out twice. Note that padding is cosmetic, not part
+of the identity: `INV-0019` and `INV-00019` are different invoices as far as
+the unique constraint is concerned, so shortening the padding on an account
+that already has invoices changes how new ones read, and nothing else.
 
 **Duplicate numbers across series must be resolved in the manifest.** The
 database holds a unique constraint on `(user_id, invoice_number)`. Where the

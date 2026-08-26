@@ -29,6 +29,7 @@ import { Field, Input, Select, Textarea, Toggle } from "@/components/app/form";
 import { SegmentedControl } from "@/components/app/segmented-control";
 import Toast, { type ToastType } from "@/components/ui/toast";
 import { useCompanyLogo } from "@/hooks/useCompanyLogo";
+import { previewInvoiceNumber } from "@/lib/utils";
 import type { Company } from "@/types";
 
 type Tab = "you" | "business" | "invoicing";
@@ -95,6 +96,8 @@ export default function SettingsPage() {
     country: "United Kingdom",
     invoice_prefix: "INV",
     use_year_in_number: false,
+    number_separator: "-",
+    number_padding: "5",
     default_payment_terms_days: "30",
     default_notes: "",
     bank_name: "",
@@ -135,6 +138,8 @@ export default function SettingsPage() {
           country: c.country || "United Kingdom",
           invoice_prefix: c.invoice_prefix || "INV",
           use_year_in_number: c.use_year_in_number ?? false,
+          number_separator: c.number_separator ?? "-",
+          number_padding: String(c.number_padding ?? 5),
           default_payment_terms_days: String(c.default_payment_terms_days || 30),
           default_notes: c.default_notes || "",
           bank_name: c.bank_name || "",
@@ -176,6 +181,7 @@ export default function SettingsPage() {
         ...companyForm,
         default_payment_terms_days:
           parseInt(companyForm.default_payment_terms_days, 10) || 30,
+        number_padding: parseInt(companyForm.number_padding, 10) || 5,
       };
       const saved = company
         ? await api.put<Company>("/profile/company", payload)
@@ -500,6 +506,27 @@ export default function SettingsPage() {
                     placeholder="INV"
                   />
                 </Field>
+                <Field
+                  label="Separator"
+                  hint="Leave empty to run the prefix straight into the digits."
+                >
+                  <Input
+                    value={companyForm.number_separator}
+                    onChange={(e) => setC({ number_separator: e.target.value })}
+                    placeholder="-"
+                    maxLength={5}
+                  />
+                </Field>
+                <Field label="Digits">
+                  <Input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={companyForm.number_padding}
+                    onChange={(e) => setC({ number_padding: e.target.value })}
+                    className="tabular-nums"
+                  />
+                </Field>
                 <Field label="Payment terms (days)">
                   <Input
                     type="number"
@@ -516,13 +543,12 @@ export default function SettingsPage() {
                   checked={companyForm.use_year_in_number}
                   onChange={(v) => setC({ use_year_in_number: v })}
                   label="Include the year in invoice numbers"
-                  hint={
+                  hint={`Numbers look like ${previewInvoiceNumber(
+                    companyForm.invoice_prefix || "INV",
+                    companyForm.number_separator,
+                    parseInt(companyForm.number_padding, 10),
                     companyForm.use_year_in_number
-                      ? `Numbers look like ${companyForm.invoice_prefix || "INV"}-${String(
-                          new Date().getFullYear()
-                        ).slice(2)}-00001`
-                      : `Numbers look like ${companyForm.invoice_prefix || "INV"}-00001`
-                  }
+                  )}`}
                 />
               </div>
 
