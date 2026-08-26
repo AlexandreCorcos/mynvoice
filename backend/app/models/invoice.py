@@ -11,6 +11,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -35,6 +36,15 @@ class PaymentMethod(str, enum.Enum):
 
 class Invoice(Base):
     __tablename__ = "invoices"
+    # The database itself refuses two invoices with the same number in one
+    # account — a backstop behind the per-user advisory lock in
+    # app/core/locks.py. Numbers are per-user, so the uniqueness is scoped to
+    # user_id, not global (two accounts may legitimately both hold INV-00001).
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "invoice_number", name="uq_invoices_user_invoice_number"
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
