@@ -10,7 +10,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
-from app.models.expense import Expense, ExpenseType, TransactionKind
+from app.models.expense import (
+    Expense,
+    ExpenseType,
+    TransactionKind,
+    TransactionSource,
+)
 from app.models.expense_category import ExpenseCategory
 from app.models.user import User
 from app.schemas.expense import (
@@ -146,6 +151,11 @@ async def update_expense(
     expense = result.scalar_one_or_none()
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
+    if expense.source == TransactionSource.INVOICE:
+        raise HTTPException(
+            status_code=400,
+            detail="This income comes from an invoice. Edit the invoice instead.",
+        )
 
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(expense, field, value)
@@ -165,6 +175,12 @@ async def delete_expense(
     expense = result.scalar_one_or_none()
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
+    if expense.source == TransactionSource.INVOICE:
+        raise HTTPException(
+            status_code=400,
+            detail="This income comes from an invoice. It clears when the "
+            "invoice is unpaid or deleted.",
+        )
     await db.delete(expense)
 
 

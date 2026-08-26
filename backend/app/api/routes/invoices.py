@@ -16,6 +16,7 @@ from app.models.invoice import Invoice, InvoiceStatus
 from app.models.invoice_item import InvoiceItem
 from app.models.payment import Payment
 from app.models.user import User
+from app.services.ledger import sync_invoice_income
 from app.schemas.invoice import (
     InvoiceCreate,
     InvoiceListResponse,
@@ -244,6 +245,9 @@ async def update_invoice(
 
     await db.flush()
 
+    # Reflect any change to currency/client/amount on the projected income row.
+    await sync_invoice_income(db, invoice)
+
     result = await db.execute(
         select(Invoice)
         .where(Invoice.id == invoice.id)
@@ -313,6 +317,9 @@ async def update_invoice_status(
             payment_mode=data.payment_method.value if data.payment_method else None,
         )
         db.add(payment)
+
+    # Keep the cash-basis income row in step with what's now been received.
+    await sync_invoice_income(db, invoice)
 
     return invoice
 

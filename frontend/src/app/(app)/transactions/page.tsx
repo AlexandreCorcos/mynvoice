@@ -18,6 +18,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  FileText,
   Loader2,
   Pencil,
   Plus,
@@ -27,6 +28,7 @@ import {
   Trash2,
   Wallet,
 } from "lucide-react";
+import type { MenuItem } from "@/components/app/menu";
 import { api } from "@/lib/api";
 import { cn, formatCurrency, formatDate, num } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
@@ -769,8 +771,9 @@ export default function TransactionsPage() {
                       )}
                     </span>
                     <span className="mt-0.5 block truncate text-[12.5px] text-ink-muted">
-                      {cat?.name ?? "Uncategorised"}
-                      {e.vendor ? ` · ${e.vendor}` : ""}
+                      {e.source === "invoice"
+                        ? "From a paid invoice"
+                        : `${cat?.name ?? "Uncategorised"}${e.vendor ? ` · ${e.vendor}` : ""}`}
                     </span>
                   </span>
 
@@ -790,23 +793,35 @@ export default function TransactionsPage() {
 
                   <RowMenu
                     label={`Actions for ${e.description}`}
-                    items={[
-                      {
-                        label: "Edit",
-                        icon: Pencil,
-                        onSelect: () => {
-                          setEditing(e);
-                          setFormKind(e.kind);
-                          setFormOpen(true);
-                        },
-                      },
-                      {
-                        label: "Delete",
-                        icon: Trash2,
-                        tone: "danger",
-                        onSelect: () => setDeleting(e),
-                      },
-                    ]}
+                    items={
+                      e.source === "invoice"
+                        ? ([
+                            {
+                              label: "View invoice",
+                              icon: FileText,
+                              href: e.invoice_id
+                                ? `/invoices/${e.invoice_id}`
+                                : undefined,
+                            },
+                          ] as MenuItem[])
+                        : ([
+                            {
+                              label: "Edit",
+                              icon: Pencil,
+                              onSelect: () => {
+                                setEditing(e);
+                                setFormKind(e.kind);
+                                setFormOpen(true);
+                              },
+                            },
+                            {
+                              label: "Delete",
+                              icon: Trash2,
+                              tone: "danger",
+                              onSelect: () => setDeleting(e),
+                            },
+                          ] as MenuItem[])
+                    }
                   />
                 </motion.div>
               );

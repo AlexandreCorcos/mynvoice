@@ -33,16 +33,9 @@ async def get_dashboard(
     invoice_result = await db.execute(
         select(
             func.count(Invoice.id).label("total"),
-            func.coalesce(func.sum(Invoice.total), 0).label("revenue"),
             func.count(
                 case((Invoice.status == InvoiceStatus.PAID, Invoice.id))
             ).label("paid_count"),
-            func.coalesce(
-                func.sum(
-                    case((Invoice.status == InvoiceStatus.PAID, Invoice.total))
-                ),
-                0,
-            ).label("paid_amount"),
             # Outstanding means money you have asked for and not received:
             # SENT + OVERDUE. Drafts are excluded because the client has
             # never seen them, and overdue invoices are the most outstanding
@@ -101,9 +94,20 @@ async def get_dashboard(
     )
     total_expenses = expense_result.scalar() or Decimal("0.00")
 
+    # Revenue is cash-basis: money actually received. That lives in the ledger
+    # as income rows — manual income plus a row projected from each invoice's
+    # amount_paid — so a single sum captures both without touching invoices.
+    income_result = await db.execute(
+        select(func.coalesce(func.sum(Expense.amount), 0)).where(
+            Expense.user_id == user.id,
+            Expense.kind == TransactionKind.INCOME,
+        )
+    )
+    total_income = income_result.scalar() or Decimal("0.00")
+
     stats = DashboardStats(
-        total_revenue=inv.revenue,
-        total_paid=inv.paid_amount,
+        total_revenue=total_income,
+        total_paid=total_income,
         total_unpaid=inv.unpaid_amount,
         total_overdue=inv.overdue_amount,
         invoices_count=inv.total,
@@ -164,17 +168,12 @@ async def get_dashboard(
         ("This Quarter", quarter_start),
         ("This Year", year_start),
     ]:
+        # Sales (billed) and due come from invoices by issue date.
         result = await db.execute(
             select(
                 func.coalesce(
                     func.sum(Invoice.total), 0
                 ).label("sales"),
-                func.coalesce(
-                    func.sum(
-                        case((Invoice.status == InvoiceStatus.PAID, Invoice.total))
-                    ),
-                    0,
-                ).label("receipts"),
                 func.coalesce(
                     func.sum(
                         case(
@@ -192,22 +191,35 @@ async def get_dashboard(
             )
         )
         row = result.one()
+        # Receipts (cash in) come from the ledger's income rows by their date.
+        receipts_result = await db.execute(
+            select(func.coalesce(func.sum(Expense.amount), 0)).where(
+                Expense.user_id == user.id,
+                Expense.kind == TransactionKind.INCOME,
+                Expense.expense_date >= start_date,
+            )
+        )
+        receipts = receipts_result.scalar() or Decimal("0.00")
         period_summary.append(
             PeriodSummary(
                 label=label,
                 sales=row.sales,
-                receipts=row.receipts,
+                receipts=receipts,
                 due=row.due,
             )
         )
 
     # --- Monthly Trends ---
+    # Revenue trend is cash-basis too: income received per month.
     monthly_revenue = await db.execute(
         select(
-            func.to_char(Invoice.issue_date, "YYYY-MM").label("month"),
-            func.coalesce(func.sum(Invoice.total), 0).label("revenue"),
+            func.to_char(Expense.expense_date, "YYYY-MM").label("month"),
+            func.coalesce(func.sum(Expense.amount), 0).label("revenue"),
         )
-        .where(Invoice.user_id == user.id, Invoice.status == InvoiceStatus.PAID)
+        .where(
+            Expense.user_id == user.id,
+            Expense.kind == TransactionKind.INCOME,
+        )
         .group_by(text("1"))
         .order_by(text("1 DESC"))
         .limit(12)

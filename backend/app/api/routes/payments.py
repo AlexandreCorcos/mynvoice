@@ -14,6 +14,7 @@ from app.models.invoice import Invoice, InvoiceStatus
 from app.models.payment import Payment
 from app.models.user import User
 from app.schemas.payment import PaymentCreate, PaymentResponse
+from app.services.ledger import sync_invoice_income
 
 router = APIRouter()
 
@@ -82,7 +83,11 @@ async def create_payment(
     await db.flush()
 
     if payment.invoice_id:
-        inv_result = await db.execute(select(Invoice).where(Invoice.id == payment.invoice_id))
+        inv_result = await db.execute(
+            select(Invoice).where(
+                Invoice.id == payment.invoice_id, Invoice.user_id == user.id
+            )
+        )
         inv = inv_result.scalar_one_or_none()
         if inv:
             inv.amount_paid = (inv.amount_paid or Decimal("0.00")) + data.amount
@@ -91,6 +96,8 @@ async def create_payment(
                 inv.balance_due = Decimal("0.00")
                 inv.status = InvoiceStatus.PAID
                 inv.payment_date = data.payment_date
+            # Reflect the newly-received money in the cash-basis ledger.
+            await sync_invoice_income(db, inv)
 
     return payment
 
@@ -107,4 +114,29 @@ async def delete_payment(
     payment = result.scalar_one_or_none()
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
+
+    # Capture before delete — attributes are unreliable once it's gone.
+    amount = payment.amount or Decimal("0.00")
+    invoice_id = payment.invoice_id
+
     await db.delete(payment)
+
+    # Reverse the money off the invoice: deleting a payment used to leave
+    # amount_paid/balance_due stale (an invoice could stay "paid" with no
+    # payment behind it). Undo it and re-sync the cash-basis ledger.
+    if invoice_id:
+        inv_result = await db.execute(
+            select(Invoice).where(
+                Invoice.id == invoice_id, Invoice.user_id == user.id
+            )
+        )
+        inv = inv_result.scalar_one_or_none()
+        if inv:
+            inv.amount_paid = max(
+                Decimal("0.00"), (inv.amount_paid or Decimal("0.00")) - amount
+            )
+            inv.balance_due = inv.total - inv.amount_paid
+            if inv.balance_due > 0 and inv.status == InvoiceStatus.PAID:
+                inv.status = InvoiceStatus.SENT
+                inv.payment_date = None
+            await sync_invoice_income(db, inv)

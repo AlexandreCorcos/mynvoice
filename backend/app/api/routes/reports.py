@@ -68,58 +68,117 @@ async def get_reports(
         Expense.expense_date <= year_end,
     ]
 
+    # Received money is cash-basis: the ledger's income rows (manual income
+    # plus a row projected from each invoice's amount_paid), dated when the
+    # money arrived. "Invoiced" and "outstanding" still come from invoices.
+    income_filters = [
+        Expense.user_id == user.id,
+        Expense.kind == TransactionKind.INCOME,
+        Expense.expense_date >= year_start,
+        Expense.expense_date <= year_end,
+    ]
+
     # ---- Revenue by Period ----
     fmt = _period_format(period)
-    period_label = func.to_char(Invoice.issue_date, fmt).label("period")
 
-    revenue_by_period_result = await db.execute(
-        select(
-            period_label,
-            func.coalesce(func.sum(Invoice.total), 0).label("invoiced"),
-            func.coalesce(func.sum(Invoice.amount_paid), 0).label("received"),
-            func.coalesce(func.sum(Invoice.balance_due), 0).label("outstanding"),
+    invoiced_by_period = (
+        await db.execute(
+            select(
+                func.to_char(Invoice.issue_date, fmt).label("period"),
+                func.coalesce(func.sum(Invoice.total), 0).label("invoiced"),
+                func.coalesce(func.sum(Invoice.balance_due), 0).label("outstanding"),
+            )
+            .where(*invoice_filters)
+            .group_by(text("1"))
         )
-        .where(*invoice_filters)
-        .group_by(text("1"))
-        .order_by(text("1"))
-    )
+    ).all()
+
+    received_by_period = (
+        await db.execute(
+            select(
+                func.to_char(Expense.expense_date, fmt).label("period"),
+                func.coalesce(func.sum(Expense.amount), 0).label("received"),
+            )
+            .where(*income_filters)
+            .group_by(text("1"))
+        )
+    ).all()
+
+    periods: dict[str, dict] = {}
+
+    def _period(key: str) -> dict:
+        return periods.setdefault(
+            key,
+            {
+                "invoiced": Decimal("0.00"),
+                "received": Decimal("0.00"),
+                "outstanding": Decimal("0.00"),
+            },
+        )
+
+    for row in invoiced_by_period:
+        p = _period(row.period)
+        p["invoiced"] = row.invoiced
+        p["outstanding"] = row.outstanding
+    for row in received_by_period:
+        _period(row.period)["received"] = row.received
 
     revenue_by_period = [
         RevenueByPeriod(
-            period=row.period,
-            invoiced=row.invoiced,
-            received=row.received,
-            outstanding=row.outstanding,
+            period=key,
+            invoiced=v["invoiced"],
+            received=v["received"],
+            outstanding=v["outstanding"],
         )
-        for row in revenue_by_period_result.all()
+        for key, v in sorted(periods.items())
     ]
 
     # ---- Revenue by Client ----
-    revenue_by_client_result = await db.execute(
-        select(
-            Invoice.client_id,
-            func.coalesce(Client.company_name, "Unknown Client").label("client_name"),
-            func.coalesce(func.sum(Invoice.total), 0).label("invoiced"),
-            func.coalesce(func.sum(Invoice.amount_paid), 0).label("received"),
-            func.coalesce(func.sum(Invoice.balance_due), 0).label("outstanding"),
+    invoiced_by_client = (
+        await db.execute(
+            select(
+                Invoice.client_id,
+                func.coalesce(Client.company_name, "Unknown Client").label(
+                    "client_name"
+                ),
+                func.coalesce(func.sum(Invoice.total), 0).label("invoiced"),
+                func.coalesce(func.sum(Invoice.balance_due), 0).label("outstanding"),
+            )
+            .outerjoin(Client, Invoice.client_id == Client.id)
+            .where(*invoice_filters)
+            .group_by(Invoice.client_id, Client.company_name)
         )
-        .outerjoin(Client, Invoice.client_id == Client.id)
-        .where(*invoice_filters)
-        .group_by(Invoice.client_id, Client.company_name)
-        .order_by(func.sum(Invoice.total).desc())
-    )
+    ).all()
 
-    revenue_by_client = [
-        RevenueByClient(
-            client_id=row.client_id,
-            client_name=row.client_name,
-            invoiced=row.invoiced,
-            received=row.received,
-            outstanding=row.outstanding,
-        )
-        for row in revenue_by_client_result.all()
-        if row.client_id is not None
-    ]
+    received_by_client = {
+        row.client_id: row.received
+        for row in (
+            await db.execute(
+                select(
+                    Expense.client_id,
+                    func.coalesce(func.sum(Expense.amount), 0).label("received"),
+                )
+                .where(*income_filters)
+                .group_by(Expense.client_id)
+            )
+        ).all()
+    }
+
+    revenue_by_client = sorted(
+        [
+            RevenueByClient(
+                client_id=row.client_id,
+                client_name=row.client_name,
+                invoiced=row.invoiced,
+                received=received_by_client.get(row.client_id, Decimal("0.00")),
+                outstanding=row.outstanding,
+            )
+            for row in invoiced_by_client
+            if row.client_id is not None
+        ],
+        key=lambda r: r.invoiced,
+        reverse=True,
+    )
 
     # ---- Expenses by Category ----
     expenses_by_category_result = await db.execute(
@@ -149,11 +208,16 @@ async def get_reports(
     invoice_summary_result = await db.execute(
         select(
             func.coalesce(func.sum(Invoice.total), 0).label("total_invoiced"),
-            func.coalesce(func.sum(Invoice.amount_paid), 0).label("total_received"),
             func.coalesce(func.sum(Invoice.balance_due), 0).label("total_outstanding"),
         ).where(*invoice_filters)
     )
     inv_summary = invoice_summary_result.one()
+
+    total_received = (
+        await db.execute(
+            select(func.coalesce(func.sum(Expense.amount), 0)).where(*income_filters)
+        )
+    ).scalar() or Decimal("0.00")
 
     expense_summary_result = await db.execute(
         select(
@@ -164,10 +228,10 @@ async def get_reports(
 
     summary = ReportSummary(
         total_invoiced=inv_summary.total_invoiced,
-        total_received=inv_summary.total_received,
+        total_received=total_received,
         total_outstanding=inv_summary.total_outstanding,
         total_expenses=total_expenses,
-        net_profit=inv_summary.total_received - total_expenses,
+        net_profit=total_received - total_expenses,
     )
 
     return ReportsResponse(
