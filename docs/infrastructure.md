@@ -41,6 +41,7 @@ All DNS is managed in Cloudflare.
 | A | `app` | Server IP | Proxied |
 | A | `api` | Server IP | Proxied |
 | CNAME | `storage` | R2 bucket | Proxied (Cloudflare) |
+| CNAME | `url8280` | `sendgrid.net` | Proxied — **required**, see `docs/email-tracking.md` |
 
 ### File Storage — Cloudflare R2
 Files (company logos, etc.) are stored in Cloudflare R2 — not on the server disk.
@@ -227,8 +228,11 @@ Common causes: DB not ready, migration error, missing env var.
 
 **SSL issues**
 - Both hostnames are proxied, so Cloudflare terminates TLS at the edge. The
-  origin certificate still has to be valid for Cloudflare to trust it — check
-  the SSL/TLS mode is **Full (strict)**, not Flexible.
+  zone runs SSL mode **Full** (not Flexible — and not Full (strict) either:
+  `url8280.mynvoice.com`, the SendGrid click-tracking host, presents SendGrid's
+  own certificate at the origin, which strict rejects with a 526 on every
+  tracked email link). Harden to strict only after scoping that hostname to
+  Full with a Configuration Rule — see `docs/email-tracking.md`.
 - Wait 2-3 minutes after first deploy for Let's Encrypt to issue certificates
 
 ---
