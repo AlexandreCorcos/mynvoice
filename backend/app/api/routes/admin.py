@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_admin
 from app.db.session import get_db
+from app.schemas.types import Money
 from app.models.donation import Donation, DonationConfig
 from app.models.expense import Expense, TransactionKind
 from app.models.invoice import Invoice, InvoiceStatus
@@ -21,7 +22,7 @@ class AdminMetrics(BaseModel):
     active_users: int  # logged in within 30 days
     total_invoices: int
     total_invoices_paid: int
-    total_revenue_processed: Decimal
+    total_revenue_processed: Money
     total_expenses_recorded: int
     new_users_this_month: int
 
@@ -33,8 +34,8 @@ class DonationConfigUpdate(BaseModel):
 
 
 class DonationProgress(BaseModel):
-    monthly_target: Decimal
-    current_month_total: Decimal
+    monthly_target: Money
+    current_month_total: Money
     percentage: float
     currency: str
     message: str | None
