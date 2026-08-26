@@ -463,11 +463,16 @@ async def download_invoice_pdf(
 # ---------------------------------------------------------------------------
 
 from pydantic import BaseModel as PydanticBaseModel
+from pydantic import EmailStr
 from app.services.email import send_invoice_email, fmt_currency
 
 
 class SendInvoiceRequest(PydanticBaseModel):
-    email: str
+    # EmailStr, not str: a bare string let a recipient like
+    # "victim@x.com\nBcc: evil@x.com" through to the mail construction, which
+    # is the classic header-injection shape. EmailStr rejects the newline (and
+    # every malformed address) at the edge, matching every other email field.
+    email: EmailStr
 
 
 @router.post("/{invoice_id}/send")
