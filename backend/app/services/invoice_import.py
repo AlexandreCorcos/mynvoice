@@ -364,24 +364,33 @@ async def run(
     # point of the run is that the next number follows the ones being imported.
     for spec in manifest["clients"]:
         client = clients[spec["key"]]
+        touched = False
         if spec.get("invoice_prefix"):
             client.invoice_prefix = spec["invoice_prefix"]
+            touched = True
         if spec.get("number_separator") is not None:
             client.number_separator = spec["number_separator"]
+            touched = True
         if spec.get("number_padding"):
             client.number_padding = spec["number_padding"]
+            touched = True
         wanted = spec.get("next_invoice_number")
         if wanted and wanted > (client.next_invoice_number or 1):
             client.next_invoice_number = wanted
-        log.append(
-            f"counter  {spec['company_name']}: next is "
-            + _shape(
-                client.invoice_prefix,
-                client.number_separator,
-                client.number_padding,
-                client.next_invoice_number,
+            touched = True
+        # Only reported when the manifest actually set something. A client
+        # with no prefix of its own draws from the company series, so a
+        # counter line for it would name a series that never gets issued.
+        if touched:
+            log.append(
+                f"counter  {spec['company_name']}: next is "
+                + _shape(
+                    client.invoice_prefix,
+                    client.number_separator,
+                    client.number_padding,
+                    client.next_invoice_number,
+                )
             )
-        )
 
     # The company's own series, for invoices raised without a client prefix.
     company_spec = manifest.get("company") or {}
