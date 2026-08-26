@@ -53,6 +53,8 @@ services:
       dockerfile: Dockerfile.prod
       args:
         NEXT_PUBLIC_API_URL: https://api.mynvoice.com/api/v1
+        NEXT_PUBLIC_BMAC_URL: https://buymeacoffee.com/acorcos
+        NEXT_PUBLIC_STRIPE_URL: https://buy.stripe.com/3cI00l4Vs1Eg3kj3KlfIs00
     container_name: mynvoice-frontend
     restart: unless-stopped
     depends_on:

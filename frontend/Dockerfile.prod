@@ -6,6 +6,14 @@ WORKDIR /app
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
+# Donation links — NEXT_PUBLIC_* are inlined at build time, so they must be
+# present here or the Support page hides the buttons (with neither set the whole
+# row is dropped rather than shown empty).
+ARG NEXT_PUBLIC_BMAC_URL
+ENV NEXT_PUBLIC_BMAC_URL=${NEXT_PUBLIC_BMAC_URL}
+ARG NEXT_PUBLIC_STRIPE_URL
+ENV NEXT_PUBLIC_STRIPE_URL=${NEXT_PUBLIC_STRIPE_URL}
+
 COPY package.json package-lock.json ./
 RUN npm ci
 

@@ -112,6 +112,13 @@ R2_BUCKET=mynvoice
 R2_PUBLIC_URL=https://storage.mynvoice.com
 ```
 
+> **Frontend donation links are build-time args, not runtime env.** The Support
+> page reads `NEXT_PUBLIC_BMAC_URL` and `NEXT_PUBLIC_STRIPE_URL`, and Next inlines
+> `NEXT_PUBLIC_*` at build. They are set in `docker-compose.prod.yml` under
+> `frontend.build.args` (alongside `NEXT_PUBLIC_API_URL`) and declared as `ARG`
+> in `frontend/Dockerfile.prod`. Changing a link needs a **rebuild**, not just a
+> restart. With neither set, the Support page hides the donation buttons.
+
 ---
 
 ## First Deploy Setup
