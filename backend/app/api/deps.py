@@ -62,6 +62,27 @@ async def get_current_user(
     return user
 
 
+async def assert_owned(db: AsyncSession, model, obj_id, user_id, detail: str) -> None:
+    """Reject a foreign-key reference that points outside the caller's account.
+
+    The one boundary in this system is ``user_id`` and it is enforced by hand.
+    A row-owning endpoint scopes its own lookups, but a *reference* carried in a
+    create/update body — an invoice's ``client_id``, a payment's ``invoice_id``,
+    an expense's ``category_id`` — is only safe if the referenced row is checked
+    to belong to the same account. A missing check let one account attach
+    another's client to its own invoice, whose PDF then rendered that client's
+    name, address and bank details. 404 (not 403) so a foreign id is
+    indistinguishable from one that does not exist.
+    """
+    if obj_id is None:
+        return
+    result = await db.execute(
+        select(model.id).where(model.id == obj_id, model.user_id == user_id)
+    )
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
+
+
 async def get_current_admin(
     user: User = Depends(get_current_user),
 ) -> User:

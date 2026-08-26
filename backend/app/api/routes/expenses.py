@@ -8,8 +8,9 @@ from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, Upload
 from sqlalchemy import func, select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import assert_owned, get_current_user
 from app.db.session import get_db
+from app.models.client import Client as ClientModel
 from app.models.expense import (
     Expense,
     ExpenseType,
@@ -248,6 +249,11 @@ async def create_expense(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    # Every reference an expense carries must belong to the same account.
+    await assert_owned(db, ExpenseCategory, data.category_id, user.id, "Category not found")
+    await assert_owned(db, TransactionItem, data.item_id, user.id, "Item not found")
+    await assert_owned(db, ClientModel, data.client_id, user.id, "Client not found")
+
     expense = Expense(user_id=user.id, **data.model_dump())
     db.add(expense)
     await db.flush()
@@ -272,6 +278,14 @@ async def update_expense(
             status_code=400,
             detail="This income comes from an invoice. Edit the invoice instead.",
         )
+
+    fields = data.model_fields_set
+    if "category_id" in fields:
+        await assert_owned(db, ExpenseCategory, data.category_id, user.id, "Category not found")
+    if "item_id" in fields:
+        await assert_owned(db, TransactionItem, data.item_id, user.id, "Item not found")
+    if "client_id" in fields:
+        await assert_owned(db, ClientModel, data.client_id, user.id, "Client not found")
 
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(expense, field, value)

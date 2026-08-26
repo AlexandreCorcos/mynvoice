@@ -7,8 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import assert_owned, get_current_user
 from app.db.session import get_db
+from app.models.client import Client as ClientModel
 from app.models.company import Company
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.payment import Payment
@@ -73,6 +74,11 @@ async def create_payment(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    # A payment must not reference another account's invoice or client — both
+    # would attach one account's money record to another's books.
+    await assert_owned(db, Invoice, data.invoice_id, user.id, "Invoice not found")
+    await assert_owned(db, ClientModel, data.client_id, user.id, "Client not found")
+
     payment_number = await _generate_payment_number(db, user.id)
     payment = Payment(
         user_id=user.id,

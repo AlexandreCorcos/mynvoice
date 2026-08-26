@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import get_current_user
+from app.api.deps import assert_owned, get_current_user
 from app.db.session import get_db
 from app.models.client import Client as ClientModel
 from app.models.company import Company
@@ -131,6 +131,8 @@ async def create_invoice(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await assert_owned(db, ClientModel, data.client_id, user.id, "Client not found")
+
     invoice_number = await _generate_invoice_number(db, user.id, data.client_id)
 
     subtotal, tax_amount, total = _calculate_totals(
@@ -202,6 +204,11 @@ async def update_invoice(
         raise HTTPException(
             status_code=400, detail="Paid invoices cannot be edited"
         )
+
+    # Re-parenting an invoice onto another account's client is the update-time
+    # variant of the create-time leak; validate the reference again here.
+    if "client_id" in data.model_fields_set:
+        await assert_owned(db, ClientModel, data.client_id, user.id, "Client not found")
 
     update_data = data.model_dump(exclude_unset=True, exclude={"items"})
     for field, value in update_data.items():
@@ -425,7 +432,10 @@ async def download_invoice_pdf(
     client = None
     if invoice.client_id:
         cl_result = await db.execute(
-            select(ClientModel).where(ClientModel.id == invoice.client_id)
+            select(ClientModel).where(
+                ClientModel.id == invoice.client_id,
+                ClientModel.user_id == user.id,
+            )
         )
         client = cl_result.scalar_one_or_none()
 
@@ -481,7 +491,10 @@ async def send_invoice(
     client = None
     if invoice.client_id:
         result = await db.execute(
-            select(ClientModel).where(ClientModel.id == invoice.client_id)
+            select(ClientModel).where(
+                ClientModel.id == invoice.client_id,
+                ClientModel.user_id == user.id,
+            )
         )
         client = result.scalar_one_or_none()
 
