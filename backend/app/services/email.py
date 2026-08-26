@@ -160,13 +160,12 @@ def _fallback_link(href: str) -> str:
 
 
 # SendGrid's SMTP relay honours this header per message, overriding the
-# account-wide tracking settings. Click tracking rewrites every link through a
-# tracking subdomain (url8280.mynvoice.com → CNAME sendgrid.net) that serves
-# *.sendgrid.net's certificate, so recipients get a full-screen "connection is
-# not private" interstitial instead of the set-password page — and the rewrite
-# also copies auth tokens into SendGrid's click logs. These are transactional
-# mails: links must show app.mynvoice.com and go straight there. Open tracking
-# rides the same domain, so it goes too.
+# account-wide tracking settings — which the owner deliberately keeps ON for
+# product mail. Auth mail opts out: click tracking would rewrite the
+# set-password / reset links through the tracking subdomain, which copies
+# their one-time tokens into SendGrid's click logs, and a password link whose
+# URL is anything but app.mynvoice.com reads as phishing. Everything else
+# follows the dashboard settings.
 _SMTPAPI_NO_TRACKING = json.dumps(
     {
         "filters": {
@@ -177,11 +176,12 @@ _SMTPAPI_NO_TRACKING = json.dumps(
 )
 
 
-async def _send(msg: MIMEMultipart) -> bool:
+async def _send(msg: MIMEMultipart, *, tracking: bool = True) -> bool:
     if not settings.SMTP_HOST:
         logger.warning("SMTP_HOST is not configured — skipping email send.")
         return False
-    msg["X-SMTPAPI"] = _SMTPAPI_NO_TRACKING
+    if not tracking:
+        msg["X-SMTPAPI"] = _SMTPAPI_NO_TRACKING
     try:
         use_tls = settings.SMTP_PORT == 465
         start_tls = settings.SMTP_PORT == 587
@@ -249,7 +249,10 @@ async def send_verification_email(
         "The link works for 24 hours. If you didn't sign up, you can ignore this."
     )
 
-    ok = await _send(_message(to_email, "Set your MYNVOICE password", html, text))
+    ok = await _send(
+        _message(to_email, "Set your MYNVOICE password", html, text),
+        tracking=False,
+    )
     if ok:
         logger.info("Verification email sent to %s", to_email)
     return ok
@@ -297,7 +300,10 @@ async def send_password_reset_email(
         "you, ignore it — your current password still works."
     )
 
-    ok = await _send(_message(to_email, "Reset your MYNVOICE password", html, text))
+    ok = await _send(
+        _message(to_email, "Reset your MYNVOICE password", html, text),
+        tracking=False,
+    )
     if ok:
         logger.info("Password reset email sent to %s", to_email)
     return ok
