@@ -472,7 +472,7 @@ is currently written on our own landing page, and all of them would be false.
 
 | Do **not** claim | Reality |
 |---|---|
-| **"Google sign-in" / "Sign in with Google"** | **Not implemented.** The button exists on the login page but does nothing, and there is no backend route. *(Currently also claimed on the landing page — flagged to the owner for removal or implementation.)* |
+| **"Google sign-in" / "Sign in with Google"** | **Not implemented.** There is no `/auth/google` route. The dead login button and the false landing-page claim were both removed in v0.23.19; the schema, config and CSRF exemption remain for whenever OAuth is built. |
 | "Apple sign-in" | Not implemented; only structurally anticipated |
 | Recurring / automatic invoices | Not implemented |
 | Team accounts, multi-user, roles or permissions | Not implemented — one account, one user |
@@ -525,6 +525,7 @@ is currently written on our own landing page, and all of them would be false.
 | Security audit reports | `docs/Audit/` in the repo |
 | Brand assets (logo, OG image, wordmark PNGs) | `frontend/public/` and `frontend/src/app/` in the repo |
 | Design system reference | `CLAUDE.md` § Design System |
+| **Competitor landscape** | [`COMPETITOR_LANDSCAPE.md`](COMPETITOR_LANDSCAPE.md) — who else is free, where their walls are, and the gaps we must not claim past |
 
 **Screenshot sources for creatives:** dashboard, invoice editor (mid-drag), a
 rendered PDF, the reports screen, dark mode. Use the real app — never mock up a
