@@ -5,8 +5,47 @@ from __future__ import annotations
 import html as html_mod
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
-from weasyprint import HTML
+from weasyprint import HTML, default_url_fetcher
+
+from app.core.config import settings
+
+
+def _allowed_asset_host() -> str | None:
+    """The one host a PDF is allowed to fetch — where company logos live.
+
+    Mirrors storage._public_url: the configured R2 public URL, or the raw R2
+    endpoint when none is set.
+    """
+    if settings.R2_PUBLIC_URL:
+        return urlparse(settings.R2_PUBLIC_URL).hostname
+    if settings.R2_ACCOUNT_ID:
+        return f"{settings.R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+    return None
+
+
+def _safe_url_fetcher(url: str):
+    """Defence-in-depth SSRF guard for the renderer.
+
+    WeasyPrint turns invoice content into HTML, and its default fetcher will
+    happily resolve an `<img src>` or `@import` — including `file:///etc/passwd`
+    or `http://169.254.169.254/…`. Today every user value is html-escaped and
+    the only real resource is the company logo on R2, so nothing hostile
+    reaches here. This makes that guarantee explicit rather than incidental: an
+    inline `data:` URI is fine, the R2 asset host is fine, everything else —
+    file://, other hosts, internal addresses — is refused. A refused image just
+    renders as missing; it never becomes a request the server makes on
+    someone's behalf.
+    """
+    scheme = urlparse(url).scheme
+    if scheme == "data":
+        return default_url_fetcher(url)
+    host = urlparse(url).hostname
+    allowed = _allowed_asset_host()
+    if scheme == "https" and allowed and host == allowed:
+        return default_url_fetcher(url)
+    raise ValueError(f"blocked non-allowlisted PDF resource: {scheme}://{host}")
 
 
 def _esc(value: Any) -> str:
@@ -1044,5 +1083,7 @@ async def generate_invoice_pdf(invoice, client, company) -> bytes:
     else:
         html_string = _build_html(invoice, client, company)
 
-    pdf_bytes: bytes = HTML(string=html_string).write_pdf()
+    pdf_bytes: bytes = HTML(
+        string=html_string, url_fetcher=_safe_url_fetcher
+    ).write_pdf()
     return pdf_bytes
