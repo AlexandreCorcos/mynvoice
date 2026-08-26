@@ -21,6 +21,7 @@ from app.models.user import User
 from app.schemas.expense import (
     ExpenseCategoryCreate,
     ExpenseCategoryResponse,
+    ExpenseCategoryUpdate,
     ExpenseCreate,
     ExpenseResponse,
     ExpenseUpdate,
@@ -54,6 +55,27 @@ async def create_category(
     category = ExpenseCategory(user_id=user.id, **data.model_dump())
     db.add(category)
     await db.flush()
+    return category
+
+
+@router.patch("/categories/{category_id}", response_model=ExpenseCategoryResponse)
+async def update_category(
+    category_id: uuid.UUID,
+    data: ExpenseCategoryUpdate,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(ExpenseCategory).where(
+            ExpenseCategory.id == category_id,
+            ExpenseCategory.user_id == user.id,
+        )
+    )
+    category = result.scalar_one_or_none()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(category, field, value)
     return category
 
 

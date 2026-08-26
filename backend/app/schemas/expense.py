@@ -14,6 +14,14 @@ class ExpenseCategoryCreate(BaseModel):
     kind: TransactionKind = TransactionKind.EXPENSE
     colour: str | None = None
     icon: str | None = None
+    default_amount: Money | None = None
+
+
+class ExpenseCategoryUpdate(BaseModel):
+    name: str | None = None
+    colour: str | None = None
+    icon: str | None = None
+    default_amount: Money | None = None
 
 
 class ExpenseCategoryResponse(BaseModel):
@@ -22,6 +30,7 @@ class ExpenseCategoryResponse(BaseModel):
     kind: TransactionKind
     colour: str | None
     icon: str | None
+    default_amount: Money | None
 
     model_config = {"from_attributes": True}
 

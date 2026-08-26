@@ -181,6 +181,7 @@ export interface ExpenseCategory {
   kind: TransactionKind;
   colour: string | null;
   icon: string | null;
+  default_amount: number | null;
 }
 
 export interface Expense {

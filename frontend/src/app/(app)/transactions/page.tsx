@@ -120,6 +120,19 @@ function TransactionForm({
     setForm((f) => ({ ...f, category_id: "" })); // categories don't cross kinds
   };
 
+  /* Picking a category with a ready-made amount pre-fills the amount field. */
+  const pickCategory = (id: string) => {
+    const cat = pickable.find((c) => c.id === id);
+    setForm((f) => ({
+      ...f,
+      category_id: id,
+      amount:
+        cat?.default_amount != null && cat.default_amount !== 0
+          ? String(cat.default_amount)
+          : f.amount,
+    }));
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -259,12 +272,13 @@ function TransactionForm({
           <Field label="Category">
             <Select
               value={form.category_id}
-              onChange={(e) => set({ category_id: e.target.value })}
+              onChange={(e) => pickCategory(e.target.value)}
             >
               <option value="">Uncategorised</option>
               {pickable.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
+                  {c.default_amount != null ? ` · ${c.default_amount}` : ""}
                 </option>
               ))}
             </Select>
@@ -321,6 +335,7 @@ function CategoryManager({
 }) {
   const [kind, setKind] = useState<TransactionKind>("expense");
   const [name, setName] = useState("");
+  const [amount, setAmount] = useState("");
   const [colour, setColour] = useState(SWATCHES[0]);
   const [busy, setBusy] = useState(false);
 
@@ -334,12 +349,25 @@ function CategoryManager({
     if (!name.trim()) return;
     setBusy(true);
     try {
-      await api.post("/expenses/categories", { name: name.trim(), kind, colour });
+      await api.post("/expenses/categories", {
+        name: name.trim(),
+        kind,
+        colour,
+        default_amount: amount ? parseFloat(amount) : null,
+      });
       setName("");
+      setAmount("");
       onChanged();
     } finally {
       setBusy(false);
     }
+  };
+
+  /* Set or clear a category's ready-made amount, in place. */
+  const setDefaultAmount = async (id: string, value: string) => {
+    const parsed = value.trim() === "" ? null : parseFloat(value);
+    await api.patch(`/expenses/categories/${id}`, { default_amount: parsed });
+    onChanged();
   };
 
   const remove = async (id: string) => {
@@ -368,11 +396,22 @@ function CategoryManager({
       </div>
 
       <form onSubmit={add} className="flex flex-wrap items-end gap-2">
-        <Field label={`New ${kind} category`} className="min-w-[180px] flex-1">
+        <Field label={`New ${kind} category`} className="min-w-[150px] flex-1">
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={kind === "income" ? "Consulting" : "Software"}
+          />
+        </Field>
+        <Field label="Amount" className="w-[104px]">
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="—"
+            className="tabular-nums"
           />
         </Field>
         <div className="flex items-center gap-1.5 pb-0.5">
@@ -415,6 +454,21 @@ function CategoryManager({
               <span className="flex-1 truncate text-[13.5px] font-medium text-ink">
                 {c.name}
               </span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={c.default_amount ?? ""}
+                onBlur={(e) => {
+                  const v = e.target.value;
+                  const current = c.default_amount ?? "";
+                  if (String(v) !== String(current)) setDefaultAmount(c.id, v);
+                }}
+                placeholder="—"
+                aria-label={`Default amount for ${c.name}`}
+                title="Ready-made amount, pre-filled when you pick this category"
+                className="w-20 rounded-[8px] bg-elevated/60 px-2 py-1 text-right text-[12.5px] tabular-nums text-ink outline-none ring-1 ring-line focus:ring-brass-soft"
+              />
               <button
                 onClick={() => remove(c.id)}
                 aria-label={`Delete ${c.name}`}
