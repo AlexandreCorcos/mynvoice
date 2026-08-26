@@ -40,8 +40,21 @@ All DNS is managed in Cloudflare.
 |------|------|-----------|-------|
 | A | `app` | Server IP | Proxied |
 | A | `api` | Server IP | Proxied |
+| A | apex `mynvoice.com` | Server IP | Proxied |
+| CNAME | `www` | `mynvoice.com` | Proxied |
 | CNAME | `storage` | R2 bucket | Proxied (Cloudflare) |
 | CNAME | `url8280` | `sendgrid.net` | Proxied — **required**, see `docs/email-tracking.md` |
+
+> **No wildcard.** There is deliberately **no** `*.mynvoice.com` record. One
+> existed (A → server IP, proxied) and meant *every* label — `admin.`,
+> `staging.`, anything — resolved and served the app: a lookalike-phishing
+> surface (not a data risk; the session cookie is host-only on `api.` and CORS
+> is exact-match to `app.`). It was removed on 2026-08-26 (audit L6). Every real
+> service already has its own explicit record above (plus the SendGrid/Hostinger
+> mail records: `61975488`, `em8290`, `s1`/`s2._domainkey`,
+> `hostingermail-{a,b,c}._domainkey`, `autoconfig`, `autodiscover`, MX, SPF,
+> `_dmarc`), so nothing depended on the wildcard. If a genuinely new subdomain
+> is ever needed, add an explicit record for it — do **not** reintroduce `*`.
 
 ### File Storage — Cloudflare R2
 Files (company logos, etc.) are stored in Cloudflare R2 — not on the server disk.
