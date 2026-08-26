@@ -76,12 +76,14 @@ the owner a menu and collect the run parameters:
 | Role | Email | Password | Notes |
 |---|---|---|---|
 | **Test account (default)** | `corcos+mynvoice@gmail.com` | `12345678` | exists locally **and** in production; use freely |
+| **Isolation account A** | `corcos+audit1@gmail.com` | `12345678` | exists **in production** (and can be made locally); furnish it |
+| **Isolation account B** | `corcos+audit2@gmail.com` | `12345678` | exists **in production** (and can be made locally); furnish it |
 | **Owner / admin** | `acorcos@gmail.com` | *(owner's own)* | the only admin. **Never** test against its data |
-| **Second account** | *create one* | — | **required for #1** — see below |
 
-**Isolation testing needs two accounts, in both environments.** MYNVOICE has no tenants: the boundary
-is `users.id`, and a boundary cannot be tested from one side of it. Register a second account
-(`corcos+audit2@gmail.com`) through the normal flow, **locally and in production**.
+**Isolation testing needs two accounts.** MYNVOICE has no tenants: the boundary is `users.id`, and a
+boundary cannot be tested from one side of it. Use **`corcos+audit1@`** and **`corcos+audit2@`** as the
+two furnished accounts — they now exist **in production**, so the full A-vs-B matrix runs live (it used
+to be a coverage gap). Locally, register `corcos+audit2@` the same way if you need a local pair.
 
 In production the signup emails really are delivered, so use a real inbox alias and follow the link.
 **Locally no SMTP is configured**, so no email is sent — read the token from the database instead:

@@ -6,7 +6,7 @@ recorded did not happen, because the next person cannot tell whether a surface h
 | Date (UTC) | Playbook | Target | Verdict | Report |
 |---|---|---|---|---|
 | 2026-08-26 | marathon (1–5, all playbooks) | local → prod | 12 fixed & live (v0.23.6–0.23.13); 1 owner infra action open (L6 wildcard) | [file](marathon_2026-08-26.md) |
-| 2026-08-26 | 1 account-isolation | local → prod | **FAIL → 2 CRITICAL fixed** (v0.23.6, v0.23.7) | [file](marathon_2026-08-26.md) |
+| 2026-08-26 | 1 account-isolation | local → prod | **FAIL → 2 CRITICAL fixed** (v0.23.6, v0.23.7); full A-vs-B matrix re-run **live in prod** — all PASS | [file](marathon_2026-08-26.md) |
 | 2026-08-26 | 2 money-invoice-integrity | local → prod | PASS · 2 fixed (v0.23.8, v0.23.10 numbering race) | [file](marathon_2026-08-26.md) |
 | 2026-08-26 | 3 session-csrf-admin-stepup | local → prod | PASS | [file](marathon_2026-08-26.md) |
 | 2026-08-26 | 4 unauth-blackbox | prod | PASS · low-sev enumeration + wildcard notes | [file](marathon_2026-08-26.md) |
