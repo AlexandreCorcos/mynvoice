@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import case, func, select, text
+from sqlalchemy import and_, case, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -144,7 +144,10 @@ async def get_reports(
                 func.coalesce(func.sum(Invoice.total), 0).label("invoiced"),
                 func.coalesce(func.sum(Invoice.balance_due), 0).label("outstanding"),
             )
-            .outerjoin(Client, Invoice.client_id == Client.id)
+            .outerjoin(
+                Client,
+                and_(Invoice.client_id == Client.id, Client.user_id == user.id),
+            )
             .where(*invoice_filters)
             .group_by(Invoice.client_id, Client.company_name)
         )
@@ -188,7 +191,13 @@ async def get_reports(
             func.coalesce(func.sum(Expense.amount), 0).label("total"),
             func.count(Expense.id).label("count"),
         )
-        .outerjoin(ExpenseCategory, Expense.category_id == ExpenseCategory.id)
+        .outerjoin(
+            ExpenseCategory,
+            and_(
+                Expense.category_id == ExpenseCategory.id,
+                ExpenseCategory.user_id == user.id,
+            ),
+        )
         .where(*expense_filters)
         .group_by(Expense.category_id, ExpenseCategory.name)
         .order_by(func.sum(Expense.amount).desc())
