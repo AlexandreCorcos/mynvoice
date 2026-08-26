@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.invoice import InvoiceStatus, PaymentMethod
 
@@ -11,8 +11,11 @@ from app.schemas.types import Money
 
 class InvoiceItemCreate(BaseModel):
     description: str
-    quantity: Money = Decimal("1.00")
-    unit_price: Money
+    # Money is a book figure, not a signed adjustment: quantities, prices,
+    # rates and discounts are all >= 0. A negative here used to sail through
+    # and produce a negative subtotal/total.
+    quantity: Money = Field(default=Decimal("1.00"), ge=0)
+    unit_price: Money = Field(ge=0)
     unit: str | None = None
     sort_order: int = 0
 
@@ -34,8 +37,8 @@ class InvoiceCreate(BaseModel):
     reference: str | None = None
     issue_date: date
     due_date: date
-    tax_rate: Money = Decimal("0.00")
-    discount_amount: Money = Decimal("0.00")
+    tax_rate: Money = Field(default=Decimal("0.00"), ge=0)
+    discount_amount: Money = Field(default=Decimal("0.00"), ge=0)
     currency: str = "GBP"
     notes: str | None = None
     terms: str | None = None
@@ -49,8 +52,8 @@ class InvoiceUpdate(BaseModel):
     reference: str | None = None
     issue_date: date | None = None
     due_date: date | None = None
-    tax_rate: Money | None = None
-    discount_amount: Money | None = None
+    tax_rate: Money | None = Field(default=None, ge=0)
+    discount_amount: Money | None = Field(default=None, ge=0)
     currency: str | None = None
     notes: str | None = None
     terms: str | None = None

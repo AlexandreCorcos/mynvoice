@@ -36,6 +36,24 @@ def _calculate_totals(items_data, tax_rate: Decimal, discount: Decimal):
     return subtotal, tax_amount, total
 
 
+def _guard_dates(issue_date, due_date) -> None:
+    """An invoice cannot fall due before it is issued."""
+    if issue_date and due_date and due_date < issue_date:
+        raise HTTPException(
+            status_code=422, detail="Due date cannot be before the issue date."
+        )
+
+
+def _guard_total(total: Decimal) -> None:
+    """A discount larger than the taxed subtotal would drive the total below
+    zero — a negative invoice is not a document this app issues."""
+    if total < 0:
+        raise HTTPException(
+            status_code=422,
+            detail="Invoice total cannot be negative — reduce the discount.",
+        )
+
+
 async def _generate_invoice_number(
     db: AsyncSession, user_id: uuid.UUID, client_id: uuid.UUID | None = None
 ) -> str:
@@ -138,12 +156,14 @@ async def create_invoice(
     db: AsyncSession = Depends(get_db),
 ):
     await assert_owned(db, ClientModel, data.client_id, user.id, "Client not found")
-
-    invoice_number = await _generate_invoice_number(db, user.id, data.client_id)
+    _guard_dates(data.issue_date, data.due_date)
 
     subtotal, tax_amount, total = _calculate_totals(
         data.items, data.tax_rate, data.discount_amount
     )
+    _guard_total(total)
+
+    invoice_number = await _generate_invoice_number(db, user.id, data.client_id)
 
     invoice = Invoice(
         user_id=user.id,
@@ -220,6 +240,9 @@ async def update_invoice(
     for field, value in update_data.items():
         setattr(invoice, field, value)
 
+    # Dates now reflect the update; an invoice cannot fall due before issue.
+    _guard_dates(invoice.issue_date, invoice.due_date)
+
     # Replace items if provided
     if data.items is not None:
         for item in invoice.items:
@@ -237,21 +260,25 @@ async def update_invoice(
             )
             db.add(item)
 
-    # Recalculate totals
+    # Recalculate totals from whichever line items now apply — including when
+    # only the tax rate or discount changed (previously the total was left
+    # stale unless items were also sent).
     tax_rate = data.tax_rate if data.tax_rate is not None else invoice.tax_rate
     discount = (
         data.discount_amount
         if data.discount_amount is not None
         else invoice.discount_amount
     )
-    items_for_calc = data.items if data.items is not None else []
     if data.items is not None:
-        subtotal, tax_amount, total = _calculate_totals(
-            data.items, tax_rate, discount
-        )
-        invoice.subtotal = subtotal
-        invoice.tax_amount = tax_amount
-        invoice.total = total
+        subtotal = sum(i.quantity * i.unit_price for i in data.items)
+    else:
+        subtotal = sum(i.quantity * i.unit_price for i in invoice.items)
+    tax_amount = subtotal * tax_rate / Decimal("100")
+    total = subtotal + tax_amount - discount
+    _guard_total(total)
+    invoice.subtotal = subtotal
+    invoice.tax_amount = tax_amount
+    invoice.total = total
 
     # Always keep balance_due in sync with total minus any amount already paid
     invoice.balance_due = invoice.total - (invoice.amount_paid or Decimal("0.00"))

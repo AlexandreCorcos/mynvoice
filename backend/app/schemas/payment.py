@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.schemas.types import Money
 
@@ -10,7 +10,9 @@ from app.schemas.types import Money
 class PaymentCreate(BaseModel):
     invoice_id: uuid.UUID | None = None
     client_id: uuid.UUID | None = None
-    amount: Money
+    # A payment is money received: it must be strictly positive. A zero or
+    # negative amount is either a mistake or a disguised adjustment.
+    amount: Money = Field(gt=0)
     currency: str = "GBP"
     payment_date: date
     payment_mode: str | None = None

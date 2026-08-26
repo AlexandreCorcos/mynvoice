@@ -80,10 +80,32 @@ async def create_payment(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # A payment must not reference another account's invoice or client — both
-    # would attach one account's money record to another's books.
-    await assert_owned(db, Invoice, data.invoice_id, user.id, "Invoice not found")
+    # A payment must not reference another account's client — that would attach
+    # one account's money record to another's books.
     await assert_owned(db, ClientModel, data.client_id, user.id, "Client not found")
+
+    # When the payment is against an invoice, load it (which also enforces
+    # ownership) and refuse an overpayment: paying more than what is still owed
+    # would push amount_paid above the total and leave the books recording more
+    # received than was ever invoiced.
+    inv = None
+    if data.invoice_id:
+        inv = (
+            await db.execute(
+                select(Invoice).where(
+                    Invoice.id == data.invoice_id, Invoice.user_id == user.id
+                )
+            )
+        ).scalar_one_or_none()
+        if inv is None:
+            raise HTTPException(status_code=404, detail="Invoice not found")
+        already = inv.amount_paid or Decimal("0.00")
+        outstanding = inv.total - already
+        if data.amount > outstanding:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Payment exceeds the outstanding balance of {outstanding}.",
+            )
 
     payment_number = await _generate_payment_number(db, user.id)
     payment = Payment(
@@ -94,22 +116,15 @@ async def create_payment(
     db.add(payment)
     await db.flush()
 
-    if payment.invoice_id:
-        inv_result = await db.execute(
-            select(Invoice).where(
-                Invoice.id == payment.invoice_id, Invoice.user_id == user.id
-            )
-        )
-        inv = inv_result.scalar_one_or_none()
-        if inv:
-            inv.amount_paid = (inv.amount_paid or Decimal("0.00")) + data.amount
-            inv.balance_due = inv.total - inv.amount_paid
-            if inv.balance_due <= 0:
-                inv.balance_due = Decimal("0.00")
-                inv.status = InvoiceStatus.PAID
-                inv.payment_date = data.payment_date
-            # Reflect the newly-received money in the cash-basis ledger.
-            await sync_invoice_income(db, inv)
+    if inv is not None:
+        inv.amount_paid = (inv.amount_paid or Decimal("0.00")) + data.amount
+        inv.balance_due = inv.total - inv.amount_paid
+        if inv.balance_due <= 0:
+            inv.balance_due = Decimal("0.00")
+            inv.status = InvoiceStatus.PAID
+            inv.payment_date = data.payment_date
+        # Reflect the newly-received money in the cash-basis ledger.
+        await sync_invoice_income(db, inv)
 
     return payment
 
