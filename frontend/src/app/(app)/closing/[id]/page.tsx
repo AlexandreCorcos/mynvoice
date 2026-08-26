@@ -184,6 +184,30 @@ export default function ClosingDetailPage() {
     }
   };
 
+  const [downloading, setDownloading] = useState(false);
+
+  const exportPdf = async () => {
+    if (!period) return;
+    setDownloading(true);
+    try {
+      const res = await api.raw(`/periods/${period.id}/pdf`);
+      if (!res.ok) {
+        setToast({ message: "Couldn't generate the PDF.", type: "error" });
+        return;
+      }
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${period.name.replace(/[^\w-]+/g, "_")}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setToast({ message: "Couldn't reach the server to build the PDF.", type: "error" });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const exportCsv = () => {
     if (!period) return;
     const header = ["Date", "Type", "Description", "Amount", "Reconciled"];
@@ -238,6 +262,14 @@ export default function ClosingDetailPage() {
         title={period.name}
         actions={
           <>
+            <Button variant="secondary" onClick={exportPdf} disabled={downloading}>
+              {downloading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              PDF
+            </Button>
             <Button variant="secondary" onClick={exportCsv}>
               <Download className="h-4 w-4" />
               CSV

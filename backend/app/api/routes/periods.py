@@ -3,12 +3,14 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.accounting_period import AccountingPeriod
+from app.models.company import Company
 from app.models.expense import Expense, TransactionKind
 from app.models.user import User
 from app.schemas.accounting_period import (
@@ -217,6 +219,44 @@ async def close_period(
     period.snapshot_reconciled_count = live["reconciled_count"]
     await db.flush()
     return await _to_response(db, user, period)
+
+
+@router.get("/{period_id}/pdf")
+async def download_period_pdf(
+    period_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """An accountant-ready PDF statement of the period."""
+    period = await _get_owned(period_id, user, db)
+
+    entries = (
+        await db.execute(
+            select(Expense)
+            .where(
+                Expense.user_id == user.id,
+                Expense.expense_date >= period.start_date,
+                Expense.expense_date <= period.end_date,
+            )
+            .order_by(Expense.expense_date, Expense.created_at)
+        )
+    ).scalars().all()
+
+    company = (
+        await db.execute(select(Company).where(Company.user_id == user.id))
+    ).scalar_one_or_none()
+
+    from app.services.period_pdf import generate_period_pdf
+
+    pdf_bytes = await generate_period_pdf(period, entries, company, user.currency)
+    filename = "".join(
+        c if c.isalnum() or c in "-_" else "_" for c in period.name
+    ) or "period"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}.pdf"'},
+    )
 
 
 @router.post("/{period_id}/reopen", response_model=AccountingPeriodResponse)
