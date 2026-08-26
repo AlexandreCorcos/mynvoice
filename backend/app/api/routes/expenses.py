@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
-from app.models.expense import Expense, ExpenseType
+from app.models.expense import Expense, ExpenseType, TransactionKind
 from app.models.expense_category import ExpenseCategory
 from app.models.user import User
 from app.schemas.expense import (
@@ -29,14 +29,14 @@ router = APIRouter()
 
 @router.get("/categories", response_model=list[ExpenseCategoryResponse])
 async def list_categories(
+    kind: TransactionKind | None = Query(None),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(ExpenseCategory)
-        .where(ExpenseCategory.user_id == user.id)
-        .order_by(ExpenseCategory.name)
-    )
+    query = select(ExpenseCategory).where(ExpenseCategory.user_id == user.id)
+    if kind:
+        query = query.where(ExpenseCategory.kind == kind)
+    result = await db.execute(query.order_by(ExpenseCategory.name))
     return result.scalars().all()
 
 
@@ -75,6 +75,7 @@ async def delete_category(
 
 @router.get("/", response_model=list[ExpenseResponse])
 async def list_expenses(
+    kind: TransactionKind | None = Query(None),
     category_id: uuid.UUID | None = Query(None),
     expense_type: ExpenseType | None = Query(None),
     month: str | None = Query(None, pattern=r"^\d{4}-\d{2}$"),
@@ -85,6 +86,8 @@ async def list_expenses(
 ):
     query = select(Expense).where(Expense.user_id == user.id)
 
+    if kind:
+        query = query.where(Expense.kind == kind)
     if category_id:
         query = query.where(Expense.category_id == category_id)
     if expense_type:
@@ -177,6 +180,7 @@ async def convert_expenses_to_items(
                 Expense.id.in_(expense_ids),
                 Expense.user_id == user.id,
                 Expense.is_billable == True,
+                Expense.kind == TransactionKind.EXPENSE,
             )
         )
     )

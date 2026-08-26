@@ -367,7 +367,7 @@ export default function DashboardPage() {
             value: money(num(stats?.total_expenses)),
             caption: "recorded this year",
             icon: Wallet,
-            href: "/expenses",
+            href: "/transactions",
           },
           {
             label: "Invoices",

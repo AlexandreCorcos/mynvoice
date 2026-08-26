@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_admin
 from app.db.session import get_db
 from app.models.donation import Donation, DonationConfig
-from app.models.expense import Expense
+from app.models.expense import Expense, TransactionKind
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.user import User
 
@@ -61,7 +61,11 @@ async def get_admin_metrics(
             Invoice.status == InvoiceStatus.PAID
         )
     )
-    total_expenses = await db.execute(select(func.count(Expense.id)))
+    total_expenses = await db.execute(
+        select(func.count(Expense.id)).where(
+            Expense.kind == TransactionKind.EXPENSE
+        )
+    )
     new_users = await db.execute(
         select(func.count(User.id)).where(
             extract("year", User.created_at) == now.year,

@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.client import Client
-from app.models.expense import Expense
+from app.models.expense import Expense, TransactionKind
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.user import User
 from app.schemas.dashboard import (
@@ -95,7 +95,8 @@ async def get_dashboard(
     # Total expenses
     expense_result = await db.execute(
         select(func.coalesce(func.sum(Expense.amount), 0)).where(
-            Expense.user_id == user.id
+            Expense.user_id == user.id,
+            Expense.kind == TransactionKind.EXPENSE,
         )
     )
     total_expenses = expense_result.scalar() or Decimal("0.00")
@@ -218,7 +219,10 @@ async def get_dashboard(
             func.to_char(Expense.expense_date, "YYYY-MM").label("month"),
             func.coalesce(func.sum(Expense.amount), 0).label("expenses"),
         )
-        .where(Expense.user_id == user.id)
+        .where(
+            Expense.user_id == user.id,
+            Expense.kind == TransactionKind.EXPENSE,
+        )
         .group_by(text("1"))
         .order_by(text("1 DESC"))
         .limit(12)

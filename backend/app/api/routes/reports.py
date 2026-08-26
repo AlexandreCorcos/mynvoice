@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.client import Client
-from app.models.expense import Expense
+from app.models.expense import Expense, TransactionKind
 from app.models.expense_category import ExpenseCategory
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.user import User
@@ -58,9 +58,12 @@ async def get_reports(
         Invoice.status.not_in([InvoiceStatus.DRAFT, InvoiceStatus.CANCELLED]),
     ]
 
-    # Common filters for expenses in the given year owned by the user
+    # Common filters for expenses in the given year owned by the user.
+    # kind=expense keeps income rows (which share the ledger table) out of
+    # every expense figure.
     expense_filters = [
         Expense.user_id == user.id,
+        Expense.kind == TransactionKind.EXPENSE,
         Expense.expense_date >= year_start,
         Expense.expense_date <= year_end,
     ]

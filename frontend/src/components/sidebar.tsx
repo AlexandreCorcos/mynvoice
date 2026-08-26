@@ -17,6 +17,7 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import {
+  ArrowLeftRight,
   BarChart3,
   CreditCard,
   FileText,
@@ -29,7 +30,6 @@ import {
   Settings,
   ShieldCheck,
   Users,
-  Wallet,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -55,8 +55,8 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     ],
   },
   {
-    title: "Money out",
-    items: [{ href: "/expenses", label: "Expenses", icon: Wallet }],
+    title: "Ledger",
+    items: [{ href: "/transactions", label: "Transactions", icon: ArrowLeftRight }],
   },
   {
     title: "Insight",

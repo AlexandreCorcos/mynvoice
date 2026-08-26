@@ -170,12 +170,15 @@ export interface Payment {
   created_at: string;
 }
 
-// Expenses
+// Transactions ledger (table is still called "expenses" server-side)
 export type ExpenseType = "fixed" | "variable";
+export type TransactionKind = "income" | "expense";
+export type TransactionSource = "manual" | "invoice";
 
 export interface ExpenseCategory {
   id: string;
   name: string;
+  kind: TransactionKind;
   colour: string | null;
   icon: string | null;
 }
@@ -183,6 +186,9 @@ export interface ExpenseCategory {
 export interface Expense {
   id: string;
   category_id: string | null;
+  kind: TransactionKind;
+  source: TransactionSource;
+  invoice_id: string | null;
   description: string;
   amount: number;
   currency: string;

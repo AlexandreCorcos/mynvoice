@@ -21,6 +21,7 @@ const SECTIONS: Record<string, string> = {
   clients: "Clients",
   items: "Items & Services",
   payments: "Payments",
+  transactions: "Transactions",
   expenses: "Expenses",
   reports: "Reports",
   settings: "Settings",

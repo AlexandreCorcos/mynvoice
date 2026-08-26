@@ -37,7 +37,7 @@ from app.models.audit import AdminAuditLog
 from app.models.client import Client
 from app.models.company import Company
 from app.models.donation import Donation, DonationConfig
-from app.models.expense import Expense
+from app.models.expense import Expense, TransactionKind
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.user import User
 from app.schemas.types import Money
@@ -126,7 +126,9 @@ async def sys_metrics(
         select(func.count(Invoice.id)).where(Invoice.status == InvoiceStatus.PAID)
     )
     revenue = await scalar(select(func.coalesce(func.sum(Invoice.amount_paid), 0)))
-    total_expenses = await scalar(select(func.count(Expense.id)))
+    total_expenses = await scalar(
+        select(func.count(Expense.id)).where(Expense.kind == TransactionKind.EXPENSE)
+    )
 
     config = (await db.execute(select(DonationConfig))).scalars().first()
     target = config.monthly_target if config else 0
