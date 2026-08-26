@@ -8,6 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import assert_owned, get_current_user
+from app.core.locks import lock_user_numbering
 from app.db.session import get_db
 from app.models.client import Client as ClientModel
 from app.models.company import Company
@@ -27,7 +28,12 @@ async def _generate_payment_number(db: AsyncSession, user_id: uuid.UUID) -> str:
     Derived from the highest number already issued rather than a row count:
     counting reuses a number after a deletion, and a payment reference that
     can point at two different payments is worse than a gap in the sequence.
+
+    Serialised per account for the rest of the transaction, so two concurrent
+    payments cannot read the same highest number and issue it twice.
     """
+    await lock_user_numbering(db, user_id)
+
     result = await db.execute(
         select(Payment.payment_number).where(Payment.user_id == user_id)
     )

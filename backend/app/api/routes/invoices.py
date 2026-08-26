@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import assert_owned, get_current_user
+from app.core.locks import lock_user_numbering
 from app.db.session import get_db
 from app.models.client import Client as ClientModel
 from app.models.company import Company
@@ -38,6 +39,11 @@ def _calculate_totals(items_data, tax_rate: Decimal, discount: Decimal):
 async def _generate_invoice_number(
     db: AsyncSession, user_id: uuid.UUID, client_id: uuid.UUID | None = None
 ) -> str:
+    # Serialise this account's number generation for the rest of the
+    # transaction: without it two concurrent creates read the same counter and
+    # issue the same invoice number (there is no unique constraint to catch it).
+    await lock_user_numbering(db, user_id)
+
     # Get company defaults
     result = await db.execute(
         select(Company).where(Company.user_id == user_id)
@@ -308,11 +314,12 @@ async def update_invoice_status(
 
     # Auto-create payment record when marking as paid
     if data.status == InvoiceStatus.PAID:
-        from sqlalchemy import func as sqla_func
-        count_result = await db.execute(
-            select(sqla_func.count(Payment.id)).where(Payment.user_id == user.id)
-        )
-        payment_number = str((count_result.scalar() or 0) + 1)
+        # Use the same derived, per-user scheme (PAY-00001) as a manual payment,
+        # under the same lock — the old count(*)+1 here produced a different,
+        # bare number ("1", "2") that also reused a number after a deletion.
+        from app.api.routes.payments import _generate_payment_number
+
+        payment_number = await _generate_payment_number(db, user.id)
         payment = Payment(
             user_id=user.id,
             invoice_id=invoice.id,
