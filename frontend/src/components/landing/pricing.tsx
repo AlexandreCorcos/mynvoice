@@ -28,7 +28,7 @@ const INCLUDED = [
   "Branded PDF + email delivery",
   "Dashboard, reports & receivables ageing",
   "Multi-currency (GBP · EUR · USD)",
-  "Google sign-in & secure sessions",
+  "Month-end closing & bank reconciliation",
 ];
 
 const BMAC_URL = process.env.NEXT_PUBLIC_BMAC_URL;

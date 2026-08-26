@@ -84,20 +84,12 @@ export default function LoginPage() {
           {loading ? "Signing in…" : "Sign in"}
         </Button>
 
-        <div className="relative py-1">
-          <span className="absolute inset-0 flex items-center" aria-hidden>
-            <span className="w-full border-t border-line" />
-          </span>
-          <span className="relative flex justify-center">
-            <span className="bg-surface px-3 text-[11.5px] uppercase tracking-[0.14em] text-ink-muted">
-              or
-            </span>
-          </span>
-        </div>
-
-        <Button type="button" variant="secondary" className="w-full">
-          Continue with Google
-        </Button>
+        {/* "Continue with Google" lived here with its `or` divider. It had no
+            click handler and there is no /auth/google route behind it — a
+            button that silently did nothing. Hidden until Google OAuth is
+            actually implemented (the schema, config and CSRF exemption are
+            already in place; the route and this button are what's missing).
+            The `continueWithGoogle` string is kept in en-GB.json for then. */}
       </form>
 
       <p className="mt-7 text-center text-[13px] text-ink-muted">
