@@ -56,6 +56,63 @@ All DNS is managed in Cloudflare.
 > `_dmarc`), so nothing depended on the wildcard. If a genuinely new subdomain
 > is ever needed, add an explicit record for it — do **not** reintroduce `*`.
 
+### Canonical origin and the redirect rule
+
+`https://mynvoice.com` (the apex) is the canonical public origin. It is what
+every `<link rel="canonical">`, `og:url` and sitemap entry points at
+(`web` side: `frontend/src/lib/site.ts`).
+
+The same Next app answers on **three** hostnames — the apex, `www` and `app` —
+and all three return 200 for the marketing pages. Canonical tags consolidate the
+ranking signals, but a 301 is stronger, so `www` redirects at the edge.
+
+**Rule 1 — `www` → apex (safe, redirect everything).**
+Cloudflare dashboard → **Rules → Redirect Rules → Create rule** ("Single
+Redirect"; available on the free plan).
+
+| Field | Value |
+|---|---|
+| Rule name | `www to apex` |
+| When incoming requests match | **Custom filter expression** |
+| Expression | `http.host eq "www.mynvoice.com"` |
+| URL redirect → Type | **Dynamic** |
+| Expression | `concat("https://mynvoice.com", http.request.uri.path)` |
+| Status code | **301** |
+| Preserve query string | **on** |
+
+`www` is a pure alias with nothing of its own, so redirecting every path is safe.
+*Dynamic* (not Static) with **Preserve query string** keeps the path and the
+query — a Static redirect would send every URL to the home page.
+
+**`app.mynvoice.com` is deliberately NOT redirected.** It is the application
+host, and a blanket redirect there would take the product down. Specifically,
+these must keep answering on `app.`:
+
+- `/set-password?token=…` and `/reset-password?token=…` — **the links inside
+  verification and password-reset emails** (`APP_URL` in
+  `backend/app/services/email.py`). A redirect on a single-use token link is how
+  you break account activation for everyone.
+- `/login`, `/register`, `/forgot-password` — auth flows, and bookmarked.
+- `/dashboard` and every signed-in route.
+
+The SEO duplication from `app.` is already handled the standard way: its pages
+carry a canonical pointing at the apex, and `robots.ts` disallows the whole
+signed-in surface.
+
+> **Optional, and only if you want it:** the two genuinely-marketing paths on the
+> app host can be redirected with a *narrow* expression — but the canonical tags
+> already cover this, so the gain is small and the blast radius of a typo is the
+> live app. If you do it, scope it exactly:
+> `http.host eq "app.mynvoice.com" and (http.request.uri.path eq "/" or http.request.uri.path eq "/compare")`
+> Never widen it to `starts_with`, and never apply it to the whole host.
+
+**After adding the rule, check:**
+
+```bash
+curl -sI https://www.mynvoice.com/compare | head -3    # expect 301 -> https://mynvoice.com/compare
+curl -sI https://app.mynvoice.com/login   | head -3    # expect 200, NOT a redirect
+```
+
 ### File Storage — Cloudflare R2
 Files (company logos, etc.) are stored in Cloudflare R2 — not on the server disk.
 
