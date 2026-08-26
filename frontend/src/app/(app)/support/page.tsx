@@ -12,35 +12,16 @@
    is `graphite`, and brass appears only in the glow and the buttons.
    ========================================================================= */
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowUpRight, Coffee, CreditCard, Github, Heart, ServerCog } from "lucide-react";
-import { api } from "@/lib/api";
-import { formatCurrency, num } from "@/lib/utils";
 import { EASE_OUT } from "@/components/motion";
 import { Panel, PanelHeader } from "@/components/app/panel";
-import type { DonationProgress } from "@/types";
 
 const BMAC_URL = process.env.NEXT_PUBLIC_BMAC_URL;
 const STRIPE_URL = process.env.NEXT_PUBLIC_STRIPE_URL;
 
 export default function SupportPage() {
-  const [progress, setProgress] = useState<DonationProgress | null>(null);
-
-  useEffect(() => {
-    api
-      .get<DonationProgress>("/admin/donations")
-      .then(setProgress)
-      .catch(() => {
-        /* the page still makes sense without the figures */
-      });
-  }, []);
-
-  const currency = progress?.currency || "GBP";
-  const money = (n: number) => formatCurrency(n, currency);
-  const pct = progress ? Math.min(100, Math.round(num(progress.percentage))) : 0;
-
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       {/* ── the ask ──────────────────────────────────────────────── */}
@@ -69,38 +50,12 @@ export default function SupportPage() {
             donations pay for.
           </p>
 
-          {progress ? (
-            <div className="mx-auto mt-8 max-w-md text-left">
-              <div className="flex items-baseline justify-between text-[13px]">
-                <span className="font-semibold text-white">
-                  {money(num(progress.current_month_total))}
-                  <span className="text-white/40">
-                    {" "}
-                    of {money(num(progress.monthly_target))} covered
-                  </span>
-                </span>
-                <span className="font-bold tabular-nums text-brass-on-dark">{pct}%</span>
-              </div>
-              <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-white/[0.08]">
-                <motion.span
-                  initial={{ width: 0 }}
-                  animate={{ width: `${pct}%` }}
-                  transition={{ duration: 1.2, delay: 0.25, ease: EASE_OUT }}
-                  className="block h-full rounded-full bg-gradient-to-r from-brass to-brass-on-dark"
-                />
-              </div>
-              {progress.message ? (
-                <p className="mt-3 text-[12.5px] text-white/45">{progress.message}</p>
-              ) : null}
-            </div>
-          ) : null}
-
           {/* Both links are env-configured; with neither set this would be an
               empty gap, so the whole row goes rather than an empty one. */}
           <div
             className={
               BMAC_URL || STRIPE_URL
-                ? "mt-8 flex flex-wrap justify-center gap-2.5"
+                ? "mt-9 flex flex-wrap justify-center gap-2.5"
                 : "hidden"
             }
           >

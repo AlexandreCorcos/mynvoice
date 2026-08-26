@@ -10,10 +10,9 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, Check, Heart, ShieldCheck } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Check, Coffee, CreditCard, Heart, ShieldCheck } from "lucide-react";
 import {
   Aurora,
-  CountUp,
   EASE_OUT,
   Eyebrow,
   Grain,
@@ -32,13 +31,10 @@ const INCLUDED = [
   "Google sign-in & secure sessions",
 ];
 
-/* Donation progress. Illustrative figures until Stripe is wired up. */
-const RAISED = 420;
-const TARGET = 1000;
+const BMAC_URL = process.env.NEXT_PUBLIC_BMAC_URL;
+const STRIPE_URL = process.env.NEXT_PUBLIC_STRIPE_URL;
 
 export function Pricing() {
-  const pct = Math.round((RAISED / TARGET) * 100);
-
   return (
     <section id="pricing" className="relative isolate overflow-hidden bg-graphite py-24 lg:py-32">
       <Aurora className="opacity-70" />
@@ -144,35 +140,37 @@ export function Pricing() {
               and if you can&apos;t, use it anyway. That&apos;s the deal.
             </p>
 
-            <div className="mt-6">
-              <div className="flex items-baseline justify-between text-[13px]">
-                <span className="font-semibold text-white">
-                  <CountUp to={RAISED} prefix="£" duration={1.6} />
-                  <span className="text-white/40">
-                    {" "}
-                    of £{TARGET.toLocaleString("en-GB")} monthly cost covered
-                  </span>
-                </span>
-                <span className="font-semibold text-brass-on-dark">{pct}%</span>
+            {/* Donate straight from here — no account, no sign-in. The links
+                are env-configured; with neither set the row is dropped rather
+                than shown empty. */}
+            {(BMAC_URL || STRIPE_URL) && (
+              <div className="mt-6 flex flex-wrap gap-2.5">
+                {BMAC_URL && (
+                  <a
+                    href={BMAC_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-[13.5px] font-semibold text-graphite transition-colors hover:bg-brass-on-dark"
+                  >
+                    <Coffee className="h-4 w-4" />
+                    Buy me a coffee
+                    <ArrowUpRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                  </a>
+                )}
+                {STRIPE_URL && (
+                  <a
+                    href={STRIPE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group inline-flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 text-[13.5px] font-semibold text-white transition-colors hover:border-white/30 hover:bg-white/[0.06]"
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    Donate by card
+                    <ArrowUpRight className="h-3.5 w-3.5 text-brass-on-dark transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                  </a>
+                )}
               </div>
-              <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-white/[0.07]">
-                <motion.span
-                  initial={{ width: 0 }}
-                  whileInView={{ width: `${pct}%` }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 1.4, delay: 0.2, ease: EASE_OUT }}
-                  className="block h-full rounded-full bg-gradient-to-r from-brass to-brass-on-dark"
-                />
-              </div>
-            </div>
-
-            <Link
-              href="/support"
-              className="group mt-5 inline-flex items-center gap-2 text-[13px] font-semibold text-white/75 transition-colors hover:text-white"
-            >
-              Support the project
-              <ArrowRight className="h-3.5 w-3.5 text-brass-on-dark transition-transform duration-300 group-hover:translate-x-1" />
-            </Link>
+            )}
           </div>
         </Reveal>
 

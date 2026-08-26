@@ -135,7 +135,9 @@ export function LandingFooter() {
             transition={{ duration: 1.2, ease: EASE_OUT }}
             className="select-none text-center text-[clamp(3.2rem,15.5vw,13rem)] font-extrabold leading-[0.82] tracking-[-0.055em] text-white/[0.055]"
           >
-            MYNVOICE
+            {/* "MY" carries the brand brass, at the same faint opacity as the
+                rest — a tint, not a highlight. */}
+            <span className="text-brass-on-dark/[0.13]">MY</span>NVOICE
           </motion.p>
         </div>
 
