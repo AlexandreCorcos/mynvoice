@@ -17,6 +17,7 @@ from app.models.expense import (
     TransactionSource,
 )
 from app.models.expense_category import ExpenseCategory
+from app.models.transaction_item import TransactionItem
 from app.models.user import User
 from app.schemas.expense import (
     ExpenseCategoryCreate,
@@ -25,6 +26,9 @@ from app.schemas.expense import (
     ExpenseCreate,
     ExpenseResponse,
     ExpenseUpdate,
+    TransactionItemCreate,
+    TransactionItemResponse,
+    TransactionItemUpdate,
 )
 
 router = APIRouter()
@@ -95,6 +99,90 @@ async def delete_category(
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
     await db.delete(category)
+
+
+# --- Items (the catalogue leaves inside a category) ---
+
+
+@router.get("/items", response_model=list[TransactionItemResponse])
+async def list_items(
+    category_id: uuid.UUID | None = Query(None),
+    kind: TransactionKind | None = Query(None),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(TransactionItem).where(TransactionItem.user_id == user.id)
+    if category_id:
+        query = query.where(TransactionItem.category_id == category_id)
+    if kind:
+        query = query.join(
+            ExpenseCategory, TransactionItem.category_id == ExpenseCategory.id
+        ).where(ExpenseCategory.kind == kind)
+    result = await db.execute(query.order_by(TransactionItem.name))
+    return result.scalars().all()
+
+
+@router.post("/items", response_model=TransactionItemResponse, status_code=201)
+async def create_item(
+    data: TransactionItemCreate,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    category = (
+        await db.execute(
+            select(ExpenseCategory).where(
+                ExpenseCategory.id == data.category_id,
+                ExpenseCategory.user_id == user.id,
+            )
+        )
+    ).scalar_one_or_none()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    item = TransactionItem(user_id=user.id, **data.model_dump())
+    db.add(item)
+    await db.flush()
+    return item
+
+
+@router.patch("/items/{item_id}", response_model=TransactionItemResponse)
+async def update_item(
+    item_id: uuid.UUID,
+    data: TransactionItemUpdate,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    item = (
+        await db.execute(
+            select(TransactionItem).where(
+                TransactionItem.id == item_id,
+                TransactionItem.user_id == user.id,
+            )
+        )
+    ).scalar_one_or_none()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(item, field, value)
+    return item
+
+
+@router.delete("/items/{item_id}", status_code=204)
+async def delete_item(
+    item_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    item = (
+        await db.execute(
+            select(TransactionItem).where(
+                TransactionItem.id == item_id,
+                TransactionItem.user_id == user.id,
+            )
+        )
+    ).scalar_one_or_none()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    await db.delete(item)
 
 
 # --- Expenses ---

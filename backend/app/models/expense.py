@@ -50,6 +50,14 @@ class Expense(Base):
         nullable=True,
         index=True,
     )
+    # Optional catalogue item this row was logged from (the leaf under a
+    # category). Kept alongside category_id so breakdowns still group by group.
+    item_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("transaction_items.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
     # Ledger side + provenance. `kind` splits income from expense; `source`
     # distinguishes a hand-entered row from one projected off a paid invoice.

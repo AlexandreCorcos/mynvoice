@@ -181,12 +181,19 @@ export interface ExpenseCategory {
   kind: TransactionKind;
   colour: string | null;
   icon: string | null;
+}
+
+export interface TransactionItem {
+  id: string;
+  category_id: string;
+  name: string;
   default_amount: number | null;
 }
 
 export interface Expense {
   id: string;
   category_id: string | null;
+  item_id: string | null;
   kind: TransactionKind;
   source: TransactionSource;
   invoice_id: string | null;

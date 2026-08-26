@@ -14,14 +14,12 @@ class ExpenseCategoryCreate(BaseModel):
     kind: TransactionKind = TransactionKind.EXPENSE
     colour: str | None = None
     icon: str | None = None
-    default_amount: Money | None = None
 
 
 class ExpenseCategoryUpdate(BaseModel):
     name: str | None = None
     colour: str | None = None
     icon: str | None = None
-    default_amount: Money | None = None
 
 
 class ExpenseCategoryResponse(BaseModel):
@@ -30,6 +28,25 @@ class ExpenseCategoryResponse(BaseModel):
     kind: TransactionKind
     colour: str | None
     icon: str | None
+
+    model_config = {"from_attributes": True}
+
+
+class TransactionItemCreate(BaseModel):
+    category_id: uuid.UUID
+    name: str
+    default_amount: Money | None = None
+
+
+class TransactionItemUpdate(BaseModel):
+    name: str | None = None
+    default_amount: Money | None = None
+
+
+class TransactionItemResponse(BaseModel):
+    id: uuid.UUID
+    category_id: uuid.UUID
+    name: str
     default_amount: Money | None
 
     model_config = {"from_attributes": True}
@@ -37,6 +54,7 @@ class ExpenseCategoryResponse(BaseModel):
 
 class ExpenseCreate(BaseModel):
     category_id: uuid.UUID | None = None
+    item_id: uuid.UUID | None = None
     kind: TransactionKind = TransactionKind.EXPENSE
     description: str
     amount: Money
@@ -51,6 +69,7 @@ class ExpenseCreate(BaseModel):
 
 class ExpenseUpdate(BaseModel):
     category_id: uuid.UUID | None = None
+    item_id: uuid.UUID | None = None
     kind: TransactionKind | None = None
     description: str | None = None
     amount: Money | None = None
@@ -66,6 +85,7 @@ class ExpenseUpdate(BaseModel):
 class ExpenseResponse(BaseModel):
     id: uuid.UUID
     category_id: uuid.UUID | None
+    item_id: uuid.UUID | None
     kind: TransactionKind
     source: TransactionSource
     invoice_id: uuid.UUID | None

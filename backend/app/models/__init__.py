@@ -5,6 +5,7 @@ from app.models.invoice import Invoice
 from app.models.invoice_item import InvoiceItem
 from app.models.expense import Expense
 from app.models.expense_category import ExpenseCategory
+from app.models.transaction_item import TransactionItem
 from app.models.donation import DonationConfig, Donation
 from app.models.item import Item
 from app.models.payment import Payment
@@ -20,6 +21,7 @@ __all__ = [
     "InvoiceItem",
     "Expense",
     "ExpenseCategory",
+    "TransactionItem",
     "DonationConfig",
     "Donation",
     "Item",

@@ -45,6 +45,7 @@ import type {
   Expense,
   ExpenseCategory,
   ExpenseType,
+  TransactionItem,
   TransactionKind,
 } from "@/types";
 
@@ -61,6 +62,7 @@ function TransactionForm({
   tx,
   initialKind,
   categories,
+  items,
   currency,
   onClose,
   onSaved,
@@ -69,6 +71,7 @@ function TransactionForm({
   tx: Expense | null;
   initialKind: TransactionKind;
   categories: ExpenseCategory[];
+  items: TransactionItem[];
   currency: string;
   onClose: () => void;
   onSaved: () => void;
@@ -78,6 +81,7 @@ function TransactionForm({
     description: "",
     amount: "",
     category_id: "",
+    item_id: "",
     expense_type: "variable" as ExpenseType,
     expense_date: new Date().toISOString().split("T")[0],
     vendor: "",
@@ -98,6 +102,7 @@ function TransactionForm({
       description: tx?.description ?? "",
       amount: tx ? String(tx.amount) : "",
       category_id: tx?.category_id ?? "",
+      item_id: tx?.item_id ?? "",
       expense_type: tx?.expense_type ?? "variable",
       expense_date: tx?.expense_date ?? new Date().toISOString().split("T")[0],
       vendor: tx?.vendor ?? "",
@@ -108,28 +113,41 @@ function TransactionForm({
 
   const set = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
 
-  /* Only this kind's categories belong in the picker. */
+  /* Only this kind's categories (groups) belong in the picker. */
   const pickable = useMemo(
     () => categories.filter((c) => c.kind === kind),
     [categories, kind]
   );
 
+  /* Items live under the chosen category. */
+  const pickableItems = useMemo(
+    () => items.filter((i) => i.category_id === form.category_id),
+    [items, form.category_id]
+  );
+
   const pickKind = (next: TransactionKind) => {
     if (next === kind) return;
     setKind(next);
-    setForm((f) => ({ ...f, category_id: "" })); // categories don't cross kinds
+    setForm((f) => ({ ...f, category_id: "", item_id: "" }));
   };
 
-  /* Picking a category with a ready-made amount pre-fills the amount field. */
+  /* Switching category clears the item (items don't cross groups). */
   const pickCategory = (id: string) => {
-    const cat = pickable.find((c) => c.id === id);
+    setForm((f) => ({ ...f, category_id: id, item_id: "" }));
+  };
+
+  /* Picking an item brings its ready-made amount and, if the description is
+     still empty, its name. */
+  const pickItem = (id: string) => {
+    const item = pickableItems.find((i) => i.id === id);
     setForm((f) => ({
       ...f,
-      category_id: id,
+      item_id: id,
       amount:
-        cat?.default_amount != null && cat.default_amount !== 0
-          ? String(cat.default_amount)
+        item?.default_amount != null && item.default_amount !== 0
+          ? String(item.default_amount)
           : f.amount,
+      description: f.description || item?.name || "",
     }));
   };
 
@@ -144,6 +162,7 @@ function TransactionForm({
         amount: parseFloat(form.amount) || 0,
         expense_date: form.expense_date,
         category_id: form.category_id || null,
+        item_id: form.item_id || null,
         expense_type: isIncome ? "variable" : form.expense_type,
         vendor: form.vendor || null,
         notes: form.notes || null,
@@ -278,7 +297,27 @@ function TransactionForm({
               {pickable.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
-                  {c.default_amount != null ? ` · ${c.default_amount}` : ""}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Item">
+            <Select
+              value={form.item_id}
+              onChange={(e) => pickItem(e.target.value)}
+              disabled={!form.category_id || pickableItems.length === 0}
+            >
+              <option value="">
+                {!form.category_id
+                  ? "Pick a category first"
+                  : pickableItems.length === 0
+                    ? "No items here yet"
+                    : "None"}
+              </option>
+              {pickableItems.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.name}
+                  {i.default_amount != null ? ` · ${i.default_amount}` : ""}
                 </option>
               ))}
             </Select>
@@ -322,20 +361,144 @@ function TransactionForm({
 
 const SWATCHES = ["#8A6A3D", "#3F6B4A", "#B4332E", "#6E6862", "#A98A5C", "#4A5A6B"];
 
+/* One category (group) and the items inside it. */
+function GroupCard({
+  group,
+  items,
+  onChanged,
+}: {
+  group: ExpenseCategory;
+  items: TransactionItem[];
+  onChanged: () => void;
+}) {
+  const [itemName, setItemName] = useState("");
+  const [itemAmount, setItemAmount] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const groupItems = items.filter((i) => i.category_id === group.id);
+
+  const addItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!itemName.trim()) return;
+    setBusy(true);
+    try {
+      await api.post("/expenses/items", {
+        category_id: group.id,
+        name: itemName.trim(),
+        default_amount: itemAmount ? parseFloat(itemAmount) : null,
+      });
+      setItemName("");
+      setItemAmount("");
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const setItemDefault = async (id: string, value: string) => {
+    const parsed = value.trim() === "" ? null : parseFloat(value);
+    await api.patch(`/expenses/items/${id}`, { default_amount: parsed });
+    onChanged();
+  };
+
+  return (
+    <div className="rounded-[12px] p-3 ring-1 ring-line">
+      <div className="flex items-center gap-2.5">
+        <span
+          className="h-3 w-3 flex-none rounded-full"
+          style={{ background: group.colour ?? FALLBACK_COLOUR }}
+        />
+        <span className="flex-1 truncate text-[13.5px] font-bold text-ink">
+          {group.name}
+        </span>
+        <button
+          onClick={async () => {
+            await api.delete(`/expenses/categories/${group.id}`);
+            onChanged();
+          }}
+          aria-label={`Delete ${group.name}`}
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-negative/10 hover:text-negative"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      <div className="mt-2 space-y-1 border-l border-line pl-3.5">
+        {groupItems.map((i) => (
+          <div key={i.id} className="flex items-center gap-2">
+            <span className="flex-1 truncate text-[13px] text-ink">{i.name}</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              defaultValue={i.default_amount ?? ""}
+              onBlur={(e) => {
+                const v = e.target.value;
+                const current = i.default_amount ?? "";
+                if (String(v) !== String(current)) setItemDefault(i.id, v);
+              }}
+              placeholder="—"
+              aria-label={`Amount for ${i.name}`}
+              className="w-20 rounded-[8px] bg-elevated/60 px-2 py-1 text-right text-[12.5px] tabular-nums text-ink outline-none ring-1 ring-line focus:ring-brass-soft"
+            />
+            <button
+              onClick={async () => {
+                await api.delete(`/expenses/items/${i.id}`);
+                onChanged();
+              }}
+              aria-label={`Delete ${i.name}`}
+              className="flex h-6 w-6 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-negative/10 hover:text-negative"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </div>
+        ))}
+        <form onSubmit={addItem} className="flex items-center gap-2 pt-1">
+          <Input
+            value={itemName}
+            onChange={(e) => setItemName(e.target.value)}
+            placeholder="New item"
+            className="h-8 flex-1 text-[13px]"
+          />
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={itemAmount}
+            onChange={(e) => setItemAmount(e.target.value)}
+            placeholder="—"
+            aria-label="New item amount"
+            className="w-20 rounded-[8px] bg-elevated/60 px-2 py-1 text-right text-[12.5px] tabular-nums text-ink outline-none ring-1 ring-line focus:ring-brass-soft"
+          />
+          <Button
+            type="submit"
+            variant="ghost"
+            disabled={busy || !itemName.trim()}
+            className="h-8 w-8 flex-none px-0"
+          >
+            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function CategoryManager({
   open,
   categories,
+  items,
   onClose,
   onChanged,
 }: {
   open: boolean;
   categories: ExpenseCategory[];
+  items: TransactionItem[];
   onClose: () => void;
   onChanged: () => void;
 }) {
   const [kind, setKind] = useState<TransactionKind>("expense");
   const [name, setName] = useState("");
-  const [amount, setAmount] = useState("");
   const [colour, setColour] = useState(SWATCHES[0]);
   const [busy, setBusy] = useState(false);
 
@@ -349,30 +512,12 @@ function CategoryManager({
     if (!name.trim()) return;
     setBusy(true);
     try {
-      await api.post("/expenses/categories", {
-        name: name.trim(),
-        kind,
-        colour,
-        default_amount: amount ? parseFloat(amount) : null,
-      });
+      await api.post("/expenses/categories", { name: name.trim(), kind, colour });
       setName("");
-      setAmount("");
       onChanged();
     } finally {
       setBusy(false);
     }
-  };
-
-  /* Set or clear a category's ready-made amount, in place. */
-  const setDefaultAmount = async (id: string, value: string) => {
-    const parsed = value.trim() === "" ? null : parseFloat(value);
-    await api.patch(`/expenses/categories/${id}`, { default_amount: parsed });
-    onChanged();
-  };
-
-  const remove = async (id: string) => {
-    await api.delete(`/expenses/categories/${id}`);
-    onChanged();
   };
 
   return (
@@ -380,8 +525,8 @@ function CategoryManager({
       open={open}
       onClose={onClose}
       size="md"
-      title="Categories"
-      description="Your own buckets — income and expense keep separate lists."
+      title="Categories & items"
+      description="Group your money by category, and add items inside with a ready-made amount."
     >
       <div className="mb-4">
         <SegmentedControl<TransactionKind>
@@ -401,17 +546,6 @@ function CategoryManager({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={kind === "income" ? "Consulting" : "Software"}
-          />
-        </Field>
-        <Field label="Amount" className="w-[104px]">
-          <Input
-            type="number"
-            min="0"
-            step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="—"
-            className="tabular-nums"
           />
         </Field>
         <div className="flex items-center gap-1.5 pb-0.5">
@@ -436,47 +570,14 @@ function CategoryManager({
         </Button>
       </form>
 
-      <div className="mt-5 space-y-1.5">
+      <div className="mt-5 max-h-[46vh] space-y-2 overflow-y-auto">
         {shown.length === 0 ? (
           <p className="py-6 text-center text-[13px] text-ink-muted">
             No {kind} categories yet.
           </p>
         ) : (
           shown.map((c) => (
-            <div
-              key={c.id}
-              className="flex items-center gap-3 rounded-[10px] px-3 py-2.5 ring-1 ring-line"
-            >
-              <span
-                className="h-3 w-3 flex-none rounded-full"
-                style={{ background: c.colour ?? FALLBACK_COLOUR }}
-              />
-              <span className="flex-1 truncate text-[13.5px] font-medium text-ink">
-                {c.name}
-              </span>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                defaultValue={c.default_amount ?? ""}
-                onBlur={(e) => {
-                  const v = e.target.value;
-                  const current = c.default_amount ?? "";
-                  if (String(v) !== String(current)) setDefaultAmount(c.id, v);
-                }}
-                placeholder="—"
-                aria-label={`Default amount for ${c.name}`}
-                title="Ready-made amount, pre-filled when you pick this category"
-                className="w-20 rounded-[8px] bg-elevated/60 px-2 py-1 text-right text-[12.5px] tabular-nums text-ink outline-none ring-1 ring-line focus:ring-brass-soft"
-              />
-              <button
-                onClick={() => remove(c.id)}
-                aria-label={`Delete ${c.name}`}
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-negative/10 hover:text-negative"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
+            <GroupCard key={c.id} group={c} items={items} onChanged={onChanged} />
           ))
         )}
       </div>
@@ -494,6 +595,7 @@ export default function TransactionsPage() {
 
   const [rows, setRows] = useState<Expense[]>([]);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
+  const [items, setItems] = useState<TransactionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [kindFilter, setKindFilter] = useState<KindFilter>("all");
@@ -506,12 +608,14 @@ export default function TransactionsPage() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [tx, cats] = await Promise.all([
+      const [tx, cats, its] = await Promise.all([
         api.get<Expense[]>("/expenses/"),
         api.get<ExpenseCategory[]>("/expenses/categories"),
+        api.get<TransactionItem[]>("/expenses/items"),
       ]);
       setRows(tx);
       setCategories(cats);
+      setItems(its);
     } catch {
       /* empty state covers it */
     } finally {
@@ -889,6 +993,7 @@ export default function TransactionsPage() {
         tx={editing}
         initialKind={formKind}
         categories={categories}
+        items={items}
         currency={currency}
         onClose={() => setFormOpen(false)}
         onSaved={() => {
@@ -900,6 +1005,7 @@ export default function TransactionsPage() {
       <CategoryManager
         open={catsOpen}
         categories={categories}
+        items={items}
         onClose={() => setCatsOpen(false)}
         onChanged={fetchAll}
       />
