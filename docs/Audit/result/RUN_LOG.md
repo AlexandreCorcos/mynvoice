@@ -5,6 +5,12 @@ recorded did not happen, because the next person cannot tell whether a surface h
 
 | Date (UTC) | Playbook | Target | Verdict | Report |
 |---|---|---|---|---|
+| 2026-08-26 | marathon (1–5, all playbooks) | local → prod | 4 fixed (v0.23.6–0.23.9), 1 HIGH + 8 low open | [file](marathon_2026-08-26.md) |
+| 2026-08-26 | 1 account-isolation | local → prod | **FAIL → 2 CRITICAL fixed** (v0.23.6, v0.23.7) · numbering HIGH open | [file](marathon_2026-08-26.md) |
+| 2026-08-26 | 2 money-invoice-integrity | local → prod | PASS · 1 fixed (v0.23.8) · numbering race → owner | [file](marathon_2026-08-26.md) |
+| 2026-08-26 | 3 session-csrf-admin-stepup | local → prod | PASS | [file](marathon_2026-08-26.md) |
+| 2026-08-26 | 4 unauth-blackbox | prod | PASS · low-sev enumeration + wildcard notes | [file](marathon_2026-08-26.md) |
+| 2026-08-26 | 5 input-robustness | local → prod (narrowed) | PASS · 1 fixed (v0.23.9) | [file](marathon_2026-08-26.md) |
 | 2026-07-30 | unauth-blackbox *(external tool, pre-dating this structure)* | prod | 11 findings · 9 fixed, 2 open (Cloudflare) | [archive](../archive/unauth_blackbox_external_2026-07-30.md) |
 
 ## Verdict shorthand
