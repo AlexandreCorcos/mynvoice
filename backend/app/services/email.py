@@ -18,6 +18,7 @@ Email is not the web, and the constraints drive the markup:
   a broken box for a large share of readers.
 """
 
+import json
 import logging
 
 import aiosmtplib
@@ -158,10 +159,29 @@ def _fallback_link(href: str) -> str:
     )
 
 
+# SendGrid's SMTP relay honours this header per message, overriding the
+# account-wide tracking settings. Click tracking rewrites every link through a
+# tracking subdomain (url8280.mynvoice.com → CNAME sendgrid.net) that serves
+# *.sendgrid.net's certificate, so recipients get a full-screen "connection is
+# not private" interstitial instead of the set-password page — and the rewrite
+# also copies auth tokens into SendGrid's click logs. These are transactional
+# mails: links must show app.mynvoice.com and go straight there. Open tracking
+# rides the same domain, so it goes too.
+_SMTPAPI_NO_TRACKING = json.dumps(
+    {
+        "filters": {
+            "clicktrack": {"settings": {"enable": 0}},
+            "opentrack": {"settings": {"enable": 0}},
+        }
+    }
+)
+
+
 async def _send(msg: MIMEMultipart) -> bool:
     if not settings.SMTP_HOST:
         logger.warning("SMTP_HOST is not configured — skipping email send.")
         return False
+    msg["X-SMTPAPI"] = _SMTPAPI_NO_TRACKING
     try:
         use_tls = settings.SMTP_PORT == 465
         start_tls = settings.SMTP_PORT == 587
