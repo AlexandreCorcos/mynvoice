@@ -31,11 +31,10 @@ export default function RegisterPage() {
       setSent(true);
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(
-          err.status === 409
-            ? "That email already has an account. Try signing in instead."
-            : "Something went wrong. Try again in a moment."
-        );
+        // Registration never discloses whether an address is already in use —
+        // an existing account is answered with the same "check your email"
+        // success, so there is no 409 to special-case here.
+        setError("Something went wrong. Try again in a moment.");
       } else {
         setError("Couldn't reach the server.");
       }

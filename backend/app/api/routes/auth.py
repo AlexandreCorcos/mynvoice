@@ -60,22 +60,58 @@ def _issue_session(response: Response, user: User) -> TokenResponse:
     return TokenResponse(access_token=access, refresh_token=refresh)
 
 
+# One message for every outcome. The old 409 "Email already registered" turned
+# this endpoint into a user-enumeration oracle — it disclosed exactly what login
+# and forgot-password are careful never to say. Now the address owner is helped
+# by email and the caller learns nothing about whether the address exists.
+_REGISTER_MESSAGE = "Check your email to continue setting up your account."
+
+
 @router.post("/register", status_code=201)
 async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.email == data.email))
-    if result.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+    now = datetime.now(timezone.utc)
+    existing = (
+        await db.execute(select(User).where(User.email == data.email))
+    ).scalar_one_or_none()
+
+    if existing:
+        # Do not reveal that the address is taken. Help the real owner instead:
+        # resend activation if they never finished signing up, or a reset link
+        # if the account is already active (they likely forgot they have one).
+        if not existing.is_verified:
+            token = secrets.token_urlsafe(32)
+            existing.verification_token = token
+            existing.verification_token_expires_at = now + timedelta(
+                hours=VERIFICATION_TOKEN_EXPIRE_HOURS
+            )
+            await db.commit()
+            await send_verification_email(
+                to_email=existing.email,
+                first_name=existing.first_name or data.first_name,
+                token=token,
+            )
+        else:
+            token = secrets.token_urlsafe(32)
+            existing.password_reset_token = token
+            existing.password_reset_token_expires_at = now + timedelta(
+                hours=PASSWORD_RESET_TOKEN_EXPIRE_HOURS
+            )
+            await db.commit()
+            await send_password_reset_email(
+                to_email=existing.email,
+                first_name=existing.first_name,
+                token=token,
+            )
+        return {"message": _REGISTER_MESSAGE}
 
     token = secrets.token_urlsafe(32)
-    expires_at = datetime.now(timezone.utc) + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS)
-
     user = User(
         email=data.email,
         first_name=data.first_name,
         last_name=data.last_name,
         is_verified=False,
         verification_token=token,
-        verification_token_expires_at=expires_at,
+        verification_token_expires_at=now + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS),
     )
     db.add(user)
     await db.commit()
@@ -86,7 +122,7 @@ async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
         token=token,
     )
 
-    return {"message": "Check your email to set your password and activate your account."}
+    return {"message": _REGISTER_MESSAGE}
 
 
 @router.post("/set-password", response_model=TokenResponse)
