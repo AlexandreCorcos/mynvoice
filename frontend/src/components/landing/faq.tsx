@@ -93,9 +93,27 @@ function Row({ q, a, index }: { q: string; a: string; index: number }) {
   );
 }
 
+/* FAQPage structured data, built from the same QUESTIONS array the section
+   renders. Generating it from the visible copy is the point: structured data
+   that claims a question the page does not actually show is a rich-result
+   violation, and hand-maintained duplicates drift apart within a release. */
+const FAQ_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: QUESTIONS.map(({ q, a }) => ({
+    "@type": "Question",
+    name: q,
+    acceptedAnswer: { "@type": "Answer", text: a },
+  })),
+};
+
 export function Faq() {
   return (
     <section className="relative bg-surface py-24 lg:py-32">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_JSON_LD) }}
+      />
       <div className="mx-auto grid max-w-6xl gap-12 px-5 lg:grid-cols-[0.82fr_1.18fr] lg:gap-16">
         <div className="lg:sticky lg:top-32 lg:self-start">
           <Eyebrow>Questions</Eyebrow>

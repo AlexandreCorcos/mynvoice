@@ -1,61 +1,23 @@
-"use client";
-
 /* =========================================================================
-   Marketing landing page.
+   The marketing home page.
 
-   Composed from `src/components/landing/*`. The section rhythm alternates
-   graphite and light so the page breathes:
+   A thin server component so it can export metadata — the page itself is
+   `"use client"` (it is a wall of motion), and a client component cannot
+   declare a title, description or canonical. Keeping this shell on the server
+   means the crawler receives them in the HTML rather than after hydration.
 
-     hero (graphite) → ticker (graphite) → proof (light) → story (graphite)
-     → features (light) → dashboard (light) → pricing (graphite)
-     → faq (light) → footer (graphite)
-
-   Brass is never a large fill anywhere on this page — it lives in the
-   auroras, hairlines, accent words and solid buttons only.
+   The canonical matters more here than anywhere: this exact page answers on
+   the apex, `www` and `app`, so without it there are three copies competing.
    ========================================================================= */
 
-import { useEffect } from "react";
-import { MotionConfig } from "framer-motion";
-import { LandingNav } from "@/components/landing/nav";
-import { Hero } from "@/components/landing/hero";
-import { Ticker, Proof } from "@/components/landing/bands";
-import { Story } from "@/components/landing/story";
-import { Features } from "@/components/landing/features";
-import { Insight } from "@/components/landing/insight";
-import { Pricing } from "@/components/landing/pricing";
-import { Faq } from "@/components/landing/faq";
-import { LandingFooter } from "@/components/landing/footer";
-import { ScrollProgress } from "@/components/landing/primitives";
+import type { Metadata } from "next";
+import { LandingPage } from "@/components/landing/landing-page";
+import { canonical } from "@/lib/site";
 
-export default function LandingPage() {
-  // Dark mode is an app-only preference; the marketing page has a fixed
-  // brand look, so make sure the class never leaks onto it.
-  useEffect(() => {
-    document.documentElement.classList.remove("dark");
-  }, []);
+export const metadata: Metadata = {
+  alternates: { canonical: canonical("/") },
+};
 
-  return (
-    // `reducedMotion="user"` makes every motion component on the page drop
-    // transform animation when the visitor asks for it — the individual
-    // useReducedMotion() guards handle the ambient loops on top of that.
-    <MotionConfig reducedMotion="user">
-      <div className="landing min-h-screen bg-surface text-ink">
-        <ScrollProgress />
-        <LandingNav />
-
-        <main>
-          <Hero />
-          <Ticker />
-          <Proof />
-          <Story />
-          <Features />
-          <Insight />
-          <Pricing />
-          <Faq />
-        </main>
-
-        <LandingFooter />
-      </div>
-    </MotionConfig>
-  );
+export default function Page() {
+  return <LandingPage />;
 }
