@@ -6,8 +6,9 @@ social posts, ads or landing content for MYNVOICE.**
 > Read this whole file before writing a single caption. Everything in it was
 > verified against the actual codebase and the live production app — not from
 > memory, not from the pitch. § 14 (**Never claim this**) is not optional: it
-> lists things that sound true and are not, and one of them is currently on our
-> own landing page.
+> lists things that sound true and are not. Writing this document is how we
+> caught a "Google sign-in" claim that was live on our own landing page with no
+> feature behind it — that's exactly the mistake § 14 exists to prevent.
 
 **Slogan:** *Your business. Your invoices.*
 **Live app:** https://app.mynvoice.com · **Landing:** https://mynvoice.com
