@@ -38,6 +38,13 @@ import { Button } from "@/components/app/button";
 import { Panel, PanelHeader } from "@/components/app/panel";
 import { Field, Input, SearchInput, Select, Textarea } from "@/components/app/form";
 import { SegmentedControl } from "@/components/app/segmented-control";
+import {
+  ALL_TIME,
+  DateRangeFilter,
+  dateRangeLabel,
+  inDateRange,
+  type DateRangeValue,
+} from "@/components/app/date-range-filter";
 import { Modal } from "@/components/app/modal";
 import { RowMenu } from "@/components/app/menu";
 import EmptyState from "@/components/ui/empty-state";
@@ -600,6 +607,7 @@ export default function TransactionsPage() {
   const [search, setSearch] = useState("");
   const [kindFilter, setKindFilter] = useState<KindFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [range, setRange] = useState<DateRangeValue>(ALL_TIME);
   const [formOpen, setFormOpen] = useState(false);
   const [formKind, setFormKind] = useState<TransactionKind>("expense");
   const [catsOpen, setCatsOpen] = useState(false);
@@ -632,9 +640,16 @@ export default function TransactionsPage() {
     [categories]
   );
 
+  /* The date range narrows the whole screen — list, tab counts and the
+     headline panels alike. */
+  const dated = useMemo(
+    () => rows.filter((e) => inDateRange(e.expense_date, range)),
+    [rows, range]
+  );
+
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return rows.filter((e) => {
+    return dated.filter((e) => {
       if (kindFilter !== "all" && e.kind !== kindFilter) return false;
       if (categoryFilter && e.category_id !== categoryFilter) return false;
       if (!q) return true;
@@ -643,34 +658,39 @@ export default function TransactionsPage() {
         (e.vendor ?? "").toLowerCase().includes(q)
       );
     });
-  }, [rows, kindFilter, categoryFilter, search]);
+  }, [dated, kindFilter, categoryFilter, search]);
 
   const counts = useMemo(
     () => ({
-      all: rows.length,
-      income: rows.filter((e) => e.kind === "income").length,
-      expense: rows.filter((e) => e.kind === "expense").length,
+      all: dated.length,
+      income: dated.filter((e) => e.kind === "income").length,
+      expense: dated.filter((e) => e.kind === "expense").length,
     }),
-    [rows]
+    [dated]
   );
 
-  /* This month: money in, money out, and the net between them. */
+  /* Money in, money out, and the net between them — over the chosen period,
+     or over the current month when no period is chosen (the original view). */
   const summary = useMemo(() => {
     const now = new Date();
-    const thisMonth = rows.filter((e) => {
-      const d = new Date(e.expense_date);
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    });
+    const period =
+      range.preset === "all"
+        ? rows.filter((e) => {
+            const d = new Date(e.expense_date);
+            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+          })
+        : dated;
     const sum = (list: Expense[]) => list.reduce((s, e) => s + num(e.amount), 0);
-    const income = sum(thisMonth.filter((e) => e.kind === "income"));
-    const expense = sum(thisMonth.filter((e) => e.kind === "expense"));
-    return { income, expense, net: income - expense, count: thisMonth.length };
-  }, [rows]);
+    const income = sum(period.filter((e) => e.kind === "income"));
+    const expense = sum(period.filter((e) => e.kind === "expense"));
+    return { income, expense, net: income - expense, count: period.length };
+  }, [rows, dated, range.preset]);
 
   /* Where the money goes — expenses only, biggest first. */
   const breakdown = useMemo(() => {
+    const source = range.preset === "all" ? rows : dated;
     const totals = new Map<string, { label: string; colour: string; amount: number }>();
-    for (const e of rows) {
+    for (const e of source) {
       if (e.kind !== "expense") continue;
       const cat = categoryOf(e.category_id);
       const key = cat?.id ?? "none";
@@ -685,7 +705,10 @@ export default function TransactionsPage() {
     const list = [...totals.values()].sort((a, b) => b.amount - a.amount);
     const total = list.reduce((s, r) => s + r.amount, 0);
     return { rows: list, total };
-  }, [rows, categoryOf]);
+  }, [rows, dated, range.preset, categoryOf]);
+
+  const periodTitle = range.preset === "all" ? "This month" : dateRangeLabel(range);
+  const periodNoun = range.preset === "all" ? "net this month" : "net in this period";
 
   const remove = async () => {
     if (!deleting) return;
@@ -728,7 +751,7 @@ export default function TransactionsPage() {
       {!loading && rows.length > 0 ? (
         <div className="grid gap-4 lg:grid-cols-[1fr_1.15fr]">
           <Panel>
-            <PanelHeader title="This month" caption={`${summary.count} recorded`} />
+            <PanelHeader title={periodTitle} caption={`${summary.count} recorded`} />
             <p
               className={cn(
                 "mt-4 text-[30px] font-extrabold leading-none tracking-[-0.025em] tabular-nums",
@@ -741,7 +764,7 @@ export default function TransactionsPage() {
                 duration={1.2}
               />
             </p>
-            <p className="mt-1.5 text-[12px] text-ink-muted">net this month</p>
+            <p className="mt-1.5 text-[12px] text-ink-muted">{periodNoun}</p>
 
             <div className="mt-5 grid grid-cols-2 gap-3">
               <div className="rounded-[12px] bg-elevated/60 p-3.5">
@@ -770,7 +793,9 @@ export default function TransactionsPage() {
 
             {breakdown.rows.length === 0 ? (
               <p className="mt-6 text-center text-[13px] text-ink-muted">
-                No expenses recorded yet.
+                {range.preset === "all"
+                  ? "No expenses recorded yet."
+                  : "No expenses in this period."}
               </p>
             ) : (
               <>
@@ -844,6 +869,7 @@ export default function TransactionsPage() {
                 </Select>
               </div>
             ) : null}
+            <DateRangeFilter value={range} onChange={setRange} />
           </div>
           <SearchInput
             placeholder="Search description or name…"
@@ -868,7 +894,7 @@ export default function TransactionsPage() {
           description={
             rows.length === 0
               ? "Record money in and out and the dashboard tells you the whole story, not half of it."
-              : "Try a different search, category or type."
+              : "Try a different search, category, type or period."
           }
           action={
             rows.length === 0 ? (

@@ -33,6 +33,12 @@ import { PageHeader } from "@/components/app/page-header";
 import { Button, ButtonLink } from "@/components/app/button";
 import { SearchInput } from "@/components/app/form";
 import { SegmentedControl } from "@/components/app/segmented-control";
+import {
+  ALL_TIME,
+  DateRangeFilter,
+  inDateRange,
+  type DateRangeValue,
+} from "@/components/app/date-range-filter";
 import { RowMenu, type MenuItem } from "@/components/app/menu";
 import { Modal } from "@/components/app/modal";
 import StatusBadge from "@/components/ui/status-badge";
@@ -191,6 +197,7 @@ export default function InvoicesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [range, setRange] = useState<DateRangeValue>(ALL_TIME);
   const [payingId, setPayingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -221,22 +228,30 @@ export default function InvoicesPage() {
 
   /* Filtering and searching happen here rather than on the server: the list
      is small enough that a round trip per keystroke would feel worse. */
+
+  /* The date range narrows the whole screen by issue date — tab counts
+     included, so the numbers on the tabs describe the period being viewed. */
+  const dated = useMemo(
+    () => invoices.filter((i) => inDateRange(i.issue_date, range)),
+    [invoices, range]
+  );
+
   const counts = useMemo(() => {
     const base: Record<Filter, number> = {
-      all: invoices.length,
+      all: dated.length,
       draft: 0,
       sent: 0,
       paid: 0,
       overdue: 0,
       cancelled: 0,
     };
-    for (const i of invoices) base[i.status] += 1;
+    for (const i of dated) base[i.status] += 1;
     return base;
-  }, [invoices]);
+  }, [dated]);
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return invoices.filter((i) => {
+    return dated.filter((i) => {
       if (filter !== "all" && i.status !== filter) return false;
       if (!q) return true;
       return (
@@ -244,7 +259,7 @@ export default function InvoicesPage() {
         clientName(i.client_id).toLowerCase().includes(q)
       );
     });
-  }, [invoices, filter, search, clientName]);
+  }, [dated, filter, search, clientName]);
 
   /* Outstanding means money asked for and not received, so drafts are out —
      the same rule the dashboard and reports use. Counting them here would
@@ -381,12 +396,15 @@ export default function InvoicesPage() {
             { value: "cancelled", label: "Cancelled", count: counts.cancelled },
           ]}
         />
-        <SearchInput
-          placeholder="Search by number or client…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="lg:w-72"
-        />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <DateRangeFilter value={range} onChange={setRange} align="end" />
+          <SearchInput
+            placeholder="Search by number or client…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="sm:w-72"
+          />
+        </div>
       </div>
 
       {/* column key — only where the columns actually exist */}
@@ -424,14 +442,18 @@ export default function InvoicesPage() {
               ? "No invoices yet"
               : search
                 ? "Nothing matches that search"
-                : `No ${filter} invoices`
+                : dated.length === 0
+                  ? "Nothing in this period"
+                  : `No ${filter} invoices`
           }
           description={
             invoices.length === 0
               ? "Your first invoice takes about a minute. Pick a client, add your lines, send."
               : search
                 ? "Try a different invoice number or client name."
-                : "Nothing in this state right now. Try another filter."
+                : dated.length === 0
+                  ? "No invoices were issued between these dates. Try a wider range."
+                  : "Nothing in this state right now. Try another filter."
           }
           action={
             invoices.length === 0 ? (
@@ -442,6 +464,10 @@ export default function InvoicesPage() {
             ) : search ? (
               <Button variant="secondary" onClick={() => setSearch("")}>
                 Clear search
+              </Button>
+            ) : dated.length === 0 ? (
+              <Button variant="secondary" onClick={() => setRange(ALL_TIME)}>
+                Show all time
               </Button>
             ) : undefined
           }

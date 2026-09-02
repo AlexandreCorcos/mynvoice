@@ -14,7 +14,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { CreditCard, Loader2, Plus, Trash2 } from "lucide-react";
+import { CalendarRange, CreditCard, Loader2, Plus, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatCurrency, formatDate, num } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
@@ -25,6 +25,12 @@ import { Panel, Overline } from "@/components/app/panel";
 import { Field, Input, Select, Textarea } from "@/components/app/form";
 import { Modal } from "@/components/app/modal";
 import { RowMenu } from "@/components/app/menu";
+import {
+  ALL_TIME,
+  DateRangeFilter,
+  inDateRange,
+  type DateRangeValue,
+} from "@/components/app/date-range-filter";
 import EmptyState from "@/components/ui/empty-state";
 import Toast, { type ToastType } from "@/components/ui/toast";
 import type { Client, InvoiceListItem, Payment } from "@/types";
@@ -268,6 +274,7 @@ export default function PaymentsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [invoices, setInvoices] = useState<InvoiceListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [range, setRange] = useState<DateRangeValue>(ALL_TIME);
   const [formOpen, setFormOpen] = useState(false);
   const [deleting, setDeleting] = useState<Payment | null>(null);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
@@ -298,6 +305,11 @@ export default function PaymentsPage() {
   const invoiceOf = (id: string | null) =>
     id ? invoices.find((i) => i.id === id) : undefined;
 
+  const visible = useMemo(
+    () => payments.filter((p) => inDateRange(p.payment_date, range)),
+    [payments, range]
+  );
+
   /* Only sum a currency against itself — mixing them would be a lie. */
   const receivedThisMonth = useMemo(() => {
     const now = new Date();
@@ -312,6 +324,14 @@ export default function PaymentsPage() {
       })
       .reduce((sum, p) => sum + num(p.amount), 0);
   }, [payments, defaultCurrency]);
+
+  const receivedInRange = useMemo(
+    () =>
+      visible
+        .filter((p) => p.currency === defaultCurrency)
+        .reduce((sum, p) => sum + num(p.amount), 0),
+    [visible, defaultCurrency]
+  );
 
   const remove = async () => {
     if (!deleting) return;
@@ -332,9 +352,11 @@ export default function PaymentsPage() {
         eyebrow="Payments received"
         title="Money that actually arrived."
         subtitle={
-          receivedThisMonth > 0
-            ? `${formatCurrency(receivedThisMonth, defaultCurrency)} in so far this month.`
-            : "Every payment recorded against an invoice, and the ones that came in on their own."
+          range.preset !== "all" && receivedInRange > 0
+            ? `${formatCurrency(receivedInRange, defaultCurrency)} received in this period.`
+            : range.preset === "all" && receivedThisMonth > 0
+              ? `${formatCurrency(receivedThisMonth, defaultCurrency)} in so far this month.`
+              : "Every payment recorded against an invoice, and the ones that came in on their own."
         }
         actions={
           <Button variant="primary" onClick={() => setFormOpen(true)}>
@@ -343,6 +365,10 @@ export default function PaymentsPage() {
           </Button>
         }
       />
+
+      {!loading && payments.length > 0 ? (
+        <DateRangeFilter value={range} onChange={setRange} />
+      ) : null}
 
       {loading ? (
         <div className="space-y-2">
@@ -359,6 +385,17 @@ export default function PaymentsPage() {
             <Button variant="primary" onClick={() => setFormOpen(true)}>
               <Plus className="h-4 w-4" />
               Record a payment
+            </Button>
+          }
+        />
+      ) : visible.length === 0 ? (
+        <EmptyState
+          icon={CalendarRange}
+          title="Nothing in this period"
+          description="No payments landed between these dates. Try a wider range."
+          action={
+            <Button variant="secondary" onClick={() => setRange(ALL_TIME)}>
+              Show all time
             </Button>
           }
         />
@@ -393,7 +430,7 @@ export default function PaymentsPage() {
                 </thead>
                 <tbody>
                   <AnimatePresence initial={false}>
-                    {payments.map((p, i) => {
+                    {visible.map((p, i) => {
                       const inv = invoiceOf(p.invoice_id);
                       return (
                         <motion.tr
@@ -468,7 +505,7 @@ export default function PaymentsPage() {
 
           {/* narrow screens — a table here would just be a scrollbar */}
           <div className="space-y-2 lg:hidden">
-            {payments.map((p) => {
+            {visible.map((p) => {
               const inv = invoiceOf(p.invoice_id);
               return (
                 <div
