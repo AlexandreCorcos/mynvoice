@@ -31,6 +31,12 @@ import {
   inDateRange,
   type DateRangeValue,
 } from "@/components/app/date-range-filter";
+import {
+  SortControl,
+  compareBy,
+  type SortField,
+  type SortState,
+} from "@/components/app/sort-control";
 import EmptyState from "@/components/ui/empty-state";
 import Toast, { type ToastType } from "@/components/ui/toast";
 import type { Client, InvoiceListItem, Payment } from "@/types";
@@ -44,6 +50,15 @@ const MODES: { value: string; label: string }[] = [
 
 const modeLabel = (mode: string | null) =>
   MODES.find((m) => m.value === mode)?.label ?? mode ?? "—";
+
+type SortKey = "date" | "number" | "client" | "amount";
+
+const SORT_FIELDS: SortField<SortKey>[] = [
+  { key: "date", label: "Date", defaultDir: "desc" },
+  { key: "number", label: "Number", defaultDir: "asc" },
+  { key: "client", label: "Client", defaultDir: "asc" },
+  { key: "amount", label: "Amount", defaultDir: "desc" },
+];
 
 /* ------------------------------------------------------------------ */
 /* Record form                                                         */
@@ -275,6 +290,7 @@ export default function PaymentsPage() {
   const [invoices, setInvoices] = useState<InvoiceListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<DateRangeValue>(ALL_TIME);
+  const [sort, setSort] = useState<SortState<SortKey>>({ key: "date", dir: "desc" });
   const [formOpen, setFormOpen] = useState(false);
   const [deleting, setDeleting] = useState<Payment | null>(null);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
@@ -305,10 +321,25 @@ export default function PaymentsPage() {
   const invoiceOf = (id: string | null) =>
     id ? invoices.find((i) => i.id === id) : undefined;
 
-  const visible = useMemo(
-    () => payments.filter((p) => inDateRange(p.payment_date, range)),
-    [payments, range]
-  );
+  const visible = useMemo(() => {
+    const value = (p: Payment): string | number | null => {
+      switch (sort.key) {
+        case "date":
+          return p.payment_date;
+        case "number":
+          return p.payment_number;
+        case "client":
+          return p.client_id
+            ? (clients.find((c) => c.id === p.client_id)?.company_name ?? null)
+            : null;
+        case "amount":
+          return num(p.amount);
+      }
+    };
+    return payments
+      .filter((p) => inDateRange(p.payment_date, range))
+      .sort(compareBy(value, sort.dir));
+  }, [payments, range, sort, clients]);
 
   /* Only sum a currency against itself — mixing them would be a lie. */
   const receivedThisMonth = useMemo(() => {
@@ -367,7 +398,10 @@ export default function PaymentsPage() {
       />
 
       {!loading && payments.length > 0 ? (
-        <DateRangeFilter value={range} onChange={setRange} />
+        <div className="flex flex-wrap items-center gap-3">
+          <DateRangeFilter value={range} onChange={setRange} />
+          <SortControl fields={SORT_FIELDS} value={sort} onChange={setSort} />
+        </div>
       ) : null}
 
       {loading ? (

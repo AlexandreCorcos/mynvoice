@@ -45,6 +45,12 @@ import {
   inDateRange,
   type DateRangeValue,
 } from "@/components/app/date-range-filter";
+import {
+  SortControl,
+  compareBy,
+  type SortField,
+  type SortState,
+} from "@/components/app/sort-control";
 import { Modal } from "@/components/app/modal";
 import { RowMenu } from "@/components/app/menu";
 import EmptyState from "@/components/ui/empty-state";
@@ -57,6 +63,15 @@ import type {
 } from "@/types";
 
 type KindFilter = "all" | TransactionKind;
+
+type SortKey = "date" | "description" | "category" | "amount";
+
+const SORT_FIELDS: SortField<SortKey>[] = [
+  { key: "date", label: "Date", defaultDir: "desc" },
+  { key: "description", label: "Description", defaultDir: "asc" },
+  { key: "category", label: "Category", defaultDir: "asc" },
+  { key: "amount", label: "Amount", defaultDir: "desc" },
+];
 
 const FALLBACK_COLOUR = "var(--ink-muted)";
 
@@ -608,6 +623,7 @@ export default function TransactionsPage() {
   const [kindFilter, setKindFilter] = useState<KindFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [range, setRange] = useState<DateRangeValue>(ALL_TIME);
+  const [sort, setSort] = useState<SortState<SortKey>>({ key: "date", dir: "desc" });
   const [formOpen, setFormOpen] = useState(false);
   const [formKind, setFormKind] = useState<TransactionKind>("expense");
   const [catsOpen, setCatsOpen] = useState(false);
@@ -649,16 +665,30 @@ export default function TransactionsPage() {
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return dated.filter((e) => {
-      if (kindFilter !== "all" && e.kind !== kindFilter) return false;
-      if (categoryFilter && e.category_id !== categoryFilter) return false;
-      if (!q) return true;
-      return (
-        e.description.toLowerCase().includes(q) ||
-        (e.vendor ?? "").toLowerCase().includes(q)
-      );
-    });
-  }, [dated, kindFilter, categoryFilter, search]);
+    const value = (e: Expense): string | number | null => {
+      switch (sort.key) {
+        case "date":
+          return e.expense_date;
+        case "description":
+          return e.description;
+        case "category":
+          return categoryOf(e.category_id)?.name ?? null;
+        case "amount":
+          return num(e.amount);
+      }
+    };
+    return dated
+      .filter((e) => {
+        if (kindFilter !== "all" && e.kind !== kindFilter) return false;
+        if (categoryFilter && e.category_id !== categoryFilter) return false;
+        if (!q) return true;
+        return (
+          e.description.toLowerCase().includes(q) ||
+          (e.vendor ?? "").toLowerCase().includes(q)
+        );
+      })
+      .sort(compareBy(value, sort.dir));
+  }, [dated, kindFilter, categoryFilter, search, sort, categoryOf]);
 
   const counts = useMemo(
     () => ({
@@ -870,6 +900,7 @@ export default function TransactionsPage() {
               </div>
             ) : null}
             <DateRangeFilter value={range} onChange={setRange} />
+            <SortControl fields={SORT_FIELDS} value={sort} onChange={setSort} />
           </div>
           <SearchInput
             placeholder="Search description or name…"

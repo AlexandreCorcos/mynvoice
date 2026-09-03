@@ -39,6 +39,12 @@ import {
   inDateRange,
   type DateRangeValue,
 } from "@/components/app/date-range-filter";
+import {
+  SortControl,
+  compareBy,
+  type SortField,
+  type SortState,
+} from "@/components/app/sort-control";
 import { RowMenu, type MenuItem } from "@/components/app/menu";
 import { Modal } from "@/components/app/modal";
 import StatusBadge from "@/components/ui/status-badge";
@@ -51,6 +57,16 @@ import type {
 } from "@/types";
 
 type Filter = InvoiceStatus | "all";
+
+type SortKey = "date" | "due" | "number" | "client" | "amount";
+
+const SORT_FIELDS: SortField<SortKey>[] = [
+  { key: "date", label: "Issued", defaultDir: "desc" },
+  { key: "due", label: "Due", defaultDir: "desc" },
+  { key: "number", label: "Number", defaultDir: "asc" },
+  { key: "client", label: "Client", defaultDir: "asc" },
+  { key: "amount", label: "Amount", defaultDir: "desc" },
+];
 
 const PAYMENT_METHODS: { label: string; value: PaymentMethod }[] = [
   { label: "Bank transfer", value: "bank_transfer" },
@@ -198,6 +214,7 @@ export default function InvoicesPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [range, setRange] = useState<DateRangeValue>(ALL_TIME);
+  const [sort, setSort] = useState<SortState<SortKey>>({ key: "date", dir: "desc" });
   const [payingId, setPayingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -251,15 +268,31 @@ export default function InvoicesPage() {
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return dated.filter((i) => {
-      if (filter !== "all" && i.status !== filter) return false;
-      if (!q) return true;
-      return (
-        i.invoice_number.toLowerCase().includes(q) ||
-        clientName(i.client_id).toLowerCase().includes(q)
-      );
-    });
-  }, [dated, filter, search, clientName]);
+    const value = (i: InvoiceListItem): string | number | null => {
+      switch (sort.key) {
+        case "date":
+          return i.issue_date;
+        case "due":
+          return i.due_date;
+        case "number":
+          return i.invoice_number;
+        case "client":
+          return i.client_id ? clientName(i.client_id) : null;
+        case "amount":
+          return num(i.total);
+      }
+    };
+    return dated
+      .filter((i) => {
+        if (filter !== "all" && i.status !== filter) return false;
+        if (!q) return true;
+        return (
+          i.invoice_number.toLowerCase().includes(q) ||
+          clientName(i.client_id).toLowerCase().includes(q)
+        );
+      })
+      .sort(compareBy(value, sort.dir));
+  }, [dated, filter, search, clientName, sort]);
 
   /* Outstanding means money asked for and not received, so drafts are out —
      the same rule the dashboard and reports use. Counting them here would
@@ -382,7 +415,7 @@ export default function InvoicesPage() {
       />
 
       {/* controls */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <SegmentedControl<Filter>
           layoutId="invoice-filter"
           value={filter}
@@ -396,13 +429,14 @@ export default function InvoicesPage() {
             { value: "cancelled", label: "Cancelled", count: counts.cancelled },
           ]}
         />
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <DateRangeFilter value={range} onChange={setRange} align="end" />
+        <div className="flex flex-wrap items-center gap-3">
+          <DateRangeFilter value={range} onChange={setRange} />
+          <SortControl fields={SORT_FIELDS} value={sort} onChange={setSort} />
           <SearchInput
             placeholder="Search by number or client…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="sm:w-72"
+            className="w-full sm:w-64"
           />
         </div>
       </div>
