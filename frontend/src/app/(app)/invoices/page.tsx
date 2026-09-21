@@ -47,6 +47,7 @@ import {
 } from "@/components/app/sort-control";
 import { RowMenu, type MenuItem } from "@/components/app/menu";
 import { Modal } from "@/components/app/modal";
+import { MarkPaidModal } from "@/components/app/mark-paid-modal";
 import StatusBadge from "@/components/ui/status-badge";
 import EmptyState from "@/components/ui/empty-state";
 import type {
@@ -66,13 +67,6 @@ const SORT_FIELDS: SortField<SortKey>[] = [
   { key: "number", label: "Number", defaultDir: "asc" },
   { key: "client", label: "Client", defaultDir: "asc" },
   { key: "amount", label: "Amount", defaultDir: "desc" },
-];
-
-const PAYMENT_METHODS: { label: string; value: PaymentMethod }[] = [
-  { label: "Bank transfer", value: "bank_transfer" },
-  { label: "Card", value: "card" },
-  { label: "Cash", value: "cash" },
-  { label: "Other", value: "other" },
 ];
 
 /** Days between today and the due date, positive when overdue. */
@@ -314,12 +308,12 @@ export default function InvoicesPage() {
     fetchData();
   };
 
-  const markPaid = async (method: PaymentMethod) => {
+  const markPaid = async (method: PaymentMethod, paymentDate: string) => {
     if (!payingId) return;
     await api.patch(`/invoices/${payingId}/status`, {
       status: "paid",
       payment_method: method,
-      payment_date: new Date().toISOString().split("T")[0],
+      payment_date: paymentDate,
     });
     setPayingId(null);
     fetchData();
@@ -523,24 +517,11 @@ export default function InvoicesPage() {
       )}
 
       {/* ---- mark as paid ---- */}
-      <Modal
+      <MarkPaidModal
         open={Boolean(payingId)}
         onClose={() => setPayingId(null)}
-        title="Mark as paid"
-        description="How did the money arrive? This is recorded against the invoice."
-      >
-        <div className="grid grid-cols-2 gap-2">
-          {PAYMENT_METHODS.map((pm) => (
-            <button
-              key={pm.value}
-              onClick={() => markPaid(pm.value)}
-              className="rounded-[10px] bg-card px-4 py-3 text-[13px] font-semibold text-ink ring-1 ring-line transition-colors hover:bg-brass hover:text-white hover:ring-brass"
-            >
-              {pm.label}
-            </button>
-          ))}
-        </div>
-      </Modal>
+        onConfirm={markPaid}
+      />
 
       {/* ---- delete ---- */}
       <Modal

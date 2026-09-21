@@ -36,17 +36,11 @@ import { Panel, PanelHeader, Overline } from "@/components/app/panel";
 import { Button, ButtonLink } from "@/components/app/button";
 import { Field, Input } from "@/components/app/form";
 import { Modal } from "@/components/app/modal";
+import { MarkPaidModal } from "@/components/app/mark-paid-modal";
 import { RowMenu, type MenuItem } from "@/components/app/menu";
 import StatusBadge from "@/components/ui/status-badge";
 import Toast, { type ToastType } from "@/components/ui/toast";
 import type { Client, Invoice, InvoiceStatus, PaymentMethod } from "@/types";
-
-const PAYMENT_METHODS: { label: string; value: PaymentMethod }[] = [
-  { label: "Bank transfer", value: "bank_transfer" },
-  { label: "Card", value: "card" },
-  { label: "Cash", value: "cash" },
-  { label: "Other", value: "other" },
-];
 
 /* ------------------------------------------------------------------ */
 /* Lifecycle rail                                                      */
@@ -200,14 +194,18 @@ export default function InvoiceDetailPage() {
     fetchInvoice();
   }, [fetchInvoice]);
 
-  const setStatus = async (status: InvoiceStatus, method?: PaymentMethod) => {
+  const setStatus = async (
+    status: InvoiceStatus,
+    method?: PaymentMethod,
+    paymentDate?: string
+  ) => {
     if (!invoice) return;
     setBusy(true);
     try {
       const body: Record<string, unknown> = { status };
       if (method) {
         body.payment_method = method;
-        body.payment_date = new Date().toISOString().split("T")[0];
+        body.payment_date = paymentDate;
       }
       await api.patch<Invoice>(`/invoices/${invoice.id}/status`, body);
       await fetchInvoice();
@@ -696,25 +694,12 @@ export default function InvoiceDetailPage() {
       </div>
 
       {/* ---- mark as paid ---- */}
-      <Modal
+      <MarkPaidModal
         open={payOpen}
         onClose={() => setPayOpen(false)}
-        title="Mark as paid"
-        description="How did the money arrive? This is recorded against the invoice."
-      >
-        <div className="grid grid-cols-2 gap-2">
-          {PAYMENT_METHODS.map((pm) => (
-            <button
-              key={pm.value}
-              disabled={busy}
-              onClick={() => setStatus("paid", pm.value)}
-              className="rounded-[10px] bg-card px-4 py-3 text-[13px] font-semibold text-ink ring-1 ring-line transition-colors hover:bg-brass hover:text-white hover:ring-brass disabled:opacity-50"
-            >
-              {pm.label}
-            </button>
-          ))}
-        </div>
-      </Modal>
+        onConfirm={(method, paymentDate) => setStatus("paid", method, paymentDate)}
+        busy={busy}
+      />
 
       {/* ---- send ---- */}
       <Modal
