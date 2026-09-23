@@ -1,0 +1,29 @@
+#!/bin/sh
+# Push gate launcher (AI_RULES R2): finds a Python that works and runs quality_gate.py.
+# Used by .claude/settings.json (PreToolUse hook) and .githooks/pre-push.
+# Order: backend venv -> repo venv -> python -> python3. Nothing usable: harness denies pushes,
+# git mode blocks.
+case "$0" in */*) HERE="${0%/*}" ;; *) HERE="." ;; esac
+HERE="$(cd "$HERE" 2>/dev/null && pwd)"
+ROOT="$(cd "$HERE/../.." 2>/dev/null && pwd)"
+
+works() { [ -n "$1" ] && command -v "$1" >/dev/null 2>&1 && "$1" -c "import sys" >/dev/null 2>&1; }
+
+for PY in "$ROOT/backend/venv/Scripts/python.exe" "$ROOT/backend/venv/bin/python" \
+          "$ROOT/venv/Scripts/python.exe" "$ROOT/venv/bin/python"; do
+    [ -x "$PY" ] && exec "$PY" "$HERE/quality_gate.py" "$@"
+done
+for NAME in python python3 py; do
+    PY="$(command -v "$NAME" 2>/dev/null)"
+    works "$PY" && exec "$PY" "$HERE/quality_gate.py" "$@"
+done
+
+MSG="QUALITY GATE: no usable Python found. Nothing could be verified."
+if [ "$1" = "harness" ]; then
+    case "$(cat)" in
+        *push*) printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"%s"}}' "$MSG" ;;
+    esac
+    exit 0
+fi
+echo "$MSG" >&2
+exit 1

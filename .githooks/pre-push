@@ -1,0 +1,4 @@
+#!/bin/sh
+# Push gate, git layer (AI_RULES R2). core.hooksPath=.githooks is set by the gate's harness
+# hook the first time it runs; `git config core.hooksPath .githooks` sets it by hand.
+exec sh "$(git rev-parse --show-toplevel)/.claude/hooks/quality-gate" pre-push "$@"

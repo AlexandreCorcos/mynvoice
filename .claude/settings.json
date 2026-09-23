@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/quality-gate\" harness",
+            "timeout": 30,
+            "statusMessage": "Push gate (R2)"
+          }
+        ]
+      }
+    ]
+  }
+}

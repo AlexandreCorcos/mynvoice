@@ -1,0 +1,2 @@
+# Test + gate tooling (not shipped to prod). Install: pip install -r requirements-dev.txt
+pytest==8.3.4
