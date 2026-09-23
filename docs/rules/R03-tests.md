@@ -53,8 +53,8 @@ frontend request; a single alembic head; the invoice state machine (paid is lock
 `.github/workflows/ci.yml` runs the backend suite (pytest + guards) and the frontend lint on every
 push to `main` and every PR. It is the safety net for a push from a machine without the local gate,
 and it covers the frontend, which the local gate deliberately does not. The backend job installs
-only `pytest pydantic fastapi` — the suite never touches Postgres, so the heavy runtime deps stay
-out of CI.
+only `pytest`, `pydantic` and `fastapi` (pinned to the backend's versions) — the suite never
+touches Postgres, so the heavy runtime deps stay out of CI.
 
 ## Commands
 
