@@ -20,7 +20,7 @@ jobs:
           python-version: "3.13"
       # The unit + guard suite needs only these; it never touches Postgres, so
       # the heavy runtime deps (weasyprint, asyncpg, ...) stay out of CI.
-      - run: pip install pytest pydantic fastapi
+      - run: pip install pytest==8.3.4 pydantic==2.10.4 fastapi==0.115.6
       - run: python -m pytest
         working-directory: backend
 

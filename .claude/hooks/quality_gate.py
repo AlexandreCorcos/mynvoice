@@ -186,10 +186,6 @@ def tier(paths) -> tuple[str, list[str]]:
     return ("C", hot) if hot else ("B", [])
 
 
-def frontend_changed(paths) -> bool:
-    return any(p.startswith("frontend/") and classify(p) == "code" for p in paths)
-
-
 # ---------------------------------------------------------------------------
 # receipts and markers (in the git common dir: shared by worktrees, never committed)
 

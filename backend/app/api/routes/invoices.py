@@ -276,12 +276,8 @@ async def update_invoice(
         if data.discount_amount is not None
         else invoice.discount_amount
     )
-    if data.items is not None:
-        subtotal = sum(i.quantity * i.unit_price for i in data.items)
-    else:
-        subtotal = sum(i.quantity * i.unit_price for i in invoice.items)
-    tax_amount = subtotal * tax_rate / Decimal("100")
-    total = subtotal + tax_amount - discount
+    items_source = data.items if data.items is not None else invoice.items
+    subtotal, tax_amount, total = calculate_totals(items_source, tax_rate, discount)
     guard_total(total)
     invoice.subtotal = subtotal
     invoice.tax_amount = tax_amount
