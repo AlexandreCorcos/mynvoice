@@ -18,6 +18,7 @@ from app.models.invoice_item import InvoiceItem
 from app.models.payment import Payment
 from app.models.user import User
 from app.services import storage
+from app.services.invoice_totals import calculate_totals, guard_dates, guard_total
 from app.services.ledger import sync_invoice_income
 from app.schemas.invoice import (
     InvoiceCreate,
@@ -28,31 +29,6 @@ from app.schemas.invoice import (
 )
 
 router = APIRouter()
-
-
-def _calculate_totals(items_data, tax_rate: Decimal, discount: Decimal):
-    subtotal = sum(item.quantity * item.unit_price for item in items_data)
-    tax_amount = subtotal * tax_rate / Decimal("100")
-    total = subtotal + tax_amount - discount
-    return subtotal, tax_amount, total
-
-
-def _guard_dates(issue_date, due_date) -> None:
-    """An invoice cannot fall due before it is issued."""
-    if issue_date and due_date and due_date < issue_date:
-        raise HTTPException(
-            status_code=422, detail="Due date cannot be before the issue date."
-        )
-
-
-def _guard_total(total: Decimal) -> None:
-    """A discount larger than the taxed subtotal would drive the total below
-    zero — a negative invoice is not a document this app issues."""
-    if total < 0:
-        raise HTTPException(
-            status_code=422,
-            detail="Invoice total cannot be negative — reduce the discount.",
-        )
 
 
 async def _invoice_pdf_bytes(invoice: Invoice, client, company) -> bytes:
@@ -187,12 +163,12 @@ async def create_invoice(
     db: AsyncSession = Depends(get_db),
 ):
     await assert_owned(db, ClientModel, data.client_id, user.id, "Client not found")
-    _guard_dates(data.issue_date, data.due_date)
+    guard_dates(data.issue_date, data.due_date)
 
-    subtotal, tax_amount, total = _calculate_totals(
+    subtotal, tax_amount, total = calculate_totals(
         data.items, data.tax_rate, data.discount_amount
     )
-    _guard_total(total)
+    guard_total(total)
 
     invoice_number = await _generate_invoice_number(db, user.id, data.client_id)
 
@@ -272,7 +248,7 @@ async def update_invoice(
         setattr(invoice, field, value)
 
     # Dates now reflect the update; an invoice cannot fall due before issue.
-    _guard_dates(invoice.issue_date, invoice.due_date)
+    guard_dates(invoice.issue_date, invoice.due_date)
 
     # Replace items if provided
     if data.items is not None:
@@ -306,7 +282,7 @@ async def update_invoice(
         subtotal = sum(i.quantity * i.unit_price for i in invoice.items)
     tax_amount = subtotal * tax_rate / Decimal("100")
     total = subtotal + tax_amount - discount
-    _guard_total(total)
+    guard_total(total)
     invoice.subtotal = subtotal
     invoice.tax_amount = tax_amount
     invoice.total = total

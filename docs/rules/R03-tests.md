@@ -36,12 +36,25 @@ all. Every guard must be **proven to fail on a planted defect** — plant it, wa
 
 | Guard (`backend/tests/guards/`) | Incident / invariant it locks |
 |---|---|
-| `test_user_isolation.py` | Account isolation (R4): a route reads/writes owned data without a `user_id` filter |
+| `test_user_isolation.py` | Account isolation (R4): per-handler AST scan — a route handler runs `select()` on owned data without a `user_id` filter |
 | `test_money_serialisation.py` | A schema money field typed bare `Decimal` serialises to a JSON string (v0.14.0) |
 | `test_session_cookie_host_only.py` | A session cookie set with `Domain=` would leak to every subdomain |
 
-Not guarded yet (ideas): `assert_owned` on every create/update foreign reference; `credentials:
-"include"` on every frontend request; a single alembic head.
+Unit tests so far: `test_money_type.py` (the `Money` JSON contract), `test_invoice_totals.py` (the
+money surface — subtotal/tax/total maths and the negative-total / due-before-issue guards, pulled
+into `app/services/invoice_totals.py` so they test without importing the app).
+
+Not guarded yet (ideas): `assert_owned` on every create/update foreign reference (prove the filter
+is on the *same* query, not just present in the handler); `credentials: "include"` on every
+frontend request; a single alembic head; the invoice state machine (paid is locked).
+
+## CI
+
+`.github/workflows/ci.yml` runs the backend suite (pytest + guards) and the frontend lint on every
+push to `main` and every PR. It is the safety net for a push from a machine without the local gate,
+and it covers the frontend, which the local gate deliberately does not. The backend job installs
+only `pytest pydantic fastapi` — the suite never touches Postgres, so the heavy runtime deps stay
+out of CI.
 
 ## Commands
 

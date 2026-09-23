@@ -1,0 +1,40 @@
+name: CI
+
+# The push gate (AI_RULES R2) runs locally and only on a push to main. CI is the
+# safety net for pushes from a machine without the hook, and it covers the
+# frontend, which the local gate deliberately does not. Backend suite + frontend lint.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: backend suite (pytest + guards)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      # The unit + guard suite needs only these; it never touches Postgres, so
+      # the heavy runtime deps (weasyprint, asyncpg, ...) stay out of CI.
+      - run: pip install pytest pydantic fastapi
+      - run: python -m pytest
+        working-directory: backend
+
+  frontend:
+    name: frontend lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run lint
+        working-directory: frontend
